@@ -31,7 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   material_new_shapes: ^1.0.0
-  material_ui: ^1.1.0
+  material_ui: ^1.1.1
   motor: ^1.1.0
 
 dev_dependencies:

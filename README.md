@@ -84,7 +84,7 @@ flutter run
 
 ## Migrating to `material_ui`
 
-This package uses [`material_ui`](https://pub.dev/packages/material_ui) `^1.1.0`
+This package uses [`material_ui`](https://pub.dev/packages/material_ui) `^1.1.1`
 for Material widgets (`MaterialApp`, `ThemeData`, `ColorScheme`, and the rest of
 the Material library). **Do not import** `package:flutter/material.dart`.
 

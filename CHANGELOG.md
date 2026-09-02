@@ -1,5 +1,9 @@
 ## 1.1.2
 
+### Changed
+
+* Bump `material_ui` dependency to `^1.1.1`.
+
 ## 1.1.1
 
 ### Added
