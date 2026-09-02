@@ -1,5 +1,13 @@
 ## 1.1.2
 
+### Fixed
+
+* Date picker month/year mode toggle labels ellipsize when horizontal space is
+  tight (e.g. during dialog dismiss scale animation), preventing layout
+  overflow on narrow widths.
+* Date picker dialog actions use `OverflowBar` (aligned with `material_ui`) so
+  cancel/confirm buttons wrap instead of overflowing when width is constrained.
+
 ### Changed
 
 * Bump `material_ui` dependency to `^1.1.1`.
