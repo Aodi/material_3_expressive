@@ -417,7 +417,14 @@ class _M3ENavigationRailState extends State<M3ENavigationRail>
         // avoids by keeping the item view anchored and animating only its
         // label).
         alignment: AlignmentDirectional.centerStart,
-        child: labelledFab,
+        // Scale only while the rail's intermediate constraint is narrower
+        // than the intrinsic extended FAB. This prevents a transient flex
+        // overflow without changing the final FAB geometry.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
+          child: labelledFab,
+        ),
       ),
     );
   }
@@ -440,8 +447,7 @@ class _M3ENavigationRailState extends State<M3ENavigationRail>
       decoration: BoxDecoration(color: containerColor),
       child: LayoutBuilder(
         builder: (ctx, constraints) {
-          final showLabels = _isExpanded && constraints.maxWidth >= 180;
-          final children = _buildChildren(ctx, showLabels: showLabels);
+          final children = _buildChildren(ctx);
           final bottomTrailing =
               (widget.trailing != null && widget.trailingAtBottom)
               ? _buildTrailing(ctx)

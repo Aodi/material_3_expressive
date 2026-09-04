@@ -199,8 +199,9 @@ class M3ERailItemButton extends StatelessWidget {
     return Align(alignment: AlignmentDirectional.centerStart, child: pill);
   }
 
-  /// Mirrors Android's LabelMoveTransition: an appearing expanded label
-  /// starts 30dp to the leading side and settles at its final position.
+  /// Reveals the expanded label from its leading edge while keeping its
+  /// position fixed. Android's NavigationRail label transition clips/reveals
+  /// the label; translating the text itself makes it visibly slide.
   Widget _buildExpandedLabel(M3EThemeData m3e, Color labelFg) {
     final text = Text(
       label,
@@ -210,16 +211,16 @@ class M3ERailItemButton extends StatelessWidget {
       style: m3e.typeScale.labelLarge.copyWith(color: labelFg),
     );
     return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: -30, end: 0),
-      duration: M3ENavigationRailLayout.expandDuration,
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: M3EMotion.medium2,
       curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        // Android's transition starts on the leading side. Mirror the
-        // movement for RTL so labels enter from the right there as well.
-        final direction = Directionality.of(context);
-        final dx = direction == TextDirection.ltr ? value : -value;
-        return Transform.translate(offset: Offset(dx, 0), child: child);
-      },
+      builder: (context, value, child) => ClipRect(
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          widthFactor: value,
+          child: child,
+        ),
+      ),
       child: text,
     );
   }

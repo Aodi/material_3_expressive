@@ -22,20 +22,17 @@ mixin _M3ENavigationRailChildrenMixin on State<M3ENavigationRail> {
     );
   }
 
-  List<Widget> _buildChildren(
-    BuildContext context, {
-    required bool showLabels,
-  }) {
+  List<Widget> _buildChildren(BuildContext context) {
     final theme = M3ETheme.of(context).navigationRailTheme;
     final isExpanded = _isExpanded;
     final children = <Widget>[
       const SizedBox(height: M3ENavigationRailLayout.topGap),
       _buildMenuButton(context),
     ];
-    // Wait until the animated rail is wide enough before revealing the FAB
-    // label. This keeps the icon fixed and prevents extended content from
-    // overflowing compact/intermediate rail constraints.
-    final fabWidget = _buildFab(context, showLabel: showLabels);
+    // Reveal the FAB label at the same state change as destination labels.
+    // The rail's width animation provides the available-space constraint;
+    // delaying this flag makes the two motions visibly out of sync.
+    final fabWidget = _buildFab(context, showLabel: isExpanded);
     if (fabWidget != null) {
       children.add(fabWidget);
     }
