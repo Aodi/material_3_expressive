@@ -421,9 +421,12 @@ class _M3ENavigationRailState extends State<M3ENavigationRail>
       // Align lets the FAB keep its intrinsic content width instead of
       // stretching to the full rail, while preserving the rail's 20dp inset.
       child: Align(
-        alignment: isExpanded
-            ? AlignmentDirectional.centerStart
-            : AlignmentDirectional.center,
+        // Keep the icon at the same leading anchor while the rail width
+        // morphs. Centering the collapsed FAB against the still-expanded
+        // width creates the visible first-frame jump (the same issue Android
+        // avoids by keeping the item view anchored and animating only its
+        // label).
+        alignment: AlignmentDirectional.centerStart,
         child: labelledFab,
       ),
     );

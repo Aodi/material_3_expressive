@@ -115,42 +115,6 @@ class M3ERailItemButton extends StatelessWidget {
             labelFg: labelFg,
             scaledIcon: scaledIcon,
           );
-    // Keep the same render subtree while the rail changes width. AnimatedAlign
-    // prevents the collapsed target from snapping to center on the first
-    // frame, while AnimatedSize reveals/hides the label with the rail motion.
-    final animatedContent = LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        // Do not apply the 20dp expanded inset until the rail has enough
-        // width for the horizontal row. During the first expansion frames,
-        // applying it would leave only 24dp for the row and trigger overflow.
-        final bool applyExpandedInset = expanded && constraints.maxWidth >= 180;
-        return AnimatedPadding(
-          duration: M3ENavigationRailLayout.expandDuration,
-          curve: Curves.easeOutCubic,
-          padding: EdgeInsetsDirectional.only(
-            start: applyExpandedInset
-                ? M3ENavigationRailLayout.horizontalInset
-                : 0,
-            end: applyExpandedInset
-                ? M3ENavigationRailLayout.horizontalInset
-                : 0,
-          ),
-          child: AnimatedAlign(
-            duration: M3ENavigationRailLayout.expandDuration,
-            curve: Curves.easeOutCubic,
-            alignment: expanded ? Alignment.centerLeft : Alignment.center,
-            child: AnimatedSize(
-              duration: M3ENavigationRailLayout.expandDuration,
-              curve: Curves.easeOutCubic,
-              alignment: expanded
-                  ? AlignmentDirectional.centerStart
-                  : AlignmentDirectional.center,
-              child: content,
-            ),
-          ),
-        );
-      },
-    );
     final material = Material(
       type: MaterialType.transparency,
       child: InkWell(
@@ -163,10 +127,18 @@ class M3ERailItemButton extends StatelessWidget {
         highlightColor: Colors.transparent,
         overlayColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
         child: Padding(
-          padding: EdgeInsets.zero,
-          child: IconTheme.merge(
-            data: IconThemeData(color: iconFg, size: theme.iconSize),
-            child: animatedContent,
+          // The icon/indicator keeps the same leading anchor in both rail
+          // states. The collapsed 56dp indicator is centered by the 20dp
+          // insets inside the 96dp rail, without changing its x-position.
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: M3ENavigationRailLayout.horizontalInset,
+          ),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: IconTheme.merge(
+              data: IconThemeData(color: iconFg, size: theme.iconSize),
+              child: content,
+            ),
           ),
         ),
       ),
@@ -201,15 +173,7 @@ class M3ERailItemButton extends StatelessWidget {
       children: [
         scaledIcon,
         Flexible(child: SizedBox(width: theme.iconLabelGap)),
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            semanticsLabel: semanticLabel ?? label,
-            style: m3e.typeScale.labelLarge.copyWith(color: labelFg),
-          ),
-        ),
+        Flexible(child: _buildExpandedLabel(m3e, labelFg)),
         if (badgeCount != null)
           Padding(
             padding: EdgeInsets.only(left: theme.iconLabelGap),
@@ -233,6 +197,31 @@ class M3ERailItemButton extends StatelessWidget {
       child: content,
     );
     return Align(alignment: AlignmentDirectional.centerStart, child: pill);
+  }
+
+  /// Mirrors Android's LabelMoveTransition: an appearing expanded label
+  /// starts 30dp to the leading side and settles at its final position.
+  Widget _buildExpandedLabel(M3EThemeData m3e, Color labelFg) {
+    final text = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      semanticsLabel: semanticLabel ?? label,
+      style: m3e.typeScale.labelLarge.copyWith(color: labelFg),
+    );
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: -30, end: 0),
+      duration: M3ENavigationRailLayout.expandDuration,
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        // Android's transition starts on the leading side. Mirror the
+        // movement for RTL so labels enter from the right there as well.
+        final direction = Directionality.of(context);
+        final dx = direction == TextDirection.ltr ? value : -value;
+        return Transform.translate(offset: Offset(dx, 0), child: child);
+      },
+      child: text,
+    );
   }
 
   Widget _buildCollapsedContent({
