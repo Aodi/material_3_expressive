@@ -163,7 +163,7 @@ class M3ERailItemButton extends StatelessWidget {
     required Widget scaledIcon,
   }) {
     final content = Row(
-      mainAxisSize: MainAxisSize.max,
+      mainAxisSize: MainAxisSize.min,
       children: [
         scaledIcon,
         SizedBox(width: theme.iconLabelGap),
@@ -184,7 +184,6 @@ class M3ERailItemButton extends StatelessWidget {
     );
     final pill = Container(
       key: indicatorKey,
-      width: double.infinity,
       height: theme.itemExpandedHeight,
       padding: EdgeInsetsDirectional.only(
         start: theme.indicatorLeading,
