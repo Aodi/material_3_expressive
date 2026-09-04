@@ -162,6 +162,8 @@ Future<void> _m3enavigationrailFabSlotSupportsCustomElevation(
 
   expect(decoration, isA<BoxDecoration>());
   expect((decoration! as BoxDecoration).boxShadow, isEmpty);
+  // The rail slot aligns the FAB without forcing it to the rail's full width.
+  expect(tester.getSize(find.byType(M3EExtendedFab)).width, lessThan(96));
 }
 
 Future<void> _m3enavigationrailUsesOfficialWidths(WidgetTester tester) async {

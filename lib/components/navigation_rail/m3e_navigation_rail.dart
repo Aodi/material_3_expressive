@@ -418,7 +418,15 @@ class _M3ENavigationRailState extends State<M3ENavigationRail>
 
     return Padding(
       padding: M3ENavigationRailLayout.sectionPadding,
-      child: labelledFab,
+      // Column children receive tight cross-axis constraints by default.
+      // Align lets the FAB keep its intrinsic content width instead of
+      // stretching to the full rail, while preserving the rail's 20dp inset.
+      child: Align(
+        alignment: isExpanded
+            ? AlignmentDirectional.centerStart
+            : AlignmentDirectional.center,
+        child: labelledFab,
+      ),
     );
   }
 
