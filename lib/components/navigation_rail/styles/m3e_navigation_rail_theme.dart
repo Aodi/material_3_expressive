@@ -10,13 +10,13 @@ class M3ENavigationRailTheme extends M3EThemeExtension<M3ENavigationRailTheme> {
     this.collapsedWidth = 96.0,
     this.expandedMinWidth = 220.0,
     this.expandedMaxWidth = 360.0,
-    this.itemExpandedHeight = 40.0,
-    this.itemCollapsedHeight = 66.0,
+    this.itemExpandedHeight = 56.0,
+    this.itemCollapsedHeight = 68.0,
     this.iconSize = 24.0,
     this.indicatorLeading = 16.0,
     this.indicatorTrailing = 16.0,
-    this.iconLabelGap = 8.0,
-    this.itemVerticalGap = 4.0,
+    this.iconLabelGap = 4.0,
+    this.itemVerticalGap = 0.0,
     this.headerMinSpace = 40.0,
     this.sectionHeaderSpacingTop = 12.0,
     this.sectionHeaderSpacingBottom = 8.0,
@@ -103,6 +103,14 @@ class M3ENavigationRailTheme extends M3EThemeExtension<M3ENavigationRailTheme> {
 
   Color activeIconAndLabelColor(M3EColorScheme scheme) =>
       activeIconAndLabel ?? scheme.onSecondaryContainer;
+
+  /// Color used by the icon in a selected destination.
+  Color activeIconColor(M3EColorScheme scheme) =>
+      activeIconAndLabel ?? scheme.onSecondaryContainer;
+
+  /// Color used by the label in a selected vertical destination.
+  Color activeLabelColor(M3EColorScheme scheme) =>
+      activeIconAndLabel ?? scheme.secondary;
 
   /// inactiveIconAndLabelColor.
 

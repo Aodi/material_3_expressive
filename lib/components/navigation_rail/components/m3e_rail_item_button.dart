@@ -5,7 +5,6 @@ import 'package:material_3_expressive/components/navigation_rail/styles/m3e_navi
 import 'package:material_ui/material_ui.dart';
 
 import '../../../foundations/foundations.dart';
-import '../../icon_buttons/m3e_icon_buttons.dart';
 import '../enums/m3e_navigation_rail_enums.dart';
 import 'm3e_nav_icon_scale.dart';
 import 'm3e_rail_badge_view.dart';
@@ -87,20 +86,18 @@ class M3ERailItemButton extends StatelessWidget {
         heightOverride ??
         (expanded ? theme.itemExpandedHeight : theme.itemCollapsedHeight);
     final bool selected = isSelected;
-    final Color fg = selected
-        ? theme.activeIconAndLabelColor(scheme)
+    final Color iconFg = selected
+        ? theme.activeIconColor(scheme)
         : theme.inactiveIconAndLabelColor(scheme);
-    final Color bg = useLocalIndicator && expanded && selected
-        ? theme.activeIndicatorColorResolved(scheme)
-        : Colors.transparent;
-    final ShapeBorder shape = expanded
-        ? (theme.indicatorShapeFull ??
-              RoundedRectangleBorder(borderRadius: M3EShapes.roundSet.xs))
-        : const RoundedRectangleBorder();
+    final Color labelFg = selected
+        ? (expanded
+              ? theme.activeIconAndLabelColor(scheme)
+              : theme.activeLabelColor(scheme))
+        : theme.inactiveIconAndLabelColor(scheme);
     final Widget scaledIcon = M3ENavIconScale(
       selected: selected,
       child: IconTheme.merge(
-        data: IconThemeData(color: fg, size: theme.iconSize),
+        data: IconThemeData(color: iconFg, size: theme.iconSize),
         child: selected && selectedIcon != null ? selectedIcon! : icon,
       ),
     );
@@ -108,20 +105,17 @@ class M3ERailItemButton extends StatelessWidget {
         ? _buildExpandedContent(
             m3e: m3e,
             theme: theme,
-            fg: fg,
+            labelFg: labelFg,
             scaledIcon: scaledIcon,
           )
         : _buildCollapsedContent(
             m3e: m3e,
             theme: theme,
-            fg: fg,
+            labelFg: labelFg,
             scaledIcon: scaledIcon,
           );
     final material = Material(
-      key: expanded ? indicatorKey : null,
-      color: bg,
-      shape: shape,
-      clipBehavior: Clip.antiAlias,
+      type: MaterialType.transparency,
       child: InkWell(
         onTap: () {
           M3EHaptics.trigger(haptic);
@@ -132,16 +126,11 @@ class M3ERailItemButton extends StatelessWidget {
         highlightColor: Colors.transparent,
         overlayColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
         child: Padding(
-          padding: expanded
-              ? EdgeInsetsDirectional.only(
-                  start: theme.indicatorLeading,
-                  end: theme.indicatorTrailing,
-                )
-              : EdgeInsets.zero,
+          padding: EdgeInsets.zero,
           child: Align(
             alignment: expanded ? Alignment.centerLeft : Alignment.center,
             child: IconTheme.merge(
-              data: IconThemeData(color: fg, size: theme.iconSize),
+              data: IconThemeData(color: iconFg, size: theme.iconSize),
               child: content,
             ),
           ),
@@ -170,27 +159,21 @@ class M3ERailItemButton extends StatelessWidget {
   Widget _buildExpandedContent({
     required M3EThemeData m3e,
     required M3ENavigationRailTheme theme,
-    required Color fg,
+    required Color labelFg,
     required Widget scaledIcon,
   }) {
-    return Row(
+    final content = Row(
+      mainAxisSize: MainAxisSize.max,
       children: [
-        Expanded(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              scaledIcon,
-              SizedBox(width: theme.iconLabelGap),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  semanticsLabel: semanticLabel ?? label,
-                  style: m3e.typeScale.labelLarge.copyWith(color: fg),
-                ),
-              ),
-            ],
+        scaledIcon,
+        SizedBox(width: theme.iconLabelGap),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            semanticsLabel: semanticLabel ?? label,
+            style: m3e.typeScale.labelLarge.copyWith(color: labelFg),
           ),
         ),
         Padding(
@@ -199,12 +182,29 @@ class M3ERailItemButton extends StatelessWidget {
         ),
       ],
     );
+    final pill = Container(
+      key: indicatorKey,
+      width: double.infinity,
+      height: theme.itemExpandedHeight,
+      padding: EdgeInsetsDirectional.only(
+        start: theme.indicatorLeading,
+        end: theme.indicatorTrailing,
+      ),
+      decoration: BoxDecoration(
+        color: useLocalIndicator && isSelected
+            ? theme.activeIndicatorColorResolved(m3e.colorScheme)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: content,
+    );
+    return Align(alignment: AlignmentDirectional.centerStart, child: pill);
   }
 
   Widget _buildCollapsedContent({
     required M3EThemeData m3e,
     required M3ENavigationRailTheme theme,
-    required Color fg,
+    required Color labelFg,
     required Widget scaledIcon,
   }) {
     final bool showLabel =
@@ -212,29 +212,35 @@ class M3ERailItemButton extends StatelessWidget {
         (isSelected &&
             labelBehavior != M3ENavigationRailLabelBehavior.alwaysHide);
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         KeyedSubtree(
           key: indicatorKey,
-          child: M3EIconButton(
-            icon: scaledIcon,
-            width: M3EIconButtonWidth.wide,
-            badgeValue: badgeCount,
-            onPressed: onPressed,
-            suppressInk: true,
-            haptic: haptic,
-            variant: useLocalIndicator && isSelected
-                ? M3EIconButtonVariant.tonal
-                : M3EIconButtonVariant.standard,
+          child: SizedBox(
+            width: 56,
+            height: 32,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: useLocalIndicator && isSelected
+                    ? theme.activeIndicatorColorResolved(
+                        M3ETheme.of(context).colorScheme,
+                      )
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Center(child: scaledIcon),
+            ),
           ),
         ),
         if (showLabel)
-          Flexible(
+          Padding(
+            padding: EdgeInsets.only(top: theme.iconLabelGap),
             child: Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               semanticsLabel: semanticLabel ?? label,
-              style: m3e.typeScale.labelMedium.copyWith(color: fg),
+              style: m3e.typeScale.labelMedium.copyWith(color: labelFg),
             ),
           ),
       ],

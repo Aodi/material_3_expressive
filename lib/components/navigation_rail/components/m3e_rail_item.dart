@@ -68,10 +68,12 @@ class M3ERailItem extends StatelessWidget {
 
     Widget core;
     if (!expanded) {
-      // Collapsed: left-aligned icon-only button with 48x48 tap target.
+      // Collapsed destinations own the full rail width; the visible 56x32
+      // active indicator is centered by M3ERailItemButton.
       core = SizedBox(
+        width: double.infinity,
         height: height,
-        child: Align(alignment: Alignment.centerLeft, child: button),
+        child: button,
       );
     } else {
       core = ConstrainedBox(

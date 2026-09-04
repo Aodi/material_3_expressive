@@ -22,6 +22,10 @@ void main() {
     _m3enavigationrailFabSlotSupportsCustomElevation,
   );
   testWidgets(
+    'M3ENavigationRail uses official collapsed and expanded widths',
+    _m3enavigationrailUsesOfficialWidths,
+  );
+  testWidgets(
     'M3ENavigationRail resting indicator tracks selection while scrolling',
     _m3enavigationrailRestingIndicatorTracksSelectionWhileS,
   );
@@ -150,7 +154,7 @@ Future<void> _m3enavigationrailFabSlotSupportsCustomElevation(
 
   final fabContainer = tester.widget<AnimatedContainer>(
     find.descendant(
-      of: find.byType(M3EFab),
+      of: find.byType(M3EExtendedFab),
       matching: find.byType(AnimatedContainer),
     ),
   );
@@ -158,6 +162,36 @@ Future<void> _m3enavigationrailFabSlotSupportsCustomElevation(
 
   expect(decoration, isA<BoxDecoration>());
   expect((decoration! as BoxDecoration).boxShadow, isEmpty);
+}
+
+Future<void> _m3enavigationrailUsesOfficialWidths(WidgetTester tester) async {
+  Widget rail(M3ENavigationRailType type) {
+    return _host(
+      M3ENavigationRail(
+        type: type,
+        selectedIndex: 0,
+        onDestinationSelected: (_) {},
+        sections: const <M3ENavigationRailSection>[
+          M3ENavigationRailSection(
+            destinations: <M3ENavigationRailDestination>[
+              M3ENavigationRailDestination(
+                icon: Icon(M3EIcons.inbox),
+                label: 'Inbox',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  await tester.pumpWidget(rail(M3ENavigationRailType.collapsed));
+  await tester.pump();
+  expect(tester.getSize(find.byType(M3ENavigationRail)).width, 96);
+
+  await tester.pumpWidget(rail(M3ENavigationRailType.alwaysExpand));
+  await tester.pump();
+  expect(tester.getSize(find.byType(M3ENavigationRail)).width, 220);
 }
 
 Future<void> _m3enavigationrailRestingIndicatorTracksSelectionWhileS(

@@ -70,8 +70,8 @@ mixin _M3ENavigationRailChildrenMixin on State<M3ENavigationRail> {
         children.add(
           _destinationPadding(
             theme: theme,
-            start: 16,
-            end: 16,
+            start: M3ENavigationRailLayout.horizontalInset,
+            end: M3ENavigationRailLayout.horizontalInset,
             child: M3ERailItem(
               destination: dest,
               selected: index == widget.selectedIndex,
@@ -95,8 +95,10 @@ mixin _M3ENavigationRailChildrenMixin on State<M3ENavigationRail> {
       for (var i = 0; i < all.length; i++)
         _destinationPadding(
           theme: theme,
-          start: M3ENavigationRailLayout.horizontalInset,
-          end: M3ENavigationRailLayout.horizontalInset,
+          // Vertical destinations span the full compact rail width.  The
+          // active indicator itself is centered inside the item.
+          start: 0,
+          end: 0,
           child: M3ERailItem(
             destination: all[i],
             selected: i == widget.selectedIndex,

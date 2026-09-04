@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../foundations/foundations.dart';
 import '../extended_fabs/m3e_extended_fabs.dart';
-import '../floating_action_buttons/m3e_floating_action_buttons.dart';
 import '../icon_buttons/m3e_icon_buttons.dart';
 import 'components/m3e_nav_selection_indicator.dart';
 import 'components/m3e_rail_item.dart';
@@ -384,26 +383,42 @@ class _M3ENavigationRailState extends State<M3ENavigationRail>
       return null;
     }
     final isExpanded = _isExpanded;
+    final Widget fabWidget = isExpanded
+        ? M3EExtendedFab(
+            label: fab.label,
+            icon: fab.icon,
+            onPressed: fab.onPressed,
+            extended: true,
+            color: fab.color,
+            elevation: fab.elevation,
+            hoverElevation: fab.hoverElevation,
+          )
+        : M3EExtendedFab(
+            icon: fab.icon,
+            label: fab.label,
+            onPressed: fab.onPressed,
+            extended: false,
+            color: fab.color,
+            elevation: fab.elevation,
+            hoverElevation: fab.hoverElevation,
+          );
+
+    // Keep the slot's tooltip and semantic label available in both states.
+    // M3EExtendedFab supplies its own label semantics, while this wrapper
+    // preserves the explicit slot override and collapsed hover affordance.
+    final Widget labelledFab = Semantics(
+      container: true,
+      label: fab.semanticLabel ?? fab.label,
+      child: Tooltip(
+        message: fab.tooltip ?? fab.label,
+        preferBelow: false,
+        child: fabWidget,
+      ),
+    );
+
     return Padding(
       padding: M3ENavigationRailLayout.sectionPadding,
-      child: isExpanded
-          ? M3EExtendedFab(
-              label: fab.label,
-              icon: fab.icon,
-              onPressed: fab.onPressed,
-              color: fab.color,
-              elevation: fab.elevation,
-              hoverElevation: fab.hoverElevation,
-            )
-          : M3EFab(
-              icon: fab.icon,
-              onPressed: fab.onPressed,
-              tooltip: fab.tooltip,
-              color: fab.color,
-              size: fab.size,
-              elevation: fab.elevation,
-              hoverElevation: fab.hoverElevation,
-            ),
+      child: labelledFab,
     );
   }
 
