@@ -222,9 +222,7 @@ class M3ERailItemButton extends StatelessWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: useLocalIndicator && isSelected
-                    ? theme.activeIndicatorColorResolved(
-                        M3ETheme.of(context).colorScheme,
-                      )
+                    ? theme.activeIndicatorColorResolved(m3e.colorScheme)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(16),
               ),
