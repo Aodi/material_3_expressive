@@ -6,7 +6,7 @@ mixin _M3ENavigationRailChildrenMixin on State<M3ENavigationRail> {
   bool get _traveling;
   List<GlobalKey> get _destinationKeys;
   Widget _buildMenuButton(BuildContext context);
-  Widget? _buildFab(BuildContext context);
+  Widget? _buildFab(BuildContext context, {required bool showLabel});
   Widget? _buildTrailing(BuildContext context) {
     final tr = widget.trailing;
     if (tr == null) {
@@ -32,7 +32,10 @@ mixin _M3ENavigationRailChildrenMixin on State<M3ENavigationRail> {
       const SizedBox(height: M3ENavigationRailLayout.topGap),
       _buildMenuButton(context),
     ];
-    final fabWidget = _buildFab(context);
+    // Wait until the animated rail is wide enough before revealing the FAB
+    // label. This keeps the icon fixed and prevents extended content from
+    // overflowing compact/intermediate rail constraints.
+    final fabWidget = _buildFab(context, showLabel: showLabels);
     if (fabWidget != null) {
       children.add(fabWidget);
     }

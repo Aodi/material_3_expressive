@@ -30,6 +30,10 @@ void main() {
     _m3enavigationrailKeepsToggleAnchored,
   );
   testWidgets(
+    'M3ENavigationRail keeps FAB anchored while width changes',
+    _m3enavigationrailKeepsFabAnchored,
+  );
+  testWidgets(
     'M3ENavigationRail resting indicator tracks selection while scrolling',
     _m3enavigationrailRestingIndicatorTracksSelectionWhileS,
   );
@@ -234,6 +238,51 @@ Future<void> _m3enavigationrailKeepsToggleAnchored(WidgetTester tester) async {
 
   await tester.pump(const Duration(milliseconds: 300));
   expect(tester.getTopLeft(toggle).dx, closeTo(collapsedLeft, 0.1));
+  await tester.pump(const Duration(milliseconds: 40));
+}
+
+Future<void> _m3enavigationrailKeepsFabAnchored(WidgetTester tester) async {
+  await tester.pumpWidget(
+    _host(
+      M3ENavigationRail(
+        type: M3ENavigationRailType.collapsed,
+        selectedIndex: 0,
+        onDestinationSelected: (_) {},
+        fab: const M3ENavigationRailFabSlot(
+          icon: Icon(M3EIcons.add),
+          label: 'Create',
+        ),
+        sections: <M3ENavigationRailSection>[
+          M3ENavigationRailSection(
+            destinations: <M3ENavigationRailDestination>[
+              M3ENavigationRailDestination(
+                icon: Icon(M3EIcons.inbox),
+                label: 'Inbox',
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+  await tester.pump();
+
+  final Finder fab = find.byType(M3EExtendedFab);
+  final double collapsedLeft = tester.getTopLeft(fab).dx;
+
+  final Finder toggle = find.descendant(
+    of: find.byType(M3ENavigationRail),
+    matching: find.byType(M3EIconButton),
+  );
+  await tester.tap(toggle);
+  await tester.pump();
+
+  // The rail is still near its collapsed width on this first frame. The FAB
+  // must remain at the same leading inset while its label begins expanding.
+  expect(tester.getTopLeft(fab).dx, closeTo(collapsedLeft, 0.1));
+
+  await tester.pump(const Duration(milliseconds: 300));
+  expect(tester.getTopLeft(fab).dx, closeTo(collapsedLeft, 0.1));
   await tester.pump(const Duration(milliseconds: 40));
 }
 

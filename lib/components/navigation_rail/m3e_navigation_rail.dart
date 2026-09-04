@@ -377,30 +377,20 @@ class _M3ENavigationRailState extends State<M3ENavigationRail>
   }
 
   @override
-  Widget? _buildFab(BuildContext context) {
+  Widget? _buildFab(BuildContext context, {required bool showLabel}) {
     final fab = widget.fab;
     if (fab == null) {
       return null;
     }
-    final isExpanded = _isExpanded;
-    final Widget fabWidget = isExpanded
-        ? M3EExtendedFab(
-            label: fab.label,
-            icon: fab.icon,
-            onPressed: fab.onPressed,
-            color: fab.color,
-            elevation: fab.elevation,
-            hoverElevation: fab.hoverElevation,
-          )
-        : M3EExtendedFab(
-            icon: fab.icon,
-            label: fab.label,
-            onPressed: fab.onPressed,
-            extended: false,
-            color: fab.color,
-            elevation: fab.elevation,
-            hoverElevation: fab.hoverElevation,
-          );
+    final Widget fabWidget = M3EExtendedFab(
+      icon: fab.icon,
+      label: fab.label,
+      onPressed: fab.onPressed,
+      extended: showLabel,
+      color: fab.color,
+      elevation: fab.elevation,
+      hoverElevation: fab.hoverElevation,
+    );
 
     // Keep the slot's tooltip and semantic label available in both states.
     // M3EExtendedFab supplies its own label semantics, while this wrapper
