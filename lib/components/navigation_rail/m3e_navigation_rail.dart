@@ -355,9 +355,8 @@ class _M3ENavigationRailState extends State<M3ENavigationRail>
 
   @override
   Widget _buildMenuButton(
-    BuildContext context, {
-    required Alignment alignment,
-  }) {
+    BuildContext context,
+  ) {
     if (!_canToggle) {
       return const SizedBox.shrink();
     }
@@ -372,7 +371,13 @@ class _M3ENavigationRailState extends State<M3ENavigationRail>
 
     return Padding(
       padding: M3ENavigationRailLayout.sectionPadding,
-      child: Align(alignment: alignment, child: button),
+      // M3E keeps the rail chrome anchored to the same leading inset while
+      // the rail width morphs. Using a state-dependent alignment causes the
+      // toggle to jump to the collapsed center during the first frame.
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: button,
+      ),
     );
   }
 

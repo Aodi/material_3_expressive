@@ -5,7 +5,7 @@ mixin _M3ENavigationRailChildrenMixin on State<M3ENavigationRail> {
   bool get _suppressInk;
   bool get _traveling;
   List<GlobalKey> get _destinationKeys;
-  Widget _buildMenuButton(BuildContext context, {required Alignment alignment});
+  Widget _buildMenuButton(BuildContext context);
   Widget? _buildFab(BuildContext context);
   Widget? _buildTrailing(BuildContext context) {
     final tr = widget.trailing;
@@ -30,10 +30,7 @@ mixin _M3ENavigationRailChildrenMixin on State<M3ENavigationRail> {
     final isExpanded = _isExpanded;
     final children = <Widget>[
       const SizedBox(height: M3ENavigationRailLayout.topGap),
-      _buildMenuButton(
-        context,
-        alignment: isExpanded ? Alignment.centerLeft : Alignment.center,
-      ),
+      _buildMenuButton(context),
     ];
     final fabWidget = _buildFab(context);
     if (fabWidget != null) {

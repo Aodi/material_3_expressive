@@ -26,6 +26,10 @@ void main() {
     _m3enavigationrailUsesOfficialWidths,
   );
   testWidgets(
+    'M3ENavigationRail keeps toggle anchored while width changes',
+    _m3enavigationrailKeepsToggleAnchored,
+  );
+  testWidgets(
     'M3ENavigationRail resting indicator tracks selection while scrolling',
     _m3enavigationrailRestingIndicatorTracksSelectionWhileS,
   );
@@ -194,6 +198,42 @@ Future<void> _m3enavigationrailUsesOfficialWidths(WidgetTester tester) async {
   await tester.pumpWidget(rail(M3ENavigationRailType.alwaysExpand));
   await tester.pump();
   expect(tester.getSize(find.byType(M3ENavigationRail)).width, 220);
+}
+
+Future<void> _m3enavigationrailKeepsToggleAnchored(WidgetTester tester) async {
+  await tester.pumpWidget(
+    _host(
+      M3ENavigationRail(
+        type: M3ENavigationRailType.collapsed,
+        selectedIndex: 0,
+        onDestinationSelected: (_) {},
+        sections: const <M3ENavigationRailSection>[
+          M3ENavigationRailSection(
+            destinations: <M3ENavigationRailDestination>[
+              M3ENavigationRailDestination(
+                icon: Icon(M3EIcons.inbox),
+                label: 'Inbox',
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+  await tester.pump();
+
+  final Finder toggle = find.descendant(
+    of: find.byType(M3ENavigationRail),
+    matching: find.byType(M3EIconButton),
+  );
+  final double collapsedLeft = tester.getTopLeft(toggle).dx;
+
+  await tester.tap(toggle);
+  await tester.pump();
+  expect(tester.getTopLeft(toggle).dx, closeTo(collapsedLeft, 0.1));
+
+  await tester.pump(const Duration(milliseconds: 300));
+  expect(tester.getTopLeft(toggle).dx, closeTo(collapsedLeft, 0.1));
 }
 
 Future<void> _m3enavigationrailRestingIndicatorTracksSelectionWhileS(
