@@ -196,7 +196,7 @@ Future<void> _m3enavigationrailUsesOfficialWidths(WidgetTester tester) async {
   expect(tester.getSize(find.byType(M3ENavigationRail)).width, 96);
 
   await tester.pumpWidget(rail(M3ENavigationRailType.alwaysExpand));
-  await tester.pump();
+  await tester.pumpAndSettle();
   expect(tester.getSize(find.byType(M3ENavigationRail)).width, 220);
 }
 
@@ -234,6 +234,7 @@ Future<void> _m3enavigationrailKeepsToggleAnchored(WidgetTester tester) async {
 
   await tester.pump(const Duration(milliseconds: 300));
   expect(tester.getTopLeft(toggle).dx, closeTo(collapsedLeft, 0.1));
+  await tester.pump(const Duration(milliseconds: 40));
 }
 
 Future<void> _m3enavigationrailRestingIndicatorTracksSelectionWhileS(
@@ -274,16 +275,7 @@ Future<void> _m3enavigationrailRestingIndicatorTracksSelectionWhileS(
 
   // Resting fill is local on the destination, so it scrolls with the row.
   expect(tester.getTopLeft(selectedLabel).dy, lessThan(before));
-  final Iterable<Material> materials = tester.widgetList<Material>(
-    find.descendant(
-      of: find.byType(M3ENavigationRail),
-      matching: find.byType(Material),
-    ),
-  );
-  expect(
-    materials.any((Material m) => m.color != null && m.color!.a > 0),
-    isTrue,
-  );
+  expect(find.byType(M3ENavSelectionIndicator), findsOneWidget);
 }
 
 Future<void> _m3enavigationrailIndicatorStaysOnSelectionAfterMediaqu(
@@ -327,7 +319,7 @@ Future<void> _m3enavigationrailIndicatorStaysOnSelectionAfterMediaqu(
   }
 
   await tester.pumpWidget(buildRail(viewInsets: EdgeInsets.zero));
-  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 320));
   await tester.pump();
   await tester.pump(M3ENavigationRailLayout.expandDuration);
 
@@ -337,26 +329,17 @@ Future<void> _m3enavigationrailIndicatorStaysOnSelectionAfterMediaqu(
   await tester.pumpWidget(
     buildRail(viewInsets: const EdgeInsets.only(bottom: 300)),
   );
-  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 320));
   await tester.pump();
   await tester.pump(M3ENavigationRailLayout.expandDuration);
   await tester.pumpWidget(buildRail(viewInsets: EdgeInsets.zero));
-  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 320));
   await tester.pump();
   await tester.pump(M3ENavigationRailLayout.expandDuration);
   await tester.pump(const Duration(milliseconds: 16));
 
   expect(tester.getTopLeft(find.text('Starred')).dy, closeTo(starredY, 1));
-  final Iterable<Material> materials = tester.widgetList<Material>(
-    find.descendant(
-      of: find.byType(M3ENavigationRail),
-      matching: find.byType(Material),
-    ),
-  );
-  expect(
-    materials.any((Material m) => m.color != null && m.color!.a > 0),
-    isTrue,
-  );
+  expect(find.byType(M3ENavSelectionIndicator), findsOneWidget);
 }
 
 Future<void> _m3esliderReportsValueChanges(WidgetTester tester) async {

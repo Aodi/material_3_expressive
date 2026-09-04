@@ -66,21 +66,14 @@ class M3ERailItem extends StatelessWidget {
       indicatorKey: indicatorKey,
     );
 
-    Widget core;
-    if (!expanded) {
-      // Collapsed destinations own the full rail width; the visible 56x32
-      // active indicator is centered by M3ERailItemButton.
-      core = SizedBox(
-        width: double.infinity,
-        height: height,
-        child: button,
-      );
-    } else {
-      core = ConstrainedBox(
-        constraints: BoxConstraints(minHeight: height),
-        child: Row(children: [Expanded(child: button)]),
-      );
-    }
+    // Keep one stable full-width target in both states. Replacing this with a
+    // Row/Expanded tree during collapse causes a transient center layout
+    // before the rail width animation settles, which is visible as a jump.
+    final core = SizedBox(
+      width: double.infinity,
+      height: height,
+      child: button,
+    );
 
     return Semantics(selected: selected, button: true, child: core);
   }

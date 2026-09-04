@@ -67,8 +67,10 @@ mixin _M3ENavigationRailChildrenMixin on State<M3ENavigationRail> {
         children.add(
           _destinationPadding(
             theme: theme,
-            start: M3ENavigationRailLayout.horizontalInset,
-            end: M3ENavigationRailLayout.horizontalInset,
+            // The item owns its inset animation so the destination target
+            // remains full-width while the rail morphs.
+            start: 0,
+            end: 0,
             child: M3ERailItem(
               destination: dest,
               selected: index == widget.selectedIndex,

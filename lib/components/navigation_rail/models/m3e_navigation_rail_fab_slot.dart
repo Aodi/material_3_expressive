@@ -4,7 +4,7 @@ import '../../floating_action_buttons/enums/m3e_fab.dart';
 
 /// Configuration for the rail's built-in FAB.
 ///
-/// The rail renders one `M3EExtendedFab` and animates its [extended] state
+/// The rail renders one `M3EExtendedFab` and animates its `extended` state
 /// between collapsed and expanded layouts.
 ///
 /// Consumers provide values (icon, label, onPressed, etc.) instead of a widget.

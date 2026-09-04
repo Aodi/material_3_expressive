@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../foundations/foundations.dart';
 import '../enums/m3e_navigation_rail_enums.dart';
+import '../res/m3e_navigation_rail_layout.dart';
 import 'm3e_nav_icon_scale.dart';
 import 'm3e_rail_badge_view.dart';
 
@@ -114,6 +115,42 @@ class M3ERailItemButton extends StatelessWidget {
             labelFg: labelFg,
             scaledIcon: scaledIcon,
           );
+    // Keep the same render subtree while the rail changes width. AnimatedAlign
+    // prevents the collapsed target from snapping to center on the first
+    // frame, while AnimatedSize reveals/hides the label with the rail motion.
+    final animatedContent = LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        // Do not apply the 20dp expanded inset until the rail has enough
+        // width for the horizontal row. During the first expansion frames,
+        // applying it would leave only 24dp for the row and trigger overflow.
+        final bool applyExpandedInset = expanded && constraints.maxWidth >= 180;
+        return AnimatedPadding(
+          duration: M3ENavigationRailLayout.expandDuration,
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsetsDirectional.only(
+            start: applyExpandedInset
+                ? M3ENavigationRailLayout.horizontalInset
+                : 0,
+            end: applyExpandedInset
+                ? M3ENavigationRailLayout.horizontalInset
+                : 0,
+          ),
+          child: AnimatedAlign(
+            duration: M3ENavigationRailLayout.expandDuration,
+            curve: Curves.easeOutCubic,
+            alignment: expanded ? Alignment.centerLeft : Alignment.center,
+            child: AnimatedSize(
+              duration: M3ENavigationRailLayout.expandDuration,
+              curve: Curves.easeOutCubic,
+              alignment: expanded
+                  ? AlignmentDirectional.centerStart
+                  : AlignmentDirectional.center,
+              child: content,
+            ),
+          ),
+        );
+      },
+    );
     final material = Material(
       type: MaterialType.transparency,
       child: InkWell(
@@ -127,12 +164,9 @@ class M3ERailItemButton extends StatelessWidget {
         overlayColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
         child: Padding(
           padding: EdgeInsets.zero,
-          child: Align(
-            alignment: expanded ? Alignment.centerLeft : Alignment.center,
-            child: IconTheme.merge(
-              data: IconThemeData(color: iconFg, size: theme.iconSize),
-              child: content,
-            ),
+          child: IconTheme.merge(
+            data: IconThemeData(color: iconFg, size: theme.iconSize),
+            child: animatedContent,
           ),
         ),
       ),
@@ -166,7 +200,7 @@ class M3ERailItemButton extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         scaledIcon,
-        SizedBox(width: theme.iconLabelGap),
+        Flexible(child: SizedBox(width: theme.iconLabelGap)),
         Flexible(
           child: Text(
             label,
@@ -176,10 +210,11 @@ class M3ERailItemButton extends StatelessWidget {
             style: m3e.typeScale.labelLarge.copyWith(color: labelFg),
           ),
         ),
-        Padding(
-          padding: EdgeInsets.only(left: theme.iconLabelGap),
-          child: M3ERailBadge(count: badgeCount),
-        ),
+        if (badgeCount != null)
+          Padding(
+            padding: EdgeInsets.only(left: theme.iconLabelGap),
+            child: M3ERailBadge(count: badgeCount),
+          ),
       ],
     );
     final pill = Container(
