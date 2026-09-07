@@ -153,12 +153,15 @@ class _PreviewSection extends StatelessWidget {
                 Expanded(
                   child: Text('Preview', style: theme.typeScale.titleMedium),
                 ),
-                M3EIconButton(
-                  icon: Icon(
-                    pinned ? M3EIcons.push_pin : M3EIcons.push_pin_outlined,
+                // Pin is chrome — keep it out of the demo Tab sequence.
+                ExcludeFocus(
+                  child: M3EIconButton(
+                    icon: Icon(
+                      pinned ? M3EIcons.push_pin : M3EIcons.push_pin_outlined,
+                    ),
+                    tooltip: pinned ? 'Unpin preview' : 'Pin preview',
+                    onPressed: onTogglePin,
                   ),
-                  tooltip: pinned ? 'Unpin preview' : 'Pin preview',
-                  onPressed: onTogglePin,
                 ),
               ],
             ),

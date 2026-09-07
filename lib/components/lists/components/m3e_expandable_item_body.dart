@@ -162,6 +162,7 @@ extension _M3EExpandableItemInteraction on _M3EExpandableItemState {
     String? semanticHint,
     bool? isExpanded,
     String? tooltip,
+    FocusNode? focusNode,
   }) {
     var result = child;
     if (tooltip != null) {
@@ -194,6 +195,7 @@ extension _M3EExpandableItemInteraction on _M3EExpandableItemState {
       isHeader: isHeader,
       isIcon: isIcon,
       onTap: onTap,
+      focusNode: focusNode,
       child: semantics,
     );
   }
@@ -205,7 +207,10 @@ extension _M3EExpandableItemInteraction on _M3EExpandableItemState {
   }) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onTap: onTap,
+      onTap: () {
+        M3EFocusInteraction.instance.notePointerInteraction();
+        onTap();
+      },
       onTapDown: isHeader ? (_) => _handleTapDown() : null,
       onTapUp: isHeader ? (_) => _handleTapUp() : null,
       onTapCancel: isHeader ? () => _handleTapCancel() : null,
@@ -219,6 +224,7 @@ extension _M3EExpandableItemInteraction on _M3EExpandableItemState {
     required bool isIcon,
     required VoidCallback onTap,
     required Widget child,
+    FocusNode? focusNode,
   }) {
     return InkWell(
       customBorder: isIcon ? const CircleBorder() : null,
@@ -226,9 +232,21 @@ extension _M3EExpandableItemInteraction on _M3EExpandableItemState {
       highlightColor: d.highlightColor,
       splashFactory: d.splashFactory,
       enableFeedback: d.enableFeedback,
-      onTap: onTap,
+      onTap: () {
+        M3EFocusInteraction.instance.notePointerInteraction();
+        onTap();
+      },
+      focusNode: focusNode,
+      onFocusChange: focusNode == null
+          ? null
+          : (_) => _handleToggleFocusChanged(),
       onHover: isHeader ? _handleHoverChanged : null,
-      onTapDown: isHeader ? (_) => _handleTapDown() : null,
+      onTapDown: (_) {
+        M3EFocusInteraction.instance.notePointerInteraction();
+        if (isHeader) {
+          _handleTapDown();
+        }
+      },
       onTapUp: isHeader ? (_) => _handleTapUp() : null,
       onTapCancel: isHeader ? () => _handleTapCancel() : null,
       child: child,

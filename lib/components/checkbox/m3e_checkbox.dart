@@ -153,30 +153,41 @@ class _M3ECheckboxState extends State<M3ECheckbox>
         autofocus: widget.autofocus,
         semanticLabel: widget.semanticLabel,
         builder: (BuildContext context, M3EInteractionState state) {
-          final Widget control = SizedBox(
-            width: hitSize,
-            height: hitSize,
-            child: Stack(
-              alignment: Alignment.center,
-              children: <Widget>[
-                _buildStateLayer(checkboxTheme, scheme, state, active, hitSize),
-                AnimatedBuilder(
-                  animation: _scaleController,
-                  builder: (BuildContext context, Widget? child) {
-                    return Transform.scale(
-                      scale: _scaleController.value,
-                      child: child,
-                    );
-                  },
-                  child: _buildBox(
+          // Ring hugs the circular state layer, which is the outer shape.
+          final Widget control = M3EFocusRing(
+            focused: state.focused,
+            radius: BorderRadius.circular(hitSize / 2),
+            child: SizedBox(
+              width: hitSize,
+              height: hitSize,
+              child: Stack(
+                alignment: Alignment.center,
+                children: <Widget>[
+                  _buildStateLayer(
                     checkboxTheme,
                     scheme,
-                    active: active,
-                    boxSize: boxSize,
-                    sizeScale: sizeScale,
+                    state,
+                    active,
+                    hitSize,
                   ),
-                ),
-              ],
+                  AnimatedBuilder(
+                    animation: _scaleController,
+                    builder: (BuildContext context, Widget? child) {
+                      return Transform.scale(
+                        scale: _scaleController.value,
+                        child: child,
+                      );
+                    },
+                    child: _buildBox(
+                      checkboxTheme,
+                      scheme,
+                      active: active,
+                      boxSize: boxSize,
+                      sizeScale: sizeScale,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
 

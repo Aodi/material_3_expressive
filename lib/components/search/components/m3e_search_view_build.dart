@@ -77,37 +77,44 @@ extension _M3ESearchViewContentBuild on _M3ESearchViewContentState {
               color: styles.background,
               surfaceTintColor: styles.surfaceTint,
               elevation: styles.elevation,
-              child: OverflowBox(
-                alignment: Alignment.topLeft,
-                maxWidth: math.min(widget.viewMaxWidth, _screenSize!.width),
-                minWidth: 0,
-                fit: OverflowBoxFit.deferToChild,
-                child: FadeTransition(
-                  opacity: _viewIconsFadeCurve,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Padding(
-                        padding: EdgeInsets.only(top: widget.topPadding),
-                        child: SafeArea(
-                          top: false,
-                          bottom: false,
-                          child: widget.showFullScreenView
-                              ? Padding(
-                                  padding: styles.fullScreenHeaderPadding,
-                                  child: headerBar,
-                                )
-                              : headerBar,
+              child: CallbackShortcuts(
+                bindings: <ShortcutActivator, VoidCallback>{
+                  const SingleActivator(LogicalKeyboardKey.escape): () {
+                    Navigator.of(context).maybePop();
+                  },
+                },
+                child: OverflowBox(
+                  alignment: Alignment.topLeft,
+                  maxWidth: math.min(widget.viewMaxWidth, _screenSize!.width),
+                  minWidth: 0,
+                  fit: OverflowBoxFit.deferToChild,
+                  child: FadeTransition(
+                    opacity: _viewIconsFadeCurve,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        Padding(
+                          padding: EdgeInsets.only(top: widget.topPadding),
+                          child: SafeArea(
+                            top: false,
+                            bottom: false,
+                            child: widget.showFullScreenView
+                                ? Padding(
+                                    padding: styles.fullScreenHeaderPadding,
+                                    child: headerBar,
+                                  )
+                                : headerBar,
+                          ),
                         ),
-                      ),
-                      if (showBody &&
-                          (!styles.shrinkWrap ||
-                              minHeight > 0 ||
-                              widget.showFullScreenView ||
-                              _suggestions.isNotEmpty))
-                        ..._buildBodySlivers(styles),
-                    ],
+                        if (showBody &&
+                            (!styles.shrinkWrap ||
+                                minHeight > 0 ||
+                                widget.showFullScreenView ||
+                                _suggestions.isNotEmpty))
+                          ..._buildBodySlivers(styles),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -162,6 +169,7 @@ extension _M3ESearchViewContentBuild on _M3ESearchViewContentState {
         trailing: widget.viewTrailing ?? defaultTrailing,
         hintText: widget.viewHintText,
         controller: widget.searchController,
+        onEscape: () => Navigator.of(context).maybePop(),
         onChanged: (String value) {
           widget.viewOnChanged?.call(value);
           _updateSuggestions();
@@ -188,6 +196,7 @@ extension _M3ESearchViewContentBuild on _M3ESearchViewContentState {
       textStyle: WidgetStatePropertyAll<TextStyle>(styles.textStyle),
       hintStyle: WidgetStatePropertyAll<TextStyle>(styles.hintStyle),
       controller: widget.searchController,
+      onEscape: () => Navigator.of(context).maybePop(),
       onChanged: (String value) {
         widget.viewOnChanged?.call(value);
         _updateSuggestions();

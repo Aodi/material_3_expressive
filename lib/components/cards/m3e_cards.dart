@@ -179,6 +179,15 @@ class M3ECard extends StatelessWidget {
           : decoratedChild,
     );
 
-    return surface;
+    if (!_isInteractive) {
+      return surface;
+    }
+
+    // Keyboard focus ring follows the card's current outer radius.
+    return M3EFocusRing(
+      focused: state.focused,
+      radius: resolvedBorderRadius,
+      child: surface,
+    );
   }
 }

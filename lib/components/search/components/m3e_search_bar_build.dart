@@ -44,6 +44,7 @@ extension _M3ESearchBarContentBuild on _M3ESearchBarState {
             widget.onTapOutside ?? M3EFocus.tapOutsideHandler(_focusNode),
         onChanged: widget.onChanged,
         onSubmitted: widget.onSubmitted,
+        onEscape: widget.onEscape,
         textStyle: styles.textStyle,
         hintStyle: styles.hintStyle,
         cursorColor: barTheme.cursorColor(scheme),
@@ -75,34 +76,68 @@ extension _M3ESearchBarContentBuild on _M3ESearchBarState {
     required Widget input,
     required TextStyle idleHintStyle,
   }) {
-    final Widget content = _groupsIdleContent(textDirection)
-        ? _buildIdleGroupedContent(
-            textDirection: textDirection,
-            barTheme: barTheme,
-            scheme: scheme,
-            actionIconSize: actionIconSize,
-            idleHintStyle: idleHintStyle,
-          )
-        : _buildEditingRow(
-            textDirection: textDirection,
-            leading: _buildLeading(
-              barTheme: barTheme,
-              scheme: scheme,
-              actionSlotWidth: actionSlotWidth,
-              actionIconSize: actionIconSize,
-              compact: false,
-            ),
-            trailing: _buildTrailing(
-              barTheme: barTheme,
-              scheme: scheme,
-              actionSlotWidth: actionSlotWidth,
-              actionIconSize: actionIconSize,
-              compact: false,
-            ),
-            input: input,
-          );
+    final Widget? leading = _buildLeading(
+      barTheme: barTheme,
+      scheme: scheme,
+      actionSlotWidth: actionSlotWidth,
+      actionIconSize: actionIconSize,
+      compact: false,
+    );
+    final List<Widget>? trailing = _buildTrailing(
+      barTheme: barTheme,
+      scheme: scheme,
+      actionSlotWidth: actionSlotWidth,
+      actionIconSize: actionIconSize,
+      compact: false,
+    );
 
-    return Opacity(
+    // Keep [editingRow]/input) mounted in a stable slot. Swapping idle chrome for
+    // the editing row on focus remounts [EditableText], drops its text-input
+    // client, and can make Tab appear to skip the bar.
+    final bool idleGrouped = _groupsIdleContent(textDirection);
+    final Widget editingRow = _buildEditingRow(
+      textDirection: textDirection,
+      // While idle chrome covers the row, keep actions out of Tab order so the
+      // only stop is the search field.
+      leading: leading == null
+          ? null
+          : (idleGrouped ? ExcludeFocus(child: leading) : leading),
+      trailing: trailing == null
+          ? null
+          : (idleGrouped
+                ? trailing
+                      .map((Widget action) => ExcludeFocus(child: action))
+                      .toList()
+                : trailing),
+      input: input,
+    );
+
+    final Widget content = Stack(
+      fit: StackFit.passthrough,
+      alignment: Alignment.center,
+      children: <Widget>[
+        editingRow,
+        if (idleGrouped)
+          Positioned.fill(
+            child: ExcludeFocus(
+              child: IgnorePointer(
+                child: ColoredBox(
+                  color: styles.background,
+                  child: _buildIdleGroupedContent(
+                    textDirection: textDirection,
+                    barTheme: barTheme,
+                    scheme: scheme,
+                    actionIconSize: actionIconSize,
+                    idleHintStyle: idleHintStyle,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    final Widget bar = Opacity(
       opacity: widget.enabled ? 1 : M3ESearchConstants.disabledOpacity,
       child: Material(
         elevation: styles.elevation,
@@ -117,6 +152,7 @@ extension _M3ESearchBarContentBuild on _M3ESearchBarState {
             type: MaterialType.transparency,
             child: InkWell(
               onTap: _handleTap,
+              canRequestFocus: false,
               overlayColor: styles.overlay == null
                   ? null
                   : WidgetStatePropertyAll<Color?>(styles.overlay),
@@ -135,6 +171,27 @@ extension _M3ESearchBarContentBuild on _M3ESearchBarState {
         ),
       ),
     );
+
+    // Ring hugs the bar itself, so it tracks the expand-on-focus inset.
+    return M3EFocusRing(
+      focused: _showFocusRing,
+      radius: _barFocusRingRadius(styles.shape, barTheme),
+      child: bar,
+    );
+  }
+
+  /// Ring radius for the bar shape; stadium falls back to the pill radius.
+  BorderRadius _barFocusRingRadius(
+    OutlinedBorder shape,
+    M3ESearchBarTheme barTheme,
+  ) {
+    if (shape is RoundedRectangleBorder) {
+      return shape.borderRadius.resolve(Directionality.maybeOf(context));
+    }
+    final double height = barTheme
+        .constraints(override: widget.constraints)
+        .minHeight;
+    return BorderRadius.circular(height / 2);
   }
 
   Widget _buildIdleGroupedContent({

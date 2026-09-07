@@ -124,8 +124,9 @@ class _M3ESwitchState extends State<M3ESwitch> with TickerProviderStateMixin {
           autofocus: widget.autofocus,
           semanticLabel: widget.semanticLabel,
           builder: (BuildContext context, M3EInteractionState state) {
+            final trackRadius = M3EShapes.resolve(switchTheme.trackHeight / 2);
             // Track color: linear ~150ms crossfade (spec), not a spring.
-            return AnimatedContainer(
+            final track = AnimatedContainer(
               duration: M3EMotion.short3,
               width: switchTheme.trackWidth,
               height: switchTheme.trackHeight,
@@ -136,7 +137,7 @@ class _M3ESwitchState extends State<M3ESwitch> with TickerProviderStateMixin {
                   enabled: _enabled,
                   value: widget.value,
                 ),
-                borderRadius: M3EShapes.resolve(switchTheme.trackHeight / 2),
+                borderRadius: trackRadius,
                 border: widget.value
                     ? null
                     : Border.all(
@@ -156,6 +157,13 @@ class _M3ESwitchState extends State<M3ESwitch> with TickerProviderStateMixin {
                   return _buildThumb(switchTheme, scheme, state);
                 },
               ),
+            );
+
+            // Keyboard focus ring hugs the outer track shape.
+            return M3EFocusRing(
+              focused: state.focused,
+              radius: trackRadius,
+              child: track,
             );
           },
         );

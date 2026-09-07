@@ -1,17 +1,59 @@
 ## 1.1.2
 
+### Added
+
+* Shared keyboard focus rings via foundations `M3EFocusRing` and
+  `M3EFocusRingTheme` on `M3EThemeData.focusRingTheme` (overridable `color`,
+  `width`, `gap`). Rings follow each control’s outer shape radius and show for
+  keyboard focus (`FocusHighlightMode.traditional`).
+* Focus rings on actionable hosts and subcontrols including buttons, icon /
+  toggle / split buttons, cards and list items, switches, dropdown fields,
+  sliders (thumb outline tokens), navigation bar / rail / drawer destinations,
+  text fields and search bars (outset ring **plus** existing focused border),
+  checkboxes, radios, chips, FABs / extended FABs / FAB menu items, segmented
+  buttons, tabs, menus, and expandable list headers.
+* Example **Focus rings** playground (View tab) with Tab-order samples and a
+  tertiary color override toggle.
+
 ### Fixed
 
+* Focus rings: only the primary-focused control paints a ring; rings clear on
+  pointer interaction and resume after keyboard Tab/arrow navigation via
+  `M3EFocusInteraction`. Pointer down requests focus so Tab continues from the
+  last clicked control. Dual-chrome hosts show the ring without a focus fill
+  overlay during keyboard nav. Expanded menus/dropdowns trap Tab within the
+  open surface; dropdown field chips and clear are Tab stops with focus rings.
+  Keyboard focus scrolls
+  into view inside scrollables when rings are allowed.
+* `M3EFocusRing` keeps a stable `Stack` tree when toggling `focused` so
+  descendants (especially `EditableText`) are not remounted — fixing Tab-focus
+  text fields that showed a ring but could not accept input.
+* Search bar keeps the editing row mounted under idle chrome so Tab reaches the
+  field and typing still works after the ring appears.
+* FAB menu: focus scope skips traversal as a Tab stop, focuses the first item
+  on open, and closed-loops Tab across every menu item.
+* `M3ESearchAnchor.bar` participates in keyboard Tab with a focus ring;
+  Enter/Space opens the search view; Escape closes the open view.
+* Dropdown selected chips and trailing clear are keyboard Tab stops with focus
+  rings (field → chips → clear → open panel items).
+* Escape unfocuses `M3ETextField` / search inputs during keyboard focus; Escape
+  closes open FAB menu, search view, dropdown, and menu overlays.
 * Date picker month/year mode toggle labels ellipsize when horizontal space is
   tight (e.g. during dialog dismiss scale animation), preventing layout
   overflow on narrow widths.
 * Date picker dialog actions use `OverflowBar` (aligned with `material_ui`) so
   cancel/confirm buttons wrap instead of overflowing when width is constrained.
+* `M3EStateLayerOverlay` InkWell no longer steals a second tab stop when nested
+  under `M3ETappable` (`canRequestFocus: false`).
 
 ### Changed
 
 * Bump `material_ui` dependency to `^1.1.1`.
-
+* Button-family focus rings and group/split clearance use
+  `focusRingTheme` / `M3EFocusRing.outsetOf` instead of hardcoded primary
+  constants. `M3EButtonTheme.focusRingWidth` / `focusRingGap` /
+  `focusRingColor` remain for API compatibility; prefer
+  `M3EThemeData.focusRingTheme` for package-wide overrides.
 ## 1.1.1
 
 ### Added

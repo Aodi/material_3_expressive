@@ -41,7 +41,28 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
   void _initFocusAndLoading() {
     _focusNode = widget.focusNode ?? FocusNode();
     _loadingNotifier = ValueNotifier<bool>(false);
-    _listenable = Listenable.merge([_controller, _loadingNotifier]);
+    _focusRingNotifier = ValueNotifier<bool>(
+      M3EFocusRing.shouldShow(_focusNode),
+    );
+    _focusNode.addListener(_syncFieldFocusRing);
+    FocusManager.instance.addHighlightModeListener(
+      _onFocusHighlightModeChanged,
+    );
+    M3EFocusInteraction.instance.addListener(_syncFieldFocusRing);
+    _listenable = Listenable.merge([
+      _controller,
+      _loadingNotifier,
+      _focusRingNotifier,
+    ]);
+  }
+
+  void _onFocusHighlightModeChanged(FocusHighlightMode mode) {
+    _syncFieldFocusRing();
+  }
+
+  /// Keeps the field ring in sync with keyboard focus highlight state.
+  void _syncFieldFocusRing() {
+    _focusRingNotifier.value = M3EFocusRing.shouldShow(_focusNode);
   }
 
   void _listenBackButton() {
@@ -110,10 +131,13 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
     if (oldWidget.focusNode == widget.focusNode) {
       return;
     }
+    _focusNode.removeListener(_syncFieldFocusRing);
     if (oldWidget.focusNode == null) {
       _focusNode.dispose();
     }
     _focusNode = widget.focusNode ?? FocusNode();
+    _focusNode.addListener(_syncFieldFocusRing);
+    _syncFieldFocusRing();
   }
 
   void _syncMotionFromWidget(M3EDropdownMenu<T> oldWidget) {
@@ -175,6 +199,8 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeInOut,
             alignment: Alignment.topCenter,
+            // Let the field's focus ring paint outside the animated bounds.
+            clipBehavior: Clip.none,
             child: CompositedTransformTarget(
               link: _layerLink,
               child: ListenableBuilder(
@@ -184,11 +210,7 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
                     label: widget.fieldStyle.hintText ?? 'Dropdown field',
                     button: true,
                     enabled: widget.enabled,
-                    child: Focus(
-                      focusNode: _focusNode,
-                      canRequestFocus: widget.enabled,
-                      child: _buildField(context, formState),
-                    ),
+                    child: _buildField(context, formState),
                   );
                 },
               ),

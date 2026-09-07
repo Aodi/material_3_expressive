@@ -43,6 +43,7 @@ import '../../components/toggle_button_group/styles/m3e_toggle_button_group_them
 import '../../components/toolbars/styles/m3e_toolbar_theme.dart';
 import '../../components/tooltips/styles/m3e_tooltip_theme.dart';
 import '../color/m3e_color_scheme.dart';
+import '../interaction/m3e_focus_ring_theme.dart';
 import '../tokens/m3e_spacing.dart';
 import '../type/m3e_typography.dart';
 import '../type/m3e_variable_font_config.dart';
@@ -64,6 +65,7 @@ class M3EThemeData {
     this.useMaterial3 = true,
     this.splashColor,
     this.highlightColor,
+    this.focusRingTheme = M3EFocusRingTheme.defaults,
     this.appBarTheme = M3EAppBarTheme.defaults,
     this.badgeTheme = M3EBadgeTheme.defaults,
     this.bottomSheetTheme = M3EBottomSheetTheme.defaults,
@@ -195,6 +197,9 @@ class M3EThemeData {
 
   /// Optional highlight color override for ink.
   final Color? highlightColor;
+
+  /// Shared keyboard focus ring tokens for actionable controls.
+  final M3EFocusRingTheme focusRingTheme;
 
   /// Brightness derived from [colorScheme].
   final Brightness brightness;
@@ -357,6 +362,7 @@ class M3EThemeData {
     bool? useMaterial3,
     Color? splashColor,
     Color? highlightColor,
+    M3EFocusRingTheme? focusRingTheme,
     M3EAppBarTheme? appBarTheme,
     M3EBadgeTheme? badgeTheme,
     M3EBottomSheetTheme? bottomSheetTheme,
@@ -415,6 +421,7 @@ class M3EThemeData {
     useMaterial3: useMaterial3,
     splashColor: splashColor,
     highlightColor: highlightColor,
+    focusRingTheme: focusRingTheme,
     appBarTheme: appBarTheme,
     badgeTheme: badgeTheme,
     bottomSheetTheme: bottomSheetTheme,

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
@@ -75,8 +76,21 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
 
   late List<SingleMotionController> _itemCtrls;
   late List<bool> _itemVisible;
+
+  /// Keyboard focus per item, hoisted out of the clipping pill [Material] so
+  /// the focus ring can be drawn around it.
+  ///
+  /// [ValueNotifier] avoids `setState` on the menu (which rebuilds every item
+  /// and breaks Tab traversal after the first couple of stops).
+  final ValueNotifier<int?> _focusedItemIndex = ValueNotifier<int?>(null);
   late SingleMotionController _fabShapeCtrl;
   final List<Timer> _staggerTimers = <Timer>[];
+  final FocusScopeNode _menuFocusScope = FocusScopeNode(
+    debugLabel: 'M3EFabMenu',
+    // The scope must not be a Tab stop — otherwise Tab oscillates between the
+    // scope node and a single item instead of walking every menu item.
+    skipTraversal: true,
+  );
 
   bool _open = false;
 
@@ -117,6 +131,14 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
       motion: _fabShapeMotion,
       vsync: this,
     );
+    _menuFocusScope.traversalEdgeBehavior = TraversalEdgeBehavior.closedLoop;
+    M3EFocusInteraction.instance.addListener(_onFocusInteractionChanged);
+  }
+
+  void _onFocusInteractionChanged() {
+    if (!M3EFocusInteraction.instance.ringsAllowed) {
+      _focusedItemIndex.value = null;
+    }
   }
 
   @override
@@ -126,6 +148,7 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
       _disposeItemControllers();
       _itemCtrls = _createControllers(widget.items.length);
       _itemVisible = List<bool>.filled(widget.items.length, _open);
+      _focusedItemIndex.value = null;
       if (_open) {
         for (final SingleMotionController c in _itemCtrls) {
           c.value = 1;
@@ -136,9 +159,12 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    M3EFocusInteraction.instance.removeListener(_onFocusInteractionChanged);
     _cancelStagger();
     _disposeItemControllers();
     _fabShapeCtrl.dispose();
+    _menuFocusScope.dispose();
+    _focusedItemIndex.dispose();
     super.dispose();
   }
 
@@ -176,6 +202,7 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
       c.value = 0;
     }
     _itemVisible = List<bool>.filled(_itemCtrls.length, false);
+    _focusedItemIndex.value = null;
     setState(() => _open = true);
     // FAB size/radius morph and menu item cascade run together.
     _fabShapeCtrl
@@ -189,18 +216,33 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
     // Cascade from the FAB upward: bottom item (nearest FAB) first.
     final int count = _itemCtrls.length;
     for (var i = 0; i < count; i++) {
-      final int fromFab = count - 1 - i;
+      final itemIndex = i;
+      final int fromFab = count - 1 - itemIndex;
       final int delayMs = fromFab * _expandStaggerMs;
       _staggerTimers.add(
         Timer(Duration(milliseconds: delayMs), () {
           if (!mounted || !_open) {
             return;
           }
-          setState(() => _itemVisible[i] = true);
-          _itemCtrls[i]
+          setState(() => _itemVisible[itemIndex] = true);
+          _itemCtrls[itemIndex]
             ..motion = _expandMotion
             ..value = 0
             ..animateTo(1);
+          // After the last item mounts, move focus into the menu so Tab walks
+          // items (the scope itself skips traversal in the parent route).
+          if (itemIndex == 0) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted || !_open) {
+                return;
+              }
+              final Iterable<FocusNode> items =
+                  _menuFocusScope.traversalDescendants;
+              if (items.isNotEmpty) {
+                items.first.requestFocus();
+              }
+            });
+          }
         }),
       );
     }
@@ -216,6 +258,7 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
       c.value = 0;
     }
     _itemVisible = List<bool>.filled(_itemCtrls.length, false);
+    _focusedItemIndex.value = null;
     _portal.hide();
     setState(() => _open = false);
     // FAB morphs back to large rounded square while items are already gone.
@@ -286,18 +329,29 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
 
   Widget _buildOverlay(BuildContext context) {
     final bool right = _isRight;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: <Widget>[
-        _buildDismissBarrier(context),
-        CompositedTransformFollower(
-          link: _link,
-          targetAnchor: right ? Alignment.topRight : Alignment.topLeft,
-          followerAnchor: right ? Alignment.bottomRight : Alignment.bottomLeft,
-          offset: Offset(0, -M3ETheme.of(context).fabMenuTheme.menuOffset),
-          child: _buildMenu(context),
+    return FocusScope(
+      node: _menuFocusScope,
+      skipTraversal: true,
+      child: CallbackShortcuts(
+        bindings: <ShortcutActivator, VoidCallback>{
+          const SingleActivator(LogicalKeyboardKey.escape): _close,
+        },
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            _buildDismissBarrier(context),
+            CompositedTransformFollower(
+              link: _link,
+              targetAnchor: right ? Alignment.topRight : Alignment.topLeft,
+              followerAnchor: right
+                  ? Alignment.bottomRight
+                  : Alignment.bottomLeft,
+              offset: Offset(0, -M3ETheme.of(context).fabMenuTheme.menuOffset),
+              child: _buildMenu(context),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -325,6 +379,7 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
         for (int i = 0; i < widget.items.length; i++)
           if (_itemVisible[i])
             Padding(
+              key: ValueKey<Object>('fab-menu-item-$i'),
               padding: EdgeInsets.only(
                 bottom: _isLastVisibleItem(i) ? 0 : fabMenuTheme.itemGap,
               ),
@@ -341,6 +396,19 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
       }
     }
     return true;
+  }
+
+  void _setItemFocused(int index, bool focused) {
+    final bool show = focused && M3EFocusInteraction.instance.ringsAllowed;
+    final int? next = show ? index : null;
+    if (_focusedItemIndex.value == next) {
+      return;
+    }
+    // Clearing: only clear if this index still owns the highlight.
+    if (!show && _focusedItemIndex.value != index) {
+      return;
+    }
+    _focusedItemIndex.value = next;
   }
 
   /// Maps spring progress `t` (0→1, may overshoot) to width factor.
@@ -369,23 +437,35 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
 
         return Align(
           alignment: edge,
-          child: _itemOutline(
-            fabMenuTheme,
-            Material(
-              color: fill == null
-                  ? fabMenuTheme.itemContainerColor(scheme)
-                  : const Color(0x00000000),
-              elevation: fabMenuTheme.itemElevation,
-              shadowColor: scheme.shadow,
-              surfaceTintColor: const Color(0x00000000),
-              shape: const StadiumBorder(),
-              clipBehavior: Clip.antiAlias,
-              child: fill == null
-                  ? body
-                  : DecoratedBox(
-                      decoration: BoxDecoration(gradient: fill),
-                      child: body,
-                    ),
+          // Ring wraps the pill from outside: the Material clips its child.
+          child: ValueListenableBuilder<int?>(
+            valueListenable: _focusedItemIndex,
+            builder:
+                (BuildContext context, int? focusedIndex, Widget? ringChild) {
+                  return M3EFocusRing(
+                    focused: focusedIndex == index,
+                    radius: BorderRadius.circular(fabMenuTheme.itemHeight / 2),
+                    child: ringChild!,
+                  );
+                },
+            child: _itemOutline(
+              fabMenuTheme,
+              Material(
+                color: fill == null
+                    ? fabMenuTheme.itemContainerColor(scheme)
+                    : const Color(0x00000000),
+                elevation: fabMenuTheme.itemElevation,
+                shadowColor: scheme.shadow,
+                surfaceTintColor: const Color(0x00000000),
+                shape: const StadiumBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: fill == null
+                    ? body
+                    : DecoratedBox(
+                        decoration: BoxDecoration(gradient: fill),
+                        child: body,
+                      ),
+              ),
             ),
           ),
         );
@@ -397,6 +477,8 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
         },
         semanticLabel: item.label,
         materialInk: true,
+        onStateChanged: (M3EInteractionState state) =>
+            _setItemFocused(index, state.focused),
         builder: (BuildContext context, M3EInteractionState state) {
           return _itemBody(theme, item, scheme, state);
         },

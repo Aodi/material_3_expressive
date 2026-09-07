@@ -82,6 +82,7 @@ extension _M3EIconButtonBuild on _M3EIconButtonState {
         _isPointerDownNotifier,
         _isHoveredNotifier,
         _isPressedNotifier,
+        _showFocusRingNotifier,
       ]),
       builder: (BuildContext context, Widget? child) {
         final bool pressed =
@@ -104,6 +105,7 @@ extension _M3EIconButtonBuild on _M3EIconButtonState {
           ),
           innerIcon: innerIcon,
           morphStates: morphStates,
+          showFocusRing: _showFocusRingNotifier.value,
         );
       },
     );
@@ -115,8 +117,16 @@ extension _M3EIconButtonBuild on _M3EIconButtonState {
     }
     return Listener(
       behavior: HitTestBehavior.translucent,
-      onPointerDown: (_) => _setPointerDown(true),
-      onPointerUp: (_) => _setPointerDown(false),
+      onPointerDown: (_) {
+        M3EFocusInteraction.instance.notePointerInteraction();
+        _setPointerDown(true);
+      },
+      onPointerUp: (_) {
+        if (_isPointerDownNotifier.value) {
+          _focusNode.requestFocus();
+        }
+        _setPointerDown(false);
+      },
       onPointerCancel: (_) => _setPointerDown(false),
       child: child,
     );
@@ -185,6 +195,7 @@ extension _M3EIconButtonBuild on _M3EIconButtonState {
     required double targetRadius,
     required Widget innerIcon,
     required Set<WidgetState> morphStates,
+    required bool showFocusRing,
   }) {
     return M3ERadiusAndPaddingMotion(
       motion: _kIconButtonMorphMotion,
@@ -209,30 +220,35 @@ extension _M3EIconButtonBuild on _M3EIconButtonState {
             child: icon,
           );
         }
-        return M3EInkSplashTheme(
-          color: colors.fg,
-          child: IconButton(
-            onPressed: widget.onPressed == null
-                ? null
-                : () {
-                    M3EHaptics.trigger(widget.haptic);
-                    widget.onPressed!();
-                  },
-            isSelected: widget.isSelected,
-            selectedIcon: widget.selectedIcon,
-            icon: icon,
-            tooltip: widget.tooltip,
-            enableFeedback: widget.haptic != M3EHapticFeedback.none
-                ? false
-                : widget.enableFeedback,
-            statesController: _statesController,
-            style: _morphButtonStyle(
-              visual: visual,
-              colors: colors,
-              animatedRadius: animatedRadius,
-              fill: fill,
-              useGradient: useGradient,
-              gradientOverlay: gradientOverlay,
+        return M3EFocusRing(
+          focused: showFocusRing,
+          radius: animatedRadius,
+          child: M3EInkSplashTheme(
+            color: colors.fg,
+            child: IconButton(
+              focusNode: _focusNode,
+              onPressed: widget.onPressed == null
+                  ? null
+                  : () {
+                      M3EHaptics.trigger(widget.haptic);
+                      widget.onPressed!();
+                    },
+              isSelected: widget.isSelected,
+              selectedIcon: widget.selectedIcon,
+              icon: icon,
+              tooltip: widget.tooltip,
+              enableFeedback: widget.haptic != M3EHapticFeedback.none
+                  ? false
+                  : widget.enableFeedback,
+              statesController: _statesController,
+              style: _morphButtonStyle(
+                visual: visual,
+                colors: colors,
+                animatedRadius: animatedRadius,
+                fill: fill,
+                useGradient: useGradient,
+                gradientOverlay: gradientOverlay,
+              ),
             ),
           ),
         );

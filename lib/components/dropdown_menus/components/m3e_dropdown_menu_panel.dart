@@ -34,7 +34,18 @@ extension _M3EDropdownMenuPanel<T> on _M3EDropdownMenuState<T> {
           offset: marginOffset,
           child: SizedBox(
             width: renderBox.size.width,
-            child: RepaintBoundary(child: _buildDropdownPanel(showOnTop)),
+            child: CallbackShortcuts(
+              bindings: <ShortcutActivator, VoidCallback>{
+                const SingleActivator(LogicalKeyboardKey.escape): _close,
+              },
+              child: FocusScope(
+                node: _focusTrapScope,
+                child: FocusTraversalGroup(
+                  policy: ReadingOrderTraversalPolicy(),
+                  child: RepaintBoundary(child: _buildDropdownPanel(showOnTop)),
+                ),
+              ),
+            ),
           ),
         ),
       ],

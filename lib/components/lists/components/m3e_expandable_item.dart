@@ -78,6 +78,10 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
   bool _isHovered = false;
   bool _isPressed = false;
 
+  /// Node of the item's single toggle target (whole card or header row).
+  final FocusNode _toggleFocusNode = FocusNode();
+  bool _focused = false;
+
   double? _collapsedHeight;
   double? _expandedHeight;
 
@@ -90,6 +94,13 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
 
     _expandCtrl = SingleMotionController(motion: motion, vsync: this)
       ..value = widget.isExpanded ? 1.0 : 0.0;
+    _toggleFocusNode.addListener(_handleToggleFocusChanged);
+    FocusManager.instance.addHighlightModeListener(_handleHighlightModeChanged);
+    M3EFocusInteraction.instance.addListener(_handleToggleFocusChanged);
+  }
+
+  void _handleHighlightModeChanged(FocusHighlightMode mode) {
+    _handleToggleFocusChanged();
   }
 
   @override
@@ -112,8 +123,22 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
   void _handleTapUp() => setState(() => _isPressed = false);
   void _handleTapCancel() => setState(() => _isPressed = false);
 
+  void _handleToggleFocusChanged() {
+    final bool show = M3EFocusRing.shouldShow(_toggleFocusNode);
+    if (_focused != show) {
+      setState(() => _focused = show);
+    }
+  }
+
   @override
   void dispose() {
+    M3EFocusInteraction.instance.removeListener(_handleToggleFocusChanged);
+    FocusManager.instance.removeHighlightModeListener(
+      _handleHighlightModeChanged,
+    );
+    _toggleFocusNode
+      ..removeListener(_handleToggleFocusChanged)
+      ..dispose();
     _expandCtrl.dispose();
     super.dispose();
   }
@@ -226,6 +251,7 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
       d,
       onTap: outerTap,
       tooltip: outerTooltip,
+      focusNode: outerTap != null ? _toggleFocusNode : null,
       child: content,
     );
 
@@ -237,15 +263,21 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
         end: _buildEffectiveRadius(),
       ),
       builder: (context, animatedRadius, child) {
-        return M3ECard(
-          variant: M3ECardVariant.filled,
-          borderRadius: animatedRadius ?? _buildEffectiveRadius(),
-          color: d.color ?? scheme.surfaceContainerHighest,
-          elevation: d.elevation,
-          border: d.border,
-          padding: EdgeInsets.zero,
-          width: double.infinity,
-          child: child!,
+        final BorderRadius radius = animatedRadius ?? _buildEffectiveRadius();
+        // The card clips its content, so the ring wraps it from the outside.
+        return M3EFocusRing(
+          focused: _focused,
+          radius: radius,
+          child: M3ECard(
+            variant: M3ECardVariant.filled,
+            borderRadius: radius,
+            color: d.color ?? scheme.surfaceContainerHighest,
+            elevation: d.elevation,
+            border: d.border,
+            padding: EdgeInsets.zero,
+            width: double.infinity,
+            child: child!,
+          ),
         );
       },
       child: content,
@@ -296,6 +328,7 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
       semanticHint: widget.isExpanded ? 'Collapse' : 'Expand',
       isExpanded: widget.isExpanded,
       tooltip: headerTooltip,
+      focusNode: onTap != null ? _toggleFocusNode : null,
       child: headerContent,
     );
   }

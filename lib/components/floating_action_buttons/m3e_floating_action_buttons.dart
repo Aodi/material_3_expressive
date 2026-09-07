@@ -182,7 +182,11 @@ class M3EFab extends StatelessWidget {
         child: surface,
       );
     }
-    return surface;
+    return M3EFocusRing(
+      focused: state.focused,
+      radius: borderRadius,
+      child: surface,
+    );
   }
 
   Widget _decorateContent({

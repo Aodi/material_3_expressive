@@ -8,7 +8,6 @@ import 'package:material_3_expressive/foundations/foundations.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'components/m3e_base_button_state.dart';
-import 'components/m3e_focus_ring.dart';
 import 'components/m3e_radius_and_padding_motion.dart';
 import 'enums/m3e_button_enums.dart';
 import 'utils/m3e_button_gradient_layer.dart';

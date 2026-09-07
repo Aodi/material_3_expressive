@@ -68,15 +68,20 @@ class M3ERadio<T> extends StatelessWidget {
         autofocus: autofocus,
         semanticLabel: semanticLabel,
         builder: (BuildContext context, M3EInteractionState state) {
-          final Widget control = SizedBox(
-            width: radioTheme.hitSize,
-            height: radioTheme.hitSize,
-            child: Stack(
-              alignment: Alignment.center,
-              children: <Widget>[
-                _buildStateLayer(radioTheme, scheme, state),
-                _buildRing(radioTheme, scheme),
-              ],
+          // Ring hugs the circular state layer, which is the outer shape.
+          final Widget control = M3EFocusRing(
+            focused: state.focused,
+            radius: BorderRadius.circular(radioTheme.hitSize / 2),
+            child: SizedBox(
+              width: radioTheme.hitSize,
+              height: radioTheme.hitSize,
+              child: Stack(
+                alignment: Alignment.center,
+                children: <Widget>[
+                  _buildStateLayer(radioTheme, scheme, state),
+                  _buildRing(radioTheme, scheme),
+                ],
+              ),
             ),
           );
 

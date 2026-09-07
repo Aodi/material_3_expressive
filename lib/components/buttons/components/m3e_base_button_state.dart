@@ -52,8 +52,16 @@ mixin M3EBaseButtonState<T extends StatefulWidget> on State<T> {
 
     return Listener(
       behavior: HitTestBehavior.translucent,
-      onPointerDown: (_) => _setPointerDown(true),
-      onPointerUp: (_) => _setPointerDown(false),
+      onPointerDown: (_) {
+        M3EFocusInteraction.instance.notePointerInteraction();
+        _setPointerDown(true);
+      },
+      onPointerUp: (_) {
+        if (isPointerDownNotifier.value) {
+          effectiveFocusNode.requestFocus();
+        }
+        _setPointerDown(false);
+      },
       onPointerCancel: (_) => _setPointerDown(false),
       child: child,
     );
@@ -127,7 +135,6 @@ mixin M3EBaseButtonState<T extends StatefulWidget> on State<T> {
 
   void initBaseButtonState() {
     _initController();
-    _initFocusNode();
     isPressedNotifier = ValueNotifier(
       statesController.value.contains(WidgetState.pressed),
     );
@@ -135,7 +142,8 @@ mixin M3EBaseButtonState<T extends StatefulWidget> on State<T> {
     isHoveredNotifier = ValueNotifier(
       statesController.value.contains(WidgetState.hovered),
     );
-    isFocusedNotifier = ValueNotifier(effectiveFocusNode.hasFocus);
+    isFocusedNotifier = ValueNotifier(false);
+    _initFocusNode();
   }
 
   void _initController() {
@@ -149,6 +157,13 @@ mixin M3EBaseButtonState<T extends StatefulWidget> on State<T> {
       _internalFocusNode = FocusNode(debugLabel: '$T');
     }
     effectiveFocusNode.addListener(_onFocusChanged);
+    FocusManager.instance.addHighlightModeListener(_onHighlightModeChanged);
+    M3EFocusInteraction.instance.addListener(_onFocusInteractionChanged);
+    _syncFocusHighlight();
+  }
+
+  void _onFocusInteractionChanged() {
+    _syncFocusHighlight();
   }
 
   @override
@@ -208,7 +223,26 @@ mixin M3EBaseButtonState<T extends StatefulWidget> on State<T> {
   }
 
   void _onFocusChanged() {
-    isFocusedNotifier.value = effectiveFocusNode.hasFocus;
+    _syncFocusHighlight();
+  }
+
+  void _onHighlightModeChanged(FocusHighlightMode mode) {
+    _syncFocusHighlight();
+  }
+
+  void _syncFocusHighlight() {
+    final show = M3EFocusRing.shouldShow(effectiveFocusNode);
+    if (isFocusedNotifier.value != show) {
+      isFocusedNotifier.value = show;
+      if (show && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
+          M3EFocusInteraction.ensureVisibleIfKeyboard(context);
+        });
+      }
+    }
   }
 
   /// onStateChanged.
@@ -233,6 +267,8 @@ mixin M3EBaseButtonState<T extends StatefulWidget> on State<T> {
       statesController.dispose();
     }
     effectiveFocusNode.removeListener(_onFocusChanged);
+    FocusManager.instance.removeHighlightModeListener(_onHighlightModeChanged);
+    M3EFocusInteraction.instance.removeListener(_onFocusInteractionChanged);
     _internalFocusNode?.dispose();
     isPressedNotifier.dispose();
     isPointerDownNotifier.dispose();

@@ -162,48 +162,55 @@ class M3ESpringChipState<T> extends State<M3ESpringChip<T>>
     final labelStyle =
         widget.labelStyle ??
         theme.dropdownMenuTheme.chipLabelStyle(theme.typeScale, widget.scheme);
-    return MouseRegion(
-      cursor: cd.mouseCursor ?? SystemMouseCursors.click,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: cd.borderRadius,
-          color: widget.enabled ? widget.chipColor : disabledBg,
-          border: cd.border != null ? Border.fromBorderSide(cd.border!) : null,
-        ),
-        padding: cd.padding,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.item.label,
-              style: labelStyle.copyWith(
-                color: widget.enabled ? labelStyle.color : disabledFg,
-              ),
-            ),
-            if (widget.enabled) ...[
-              const SizedBox(width: 4),
-              Semantics(
-                label: 'Remove ${widget.item.label}',
-                button: true,
-                child: Tooltip(
-                  message: 'Remove ${widget.item.label}',
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: widget.onRemove,
-                    child:
-                        widget.cd.deleteIcon ??
-                        Icon(
-                          Icons.close,
-                          size: theme.resolvedIconTheme.size,
-                          color: widget.scheme.onSecondaryContainer,
-                        ),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+    final BorderRadius chipRadius = cd.borderRadius;
+    final Widget body = Container(
+      decoration: BoxDecoration(
+        borderRadius: chipRadius,
+        color: widget.enabled ? widget.chipColor : disabledBg,
+        border: cd.border != null ? Border.fromBorderSide(cd.border!) : null,
       ),
+      padding: cd.padding,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            widget.item.label,
+            style: labelStyle.copyWith(
+              color: widget.enabled ? labelStyle.color : disabledFg,
+            ),
+          ),
+          if (widget.enabled) ...[
+            const SizedBox(width: 4),
+            widget.cd.deleteIcon ??
+                Icon(
+                  Icons.close,
+                  size: theme.resolvedIconTheme.size,
+                  color: widget.scheme.onSecondaryContainer,
+                ),
+          ],
+        ],
+      ),
+    );
+
+    if (!widget.enabled) {
+      return MouseRegion(cursor: SystemMouseCursors.basic, child: body);
+    }
+
+    // Whole chip is one Tab stop; Activate / tap removes the selection.
+    return M3ETappable(
+      semanticLabel: 'Remove ${widget.item.label}',
+      mouseCursor: cd.mouseCursor ?? SystemMouseCursors.click,
+      onTap: () {
+        M3EFocusInteraction.instance.notePointerInteraction();
+        widget.onRemove();
+      },
+      builder: (BuildContext context, M3EInteractionState state) {
+        return M3EFocusRing(
+          focused: state.focused,
+          radius: chipRadius,
+          child: Tooltip(message: 'Remove ${widget.item.label}', child: body),
+        );
+      },
     );
   }
 }

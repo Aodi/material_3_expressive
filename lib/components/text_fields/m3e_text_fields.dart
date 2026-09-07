@@ -102,16 +102,30 @@ class _M3ETextFieldState extends State<M3ETextField> {
       widget.controller ?? TextEditingController();
   late final FocusNode _focusNode = widget.focusNode ?? FocusNode();
   bool _focused = false;
+  bool _showFocusRing = false;
 
   @override
   void initState() {
     super.initState();
     _focusNode.addListener(_handleFocusChange);
     _controller.addListener(_handleTextChange);
+    FocusManager.instance.addHighlightModeListener(_handleHighlightModeChange);
+    M3EFocusInteraction.instance.addListener(_handleFocusInteractionChanged);
+  }
+
+  void _handleFocusInteractionChanged() {
+    final bool show = M3EFocusRing.shouldShow(_focusNode);
+    if (_showFocusRing != show) {
+      setState(() => _showFocusRing = show);
+    }
   }
 
   @override
   void dispose() {
+    FocusManager.instance.removeHighlightModeListener(
+      _handleHighlightModeChange,
+    );
+    M3EFocusInteraction.instance.removeListener(_handleFocusInteractionChanged);
     _focusNode.removeListener(_handleFocusChange);
     _controller.removeListener(_handleTextChange);
     if (widget.focusNode == null) {
@@ -123,7 +137,20 @@ class _M3ETextFieldState extends State<M3ETextField> {
     super.dispose();
   }
 
-  void _handleFocusChange() => setState(() => _focused = _focusNode.hasFocus);
+  void _handleFocusChange() {
+    setState(() {
+      _focused = _focusNode.hasFocus;
+      _showFocusRing = M3EFocusRing.shouldShow(_focusNode);
+    });
+  }
+
+  void _handleHighlightModeChange(FocusHighlightMode mode) {
+    final bool show = M3EFocusRing.shouldShow(_focusNode);
+    if (show == _showFocusRing) {
+      return;
+    }
+    setState(() => _showFocusRing = show);
+  }
 
   void _handleTextChange() {
     widget.onChanged?.call(_controller.text);
@@ -153,36 +180,52 @@ class _M3ETextFieldState extends State<M3ETextField> {
       hasError: widget.hasError,
     );
     final outlined = widget.variant == M3ETextFieldVariant.outlined;
+    final background = textFieldTheme.backgroundDecoration(
+      scheme,
+      outlined: outlined,
+    );
 
     return TapRegion(
       enabled: widget.enabled,
       onTapOutside:
           widget.onTapOutside ?? M3EFocus.tapOutsideHandler(_focusNode),
       child: GestureDetector(
-        onTap: () => _focusNode.requestFocus(),
+        onTap: () {
+          M3EFocusInteraction.instance.notePointerInteraction();
+          _focusNode.requestFocus();
+        },
         behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: M3EMotion.short3,
-          curve: M3EMotion.standard,
-          padding: textFieldTheme.horizontalPadding,
-          constraints: BoxConstraints(minHeight: textFieldTheme.minHeight),
-          decoration: textFieldTheme.backgroundDecoration(
-            scheme,
-            outlined: outlined,
+        // Keyboard focus ring sits outside the field, on top of the thicker
+        // focused indicator/outline.
+        child: M3EFocusRing(
+          focused: _showFocusRing,
+          radius: _outerRadius(background),
+          child: AnimatedContainer(
+            duration: M3EMotion.short3,
+            curve: M3EMotion.standard,
+            padding: textFieldTheme.horizontalPadding,
+            constraints: BoxConstraints(minHeight: textFieldTheme.minHeight),
+            decoration: background,
+            // Painted over the container so the focused stroke does not inset
+            // layout and grow the field.
+            foregroundDecoration: textFieldTheme.borderDecoration(
+              scheme,
+              accent: accent,
+              outlined: outlined,
+              focused: _focused,
+              hasError: widget.hasError,
+            ),
+            child: Row(children: _buildRowChildren(theme, scheme, accent)),
           ),
-          // Painted over the container so the focused stroke does not inset
-          // layout and grow the field.
-          foregroundDecoration: textFieldTheme.borderDecoration(
-            scheme,
-            accent: accent,
-            outlined: outlined,
-            focused: _focused,
-            hasError: widget.hasError,
-          ),
-          child: Row(children: _buildRowChildren(theme, scheme, accent)),
         ),
       ),
     );
+  }
+
+  /// Ring radius, taken from the container shape so both variants match.
+  BorderRadius _outerRadius(BoxDecoration background) {
+    return background.borderRadius?.resolve(Directionality.maybeOf(context)) ??
+        BorderRadius.zero;
   }
 
   List<Widget> _buildRowChildren(
@@ -301,22 +344,25 @@ class _M3ETextFieldState extends State<M3ETextField> {
     required Color accent,
     required TextStyle inputStyle,
   }) {
-    return EditableText(
-      controller: _controller,
-      focusNode: _focusNode,
-      readOnly: !widget.enabled,
-      obscureText: widget.obscureText,
-      maxLines: widget.maxLines,
-      keyboardType: widget.keyboardType,
-      textInputAction: widget.textInputAction,
-      inputFormatters: widget.inputFormatters,
-      onSubmitted: widget.onSubmitted,
-      onTapOutside: (_) {},
-      style: inputStyle,
-      cursorColor: accent,
-      backgroundCursorColor: scheme.outlineVariant,
-      selectionColor: scheme.primary.withValues(
-        alpha: theme.textFieldTheme.selectionOpacity,
+    return CallbackShortcuts(
+      bindings: M3EFocus.editableInputShortcuts(_focusNode),
+      child: EditableText(
+        controller: _controller,
+        focusNode: _focusNode,
+        readOnly: !widget.enabled,
+        obscureText: widget.obscureText,
+        maxLines: widget.maxLines,
+        keyboardType: widget.keyboardType,
+        textInputAction: widget.textInputAction,
+        inputFormatters: widget.inputFormatters,
+        onSubmitted: widget.onSubmitted,
+        onTapOutside: (_) {},
+        style: inputStyle,
+        cursorColor: accent,
+        backgroundCursorColor: scheme.outlineVariant,
+        selectionColor: scheme.primary.withValues(
+          alpha: theme.textFieldTheme.selectionOpacity,
+        ),
       ),
     );
   }

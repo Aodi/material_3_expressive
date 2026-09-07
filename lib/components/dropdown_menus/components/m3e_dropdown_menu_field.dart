@@ -34,10 +34,12 @@ extension _M3EDropdownMenuField<T> on _M3EDropdownMenuState<T> {
         fd.backgroundColor ?? menuTheme.fieldBackgroundColor(scheme);
     final fgColor =
         fd.foregroundColor ?? menuTheme.fieldForegroundColor(scheme);
+    // Keyboard focus counts as focused even while the menu is closed.
+    final isFieldFocused = _controller.isOpen || _focusRingNotifier.value;
     final borderSide =
         (formState.hasError
             ? fd.errorBorder
-            : (_controller.isOpen ? fd.focusedBorder : fd.border)) ??
+            : (isFieldFocused ? fd.focusedBorder : fd.border)) ??
         BorderSide.none;
 
     final isOpenChanged = _lastIsOpen != _controller.isOpen;
@@ -105,25 +107,26 @@ extension _M3EDropdownMenuField<T> on _M3EDropdownMenuState<T> {
     M3EThemeData m3eTheme,
     M3EDropdownFieldStyle fd,
   ) {
+    final iconSize = m3eTheme.resolvedIconTheme.size ?? 18;
+    final ringRadius = BorderRadius.circular(iconSize);
     return Tooltip(
       message: 'Clear selection',
-      child: Semantics(
-        label: 'Clear all selections',
-        button: true,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            _controller.clearAll();
-            _formFieldKey.currentState?.didChange(_controller.selectedItems);
-          },
-          child:
-              fd.clearIcon ??
-              Icon(
-                Icons.clear,
-                color: fgColor,
-                size: m3eTheme.resolvedIconTheme.size,
-              ),
-        ),
+      child: M3ETappable(
+        semanticLabel: 'Clear all selections',
+        onTap: () {
+          M3EFocusInteraction.instance.notePointerInteraction();
+          _controller.clearAll();
+          _formFieldKey.currentState?.didChange(_controller.selectedItems);
+        },
+        builder: (BuildContext context, M3EInteractionState state) {
+          return M3EFocusRing(
+            focused: state.focused,
+            radius: ringRadius,
+            child:
+                fd.clearIcon ??
+                Icon(Icons.clear, color: fgColor, size: iconSize),
+          );
+        },
       ),
     );
   }
@@ -235,13 +238,19 @@ extension _M3EDropdownMenuField<T> on _M3EDropdownMenuState<T> {
         end: _buildEffectiveFieldRadius(),
       ),
       builder: (context, animatedRadius, child) {
-        return _buildFieldMaterial(
-          fd: fd,
-          bgColor: bgColor,
-          fgColor: fgColor,
-          borderSide: borderSide,
-          radius: animatedRadius ?? _buildEffectiveFieldRadius(),
-          child: child!,
+        final radius = animatedRadius ?? _buildEffectiveFieldRadius();
+        // Ring follows the field's animated radius.
+        return M3EFocusRing(
+          focused: _focusRingNotifier.value,
+          radius: radius,
+          child: _buildFieldMaterial(
+            fd: fd,
+            bgColor: bgColor,
+            fgColor: fgColor,
+            borderSide: borderSide,
+            radius: radius,
+            child: child!,
+          ),
         );
       },
       child: contentRow,
@@ -256,32 +265,74 @@ extension _M3EDropdownMenuField<T> on _M3EDropdownMenuState<T> {
     required BorderRadius radius,
     required Widget child,
   }) {
-    return Material(
-      color: bgColor,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: radius, side: borderSide),
-      child: InkWell(
-        splashFactory: fd.splashFactory ?? widget.splashFactory,
-        splashColor: fd.splashColor,
-        highlightColor: fd.highlightColor,
-        overlayColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) {
-            return fgColor.withValues(alpha: 0.10);
+    return Focus(
+      focusNode: _focusNode,
+      canRequestFocus: widget.enabled,
+      parentNode: _portalController.isShowing ? _focusTrapScope : null,
+      onKeyEvent: (FocusNode node, KeyEvent event) {
+        if (!widget.enabled) {
+          return KeyEventResult.ignored;
+        }
+        if (event is! KeyDownEvent) {
+          return KeyEventResult.ignored;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.escape) {
+          if (_controller.isOpen) {
+            _close();
+          } else if (_focusNode.hasPrimaryFocus) {
+            _focusNode.unfocus();
           }
-          if (states.contains(WidgetState.hovered)) {
-            return fgColor.withValues(alpha: 0.05);
+          return KeyEventResult.handled;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.numpadEnter ||
+            event.logicalKey == LogicalKeyboardKey.space) {
+          // Only the field shell toggles. Chips / clear own ActivateIntent when
+          // they have primary focus — do not steal Enter/Space from them.
+          if (!_focusNode.hasPrimaryFocus) {
+            return KeyEventResult.ignored;
           }
-          return Colors.transparent;
-        }),
-        mouseCursor: widget.enabled
-            ? (fd.mouseCursor ?? SystemMouseCursors.click)
-            : SystemMouseCursors.forbidden,
-        onTap: widget.enabled ? _toggle : null,
-        onHover: (hover) => setState(() => _isHoveredField = hover),
-        onTapDown: (_) => setState(() => _isPressedField = true),
-        onTapUp: (_) => setState(() => _isPressedField = false),
-        onTapCancel: () => setState(() => _isPressedField = false),
-        child: Padding(padding: fd.padding, child: child),
+          _toggle();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Material(
+        color: bgColor,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: radius, side: borderSide),
+        child: InkWell(
+          // Field Focus above owns keyboard focus; InkWell is pointer-only.
+          canRequestFocus: false,
+          excludeFromSemantics: true,
+          splashFactory: fd.splashFactory ?? widget.splashFactory,
+          splashColor: fd.splashColor,
+          highlightColor: fd.highlightColor,
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return fgColor.withValues(alpha: 0.10);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return fgColor.withValues(alpha: 0.05);
+            }
+            return Colors.transparent;
+          }),
+          mouseCursor: widget.enabled
+              ? (fd.mouseCursor ?? SystemMouseCursors.click)
+              : SystemMouseCursors.forbidden,
+          onTap: widget.enabled ? () => _toggle(fromPointer: true) : null,
+          onHover: (hover) => setState(() => _isHoveredField = hover),
+          onTapDown: (_) {
+            M3EFocusInteraction.instance.notePointerInteraction();
+            setState(() => _isPressedField = true);
+          },
+          onTapUp: (_) {
+            _focusNode.requestFocus();
+            setState(() => _isPressedField = false);
+          },
+          onTapCancel: () => setState(() => _isPressedField = false),
+          child: Padding(padding: fd.padding, child: child),
+        ),
       ),
     );
   }

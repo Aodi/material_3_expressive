@@ -91,32 +91,36 @@ class M3EChip extends StatelessWidget {
     );
     final bool outlined = !selected && !elevated;
 
-    return Container(
-      height: chipTheme.height,
-      decoration: BoxDecoration(
-        color: container,
-        borderRadius: borderRadius,
-        border: outlined ? Border.all(color: scheme.outlineVariant) : null,
-        boxShadow: elevated
-            ? M3EElevation.shadows(
-                M3EElevation.level1,
-                shadowColor: scheme.shadow,
-              )
-            : null,
-      ),
-      child: M3EStateLayerOverlay(
-        state: state,
-        color: foreground,
-        shape: border,
-        alignment: Alignment.center,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: leading == null
-                ? chipTheme.labelStartPadding
-                : chipTheme.iconStartPadding,
-            right: chipTheme.endPadding,
+    return M3EFocusRing(
+      focused: state.focused,
+      radius: borderRadius,
+      child: Container(
+        height: chipTheme.height,
+        decoration: BoxDecoration(
+          color: container,
+          borderRadius: borderRadius,
+          border: outlined ? Border.all(color: scheme.outlineVariant) : null,
+          boxShadow: elevated
+              ? M3EElevation.shadows(
+                  M3EElevation.level1,
+                  shadowColor: scheme.shadow,
+                )
+              : null,
+        ),
+        child: M3EStateLayerOverlay(
+          state: state,
+          color: foreground,
+          shape: border,
+          alignment: Alignment.center,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: leading == null
+                  ? chipTheme.labelStartPadding
+                  : chipTheme.iconStartPadding,
+              right: chipTheme.endPadding,
+            ),
+            child: _buildContent(theme, chipTheme, foreground),
           ),
-          child: _buildContent(theme, chipTheme, foreground),
         ),
       ),
     );

@@ -20,6 +20,15 @@ extension _M3EDropdownMenuActions<T> on _M3EDropdownMenuState<T> {
     _expandCtrl.animateTo(1);
     _arrowCtrl.animateTo(math.pi);
     _portalController.show();
+    setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_controller.isOpen) {
+        return;
+      }
+      if (M3EFocusInteraction.instance.ringsAllowed) {
+        _focusTrapScope.requestFocus();
+      }
+    });
   }
 
   void _resolveOpeningDirection() {
@@ -60,9 +69,12 @@ extension _M3EDropdownMenuActions<T> on _M3EDropdownMenuState<T> {
     _arrowCtrl.animateTo(0);
     _searchTextController.clear();
     _searchDebounce?.cancel();
+    if (mounted) {
+      _focusNode.requestFocus();
+    }
   }
 
-  void _toggle() {
+  void _toggle({bool fromPointer = false}) {
     if (!widget.enabled || _isLoading) {
       return;
     }
@@ -70,7 +82,10 @@ extension _M3EDropdownMenuActions<T> on _M3EDropdownMenuState<T> {
     if (_controller.isOpen) {
       _close();
     } else {
-      FocusManager.instance.primaryFocus?.unfocus();
+      if (fromPointer) {
+        M3EFocusInteraction.instance.notePointerInteraction();
+        _focusNode.requestFocus();
+      }
       _open();
     }
   }

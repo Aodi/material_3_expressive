@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../foundations/foundations.dart';
 import '../buttons/components/m3e_base_button_state.dart';
-import '../buttons/components/m3e_focus_ring.dart';
 import '../buttons/components/m3e_radius_and_padding_motion.dart';
 import '../buttons/enums/m3e_button_enums.dart';
 import '../buttons/res/m3e_button_constants.dart';
@@ -423,10 +422,11 @@ class _M3ESplitButtonState<T> extends State<M3ESplitButton<T>>
     initBaseButtonState();
     _trailingFocusNode = FocusNode(debugLabel: 'M3ESplitButton.trailing');
     _trailingFocusNode.addListener(_onTrailingFocusChanged);
+    M3EFocusInteraction.instance.addListener(_onTrailingFocusChanged);
   }
 
   void _onTrailingFocusChanged() {
-    final focused = _trailingFocusNode.hasFocus;
+    final focused = M3EFocusRing.shouldShow(_trailingFocusNode);
     if (_isTrailingFocused != focused) {
       setState(() => _isTrailingFocused = focused);
     }
@@ -454,6 +454,7 @@ class _M3ESplitButtonState<T> extends State<M3ESplitButton<T>>
 
   @override
   void dispose() {
+    M3EFocusInteraction.instance.removeListener(_onTrailingFocusChanged);
     _trailingFocusNode
       ..removeListener(_onTrailingFocusChanged)
       ..dispose();

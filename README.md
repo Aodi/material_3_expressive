@@ -101,6 +101,27 @@ is required (`material_ui` will not resolve on older SDKs).
 [`dynamic_color`](https://pub.dev/packages/dynamic_color) `^2.1.0` (re-exported
 through this package). Prefer those APIs rather than a local duplicate.
 
+## Keyboard focus rings
+
+Actionable M3E controls draw an expressive outset focus ring when focused via
+keyboard (Tab). Customize globally:
+
+```dart
+M3ETheme(
+  data: theme.copyWith(
+    focusRingTheme: const M3EFocusRingTheme(
+      color: Color(0xFF6750A4),
+      width: 2,
+      gap: 2,
+    ),
+  ),
+  child: child,
+)
+```
+
+Text fields and search bars keep their focused border/stroke **and** show the
+outset ring. See the example **Focus rings** playground (View tab).
+
 ## Installation
 
 Add the package to your `pubspec.yaml`:

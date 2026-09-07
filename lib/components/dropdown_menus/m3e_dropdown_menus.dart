@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
@@ -296,6 +297,9 @@ class _M3EDropdownMenuState<T> extends State<M3EDropdownMenu<T>>
   final GlobalKey<M3EMoreChipsIndicatorState> _moreKey = GlobalKey();
 
   late FocusNode _focusNode;
+  final FocusScopeNode _focusTrapScope = FocusScopeNode(
+    debugLabel: 'M3EDropdownMenu.trap',
+  );
   bool? _openingShowOnTop;
 
   final TextEditingController _searchTextController = TextEditingController();
@@ -307,6 +311,9 @@ class _M3EDropdownMenuState<T> extends State<M3EDropdownMenu<T>>
   late final SingleMotionController _expandCtrl;
   late final SingleMotionController _arrowCtrl;
   late final ValueNotifier<bool> _loadingNotifier;
+
+  /// Whether the field should paint the keyboard focus ring.
+  late final ValueNotifier<bool> _focusRingNotifier;
   late final Listenable _listenable;
 
   @override
@@ -341,6 +348,13 @@ class _M3EDropdownMenuState<T> extends State<M3EDropdownMenu<T>>
     if (_ownController) {
       _controller.dispose();
     }
+    FocusManager.instance.removeHighlightModeListener(
+      _onFocusHighlightModeChanged,
+    );
+    M3EFocusInteraction.instance.removeListener(_syncFieldFocusRing);
+    _focusNode.removeListener(_syncFieldFocusRing);
+    _focusRingNotifier.dispose();
+    _focusTrapScope.dispose();
     if (widget.focusNode == null) {
       _focusNode.dispose();
     }

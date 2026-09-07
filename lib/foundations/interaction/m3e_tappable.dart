@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/widgets.dart';
 
+import 'm3e_focus_interaction.dart';
 import 'm3e_haptics.dart';
 import 'm3e_motion.dart';
 import 'm3e_state_layer.dart';
@@ -93,19 +94,36 @@ class _M3ETappableState extends State<M3ETappable>
     with SingleTickerProviderStateMixin {
   M3EInteractionState _state = const M3EInteractionState();
   late final AnimationController _scaleController;
+  FocusNode? _internalFocusNode;
   int? _activePointer;
+
+  /// Raw focus-highlight from [FocusableActionDetector], before modality gate.
+  bool _focusHighlight = false;
+
+  FocusNode get _effectiveFocusNode =>
+      widget.focusNode ?? (_internalFocusNode ??= FocusNode());
 
   @override
   void initState() {
     super.initState();
     _scaleController = AnimationController.unbounded(vsync: this, value: 1);
+    M3EFocusInteraction.instance.addListener(_onFocusInteractionChanged);
   }
 
   @override
   void dispose() {
+    M3EFocusInteraction.instance.removeListener(_onFocusInteractionChanged);
     _clearPointerRoute();
+    _internalFocusNode?.dispose();
     _scaleController.dispose();
     super.dispose();
+  }
+
+  void _onFocusInteractionChanged() {
+    if (!mounted) {
+      return;
+    }
+    _syncFocusedVisual();
   }
 
   void _update(M3EInteractionState next) {
@@ -114,6 +132,20 @@ class _M3ETappableState extends State<M3ETappable>
     }
     setState(() => _state = next);
     widget.onStateChanged?.call(next);
+  }
+
+  void _syncFocusedVisual() {
+    final bool showRing =
+        _focusHighlight && M3EFocusInteraction.instance.ringsAllowed;
+    _update(_state.copyWith(focused: showRing));
+    if (showRing) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        M3EFocusInteraction.ensureVisibleIfKeyboard(context);
+      });
+    }
   }
 
   void _animateScale(double target) {
@@ -156,8 +188,18 @@ class _M3ETappableState extends State<M3ETappable>
     GestureBinding.instance.pointerRouter.addGlobalRoute(
       _handleGlobalPointerEvent,
     );
+    if (widget._isInteractive) {
+      // Clear rings without requestFocus here — focus on tap so the gesture
+      // is not cancelled by a mid-press focus/rebuild.
+      M3EFocusInteraction.instance.notePointerInteraction();
+    }
     _update(_state.copyWith(pressed: true));
     _animateScale(widget.pressedScale);
+  }
+
+  void _handleShowFocusHighlight(bool value) {
+    _focusHighlight = value;
+    _syncFocusedVisual();
   }
 
   void _handlePointerUp(PointerUpEvent event) {
@@ -193,6 +235,20 @@ class _M3ETappableState extends State<M3ETappable>
       return null;
     }
     return () {
+      M3EFocusInteraction.instance.notePointerInteraction();
+      _effectiveFocusNode.requestFocus();
+      _fireHaptic();
+      callback();
+    };
+  }
+
+  VoidCallback? _wrapLongPress(VoidCallback? callback) {
+    if (callback == null) {
+      return null;
+    }
+    return () {
+      M3EFocusInteraction.instance.notePointerInteraction();
+      _effectiveFocusNode.requestFocus();
       _fireHaptic();
       callback();
     };
@@ -203,7 +259,7 @@ class _M3ETappableState extends State<M3ETappable>
     final interactive = widget._isInteractive;
     final VoidCallback? onTap = interactive ? _wrapTap(widget.onTap) : null;
     final VoidCallback? onLongPress = interactive
-        ? _wrapTap(widget.onLongPress)
+        ? _wrapLongPress(widget.onLongPress)
         : null;
 
     Widget content = widget.builder(context, _state);
@@ -283,10 +339,9 @@ class _M3ETappableState extends State<M3ETappable>
   Widget _wrapFocus(Widget child, bool interactive, VoidCallback? onTap) {
     return FocusableActionDetector(
       enabled: interactive,
-      focusNode: widget.focusNode,
+      focusNode: _effectiveFocusNode,
       autofocus: widget.autofocus,
-      onShowFocusHighlight: (bool value) =>
-          _update(_state.copyWith(focused: value)),
+      onShowFocusHighlight: _handleShowFocusHighlight,
       actions: <Type, Action<Intent>>{
         ActivateIntent: CallbackAction<ActivateIntent>(
           onInvoke: (_) {
