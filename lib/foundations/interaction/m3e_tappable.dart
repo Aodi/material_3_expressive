@@ -337,17 +337,21 @@ class _M3ETappableState extends State<M3ETappable>
   }
 
   Widget _wrapFocus(Widget child, bool interactive, VoidCallback? onTap) {
+    Object? activate(Intent intent) {
+      onTap?.call();
+      return null;
+    }
+
     return FocusableActionDetector(
       enabled: interactive,
       focusNode: _effectiveFocusNode,
       autofocus: widget.autofocus,
       onShowFocusHighlight: _handleShowFocusHighlight,
       actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (_) {
-            onTap?.call();
-            return null;
-          },
+        // Desktop/mobile: Enter → ActivateIntent. Web: Enter → ButtonActivateIntent.
+        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: activate),
+        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+          onInvoke: activate,
         ),
       },
       child: child,

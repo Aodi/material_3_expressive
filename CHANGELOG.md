@@ -38,6 +38,8 @@
   rings (field → chips → clear → open panel items).
 * Escape unfocuses `M3ETextField` / search inputs during keyboard focus; Escape
   closes open FAB menu, search view, dropdown, and menu overlays.
+* Web keyboard Enter activation: `M3ETappable` and nav destinations handle
+  `ButtonActivateIntent` (web maps Enter to that, not `ActivateIntent`).
 * Date picker month/year mode toggle labels ellipsize when horizontal space is
   tight (e.g. during dialog dismiss scale animation), preventing layout
   overflow on narrow widths.

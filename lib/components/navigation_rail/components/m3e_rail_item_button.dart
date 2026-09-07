@@ -241,6 +241,12 @@ class _M3ERailItemButtonState extends State<M3ERailItemButton> {
                     return null;
                   },
                 ),
+                ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+                  onInvoke: (ButtonActivateIntent intent) {
+                    _select();
+                    return null;
+                  },
+                ),
               },
               child: Listener(
                 behavior: HitTestBehavior.translucent,

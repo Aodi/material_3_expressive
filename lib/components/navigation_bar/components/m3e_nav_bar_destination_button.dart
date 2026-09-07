@@ -209,6 +209,12 @@ class _M3ENavBarDestinationButtonState
               return null;
             },
           ),
+          ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+            onInvoke: (ButtonActivateIntent intent) {
+              _select();
+              return null;
+            },
+          ),
         },
         child: Listener(
           behavior: HitTestBehavior.translucent,

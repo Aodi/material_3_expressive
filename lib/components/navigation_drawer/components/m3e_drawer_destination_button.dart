@@ -136,6 +136,12 @@ class _M3EDrawerDestinationButtonState
                 return null;
               },
             ),
+            ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+              onInvoke: (ButtonActivateIntent intent) {
+                _select();
+                return null;
+              },
+            ),
           },
           child: Listener(
             behavior: HitTestBehavior.translucent,

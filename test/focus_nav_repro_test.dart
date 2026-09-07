@@ -553,4 +553,46 @@ void main() {
     expect(find.text('One'), findsNothing);
     expect(find.text('Two'), findsOneWidget);
   });
+
+  testWidgets('Web-style ButtonActivateIntent activates focused button', (
+    WidgetTester tester,
+  ) async {
+    var pressed = 0;
+    final focusNode = FocusNode(debugLabel: 'btn');
+    addTearDown(focusNode.dispose);
+
+    // Mimic WidgetsApp web shortcuts: Enter → ButtonActivateIntent.
+    await tester.pumpWidget(
+      MaterialApp(
+        shortcuts: <ShortcutActivator, Intent>{
+          ...WidgetsApp.defaultShortcuts,
+          const SingleActivator(LogicalKeyboardKey.enter):
+              const ButtonActivateIntent(),
+          const SingleActivator(LogicalKeyboardKey.numpadEnter):
+              const ButtonActivateIntent(),
+        },
+        home: M3ETheme(
+          data: M3EThemeData.light(),
+          child: Scaffold(
+            body: M3EButton.filled(
+              focusNode: focusNode,
+              onPressed: () => pressed++,
+              child: const Text('Go'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    M3EFocusInteraction.instance.noteKeyboardHighlight();
+    focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    expect(focusNode.hasPrimaryFocus, isTrue);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+
+    expect(pressed, 1);
+  });
 }
