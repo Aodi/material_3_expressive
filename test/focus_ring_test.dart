@@ -544,4 +544,69 @@ void main() {
     expect(search.hasPrimaryFocus, isTrue);
     expect(M3EFocusRing.shouldShow(search), isTrue);
   });
+
+  testWidgets('keyboardFocusIndicators false hides focus rings', (
+    WidgetTester tester,
+  ) async {
+    final focusNode = FocusNode();
+    addTearDown(focusNode.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: M3ETheme(
+          data: M3EThemeData.light().copyWith(keyboardFocusIndicators: false),
+          child: Scaffold(
+            body: Column(
+              children: <Widget>[
+                const M3EFocusRing(
+                  focused: true,
+                  radius: BorderRadius.all(Radius.circular(8)),
+                  child: SizedBox(width: 40, height: 40),
+                ),
+                M3EButton.filled(
+                  focusNode: focusNode,
+                  onPressed: () {},
+                  child: const Text('Go'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    M3EFocusInteraction.instance.noteKeyboardHighlight();
+    focusNode.requestFocus();
+    await tester.pumpAndSettle();
+
+    expect(focusNode.hasPrimaryFocus, isTrue);
+    expect(
+      M3EFocusRing.shouldShow(
+        focusNode,
+        tester.element(find.byType(M3EButton)),
+      ),
+      isFalse,
+    );
+
+    final PhysicalModel forcedRing = tester.widget(
+      find.descendant(
+        of: find.byType(M3EFocusRing).first,
+        matching: find.byType(PhysicalModel),
+      ),
+    );
+    expect(forcedRing.elevation, 0);
+
+    // Button shouldShow respects the theme flag (no painted ring chrome).
+    expect(
+      tester
+          .widgetList<PhysicalModel>(
+            find.descendant(
+              of: find.byType(M3EButton),
+              matching: find.byType(PhysicalModel),
+            ),
+          )
+          .every((PhysicalModel m) => m.elevation == 0),
+      isTrue,
+    );
+  });
 }

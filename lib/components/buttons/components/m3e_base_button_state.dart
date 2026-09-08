@@ -231,7 +231,10 @@ mixin M3EBaseButtonState<T extends StatefulWidget> on State<T> {
   }
 
   void _syncFocusHighlight() {
-    final show = M3EFocusRing.shouldShow(effectiveFocusNode);
+    if (!mounted) {
+      return;
+    }
+    final show = M3EFocusRing.shouldShow(effectiveFocusNode, context);
     if (isFocusedNotifier.value != show) {
       isFocusedNotifier.value = show;
       if (show && mounted) {

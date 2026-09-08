@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../theme/m3e_theme.dart';
+
 /// Tracks whether keyboard focus rings are allowed after the last interaction.
 ///
 /// Pointer interaction clears rings; only keyboard focus-navigation keys enable
@@ -100,6 +102,9 @@ class M3EFocusInteraction extends ChangeNotifier {
     Curve curve = Curves.easeOut,
   }) {
     if (!instance.ringsAllowed) {
+      return;
+    }
+    if (M3ETheme.maybeOf(context)?.keyboardFocusIndicators == false) {
       return;
     }
     if (FocusManager.instance.highlightMode != FocusHighlightMode.traditional) {

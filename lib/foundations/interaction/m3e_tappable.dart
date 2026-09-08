@@ -3,6 +3,7 @@ import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../theme/m3e_theme.dart';
 import 'm3e_focus_interaction.dart';
 import 'm3e_haptics.dart';
 import 'm3e_motion.dart';
@@ -133,8 +134,7 @@ class _M3ETappableState extends State<M3ETappable>
   }
 
   void _applyFocusableToNode() {
-    final FocusNode node = _effectiveFocusNode;
-    node
+    _effectiveFocusNode
       ..canRequestFocus = widget.focusable
       ..skipTraversal = !widget.focusable;
   }
@@ -164,8 +164,15 @@ class _M3ETappableState extends State<M3ETappable>
   }
 
   void _syncFocusedVisual() {
+    if (!mounted) {
+      return;
+    }
+    final bool indicatorsEnabled =
+        M3ETheme.maybeOf(context)?.keyboardFocusIndicators ?? true;
     final bool showRing =
-        _focusHighlight && M3EFocusInteraction.instance.ringsAllowed;
+        indicatorsEnabled &&
+        _focusHighlight &&
+        M3EFocusInteraction.instance.ringsAllowed;
     _update(_state.copyWith(focused: showRing));
     if (showRing) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

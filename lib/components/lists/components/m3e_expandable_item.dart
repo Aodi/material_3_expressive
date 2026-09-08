@@ -124,7 +124,10 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
   void _handleTapCancel() => setState(() => _isPressed = false);
 
   void _handleToggleFocusChanged() {
-    final bool show = M3EFocusRing.shouldShow(_toggleFocusNode);
+    if (!mounted) {
+      return;
+    }
+    final bool show = M3EFocusRing.shouldShow(_toggleFocusNode, context);
     if (_focused != show) {
       setState(() => _focused = show);
     }

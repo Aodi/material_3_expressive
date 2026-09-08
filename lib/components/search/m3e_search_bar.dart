@@ -205,7 +205,10 @@ class _M3ESearchBarState extends State<M3ESearchBar>
   }
 
   void _handleFocusInteractionChanged() {
-    final bool show = M3EFocusRing.shouldShow(_focusNode);
+    if (!mounted) {
+      return;
+    }
+    final bool show = M3EFocusRing.shouldShow(_focusNode, context);
     if (show == _showFocusRing) {
       return;
     }
@@ -259,13 +262,19 @@ class _M3ESearchBarState extends State<M3ESearchBar>
   }
 
   void _syncFocusedState() {
+    if (!mounted) {
+      return;
+    }
     // The states controller listener rebuilds, so the ring flag rides along.
-    _showFocusRing = M3EFocusRing.shouldShow(_focusNode);
+    _showFocusRing = M3EFocusRing.shouldShow(_focusNode, context);
     _statesController.update(WidgetState.focused, _focusNode.hasFocus);
   }
 
   void _handleHighlightModeChange(FocusHighlightMode mode) {
-    final bool show = M3EFocusRing.shouldShow(_focusNode);
+    if (!mounted) {
+      return;
+    }
+    final bool show = M3EFocusRing.shouldShow(_focusNode, context);
     if (show == _showFocusRing) {
       return;
     }

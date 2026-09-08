@@ -141,10 +141,13 @@ class _M3ENavBarDestinationButtonState
       widget.selected;
 
   void _handleFocusHighlight(bool value) {
+    if (!mounted) {
+      return;
+    }
     final bool show =
         value &&
         M3EFocusInteraction.instance.ringsAllowed &&
-        M3EFocusRing.shouldShow(_focusNode);
+        M3EFocusRing.shouldShow(_focusNode, context);
     if (_focused == show) {
       return;
     }

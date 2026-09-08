@@ -165,7 +165,10 @@ class _M3EIconButtonState extends State<M3EIconButton> {
   }
 
   void _syncFocusRing() {
-    final show = M3EFocusRing.shouldShow(_focusNode);
+    if (!mounted) {
+      return;
+    }
+    final show = M3EFocusRing.shouldShow(_focusNode, context);
     if (_showFocusRingNotifier.value != show) {
       _showFocusRingNotifier.value = show;
     }

@@ -65,6 +65,7 @@ class M3EThemeData {
     this.useMaterial3 = true,
     this.splashColor,
     this.highlightColor,
+    this.keyboardFocusIndicators = true,
     this.focusRingTheme = M3EFocusRingTheme.defaults,
     this.appBarTheme = M3EAppBarTheme.defaults,
     this.badgeTheme = M3EBadgeTheme.defaults,
@@ -197,6 +198,12 @@ class M3EThemeData {
 
   /// Optional highlight color override for ink.
   final Color? highlightColor;
+
+  /// Whether keyboard Tab focus rings and focus-state chrome are shown.
+  ///
+  /// When false, Tab traversal and activation still work, but no focus ring or
+  /// focus state-layer indicators are painted. Defaults to true.
+  final bool keyboardFocusIndicators;
 
   /// Shared keyboard focus ring tokens for actionable controls.
   final M3EFocusRingTheme focusRingTheme;
@@ -362,6 +369,7 @@ class M3EThemeData {
     bool? useMaterial3,
     Color? splashColor,
     Color? highlightColor,
+    bool? keyboardFocusIndicators,
     M3EFocusRingTheme? focusRingTheme,
     M3EAppBarTheme? appBarTheme,
     M3EBadgeTheme? badgeTheme,
@@ -421,6 +429,7 @@ class M3EThemeData {
     useMaterial3: useMaterial3,
     splashColor: splashColor,
     highlightColor: highlightColor,
+    keyboardFocusIndicators: keyboardFocusIndicators,
     focusRingTheme: focusRingTheme,
     appBarTheme: appBarTheme,
     badgeTheme: badgeTheme,

@@ -41,9 +41,7 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
   void _initFocusAndLoading() {
     _focusNode = widget.focusNode ?? FocusNode();
     _loadingNotifier = ValueNotifier<bool>(false);
-    _focusRingNotifier = ValueNotifier<bool>(
-      M3EFocusRing.shouldShow(_focusNode),
-    );
+    _focusRingNotifier = ValueNotifier<bool>(false);
     _focusNode.addListener(_syncFieldFocusRing);
     FocusManager.instance.addHighlightModeListener(
       _onFocusHighlightModeChanged,
@@ -54,6 +52,11 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
       _loadingNotifier,
       _focusRingNotifier,
     ]);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _syncFieldFocusRing();
+      }
+    });
   }
 
   void _onFocusHighlightModeChanged(FocusHighlightMode mode) {
@@ -62,7 +65,10 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
 
   /// Keeps the field ring in sync with keyboard focus highlight state.
   void _syncFieldFocusRing() {
-    _focusRingNotifier.value = M3EFocusRing.shouldShow(_focusNode);
+    if (!mounted) {
+      return;
+    }
+    _focusRingNotifier.value = M3EFocusRing.shouldShow(_focusNode, context);
   }
 
   void _listenBackButton() {

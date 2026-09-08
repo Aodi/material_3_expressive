@@ -56,8 +56,22 @@ class M3EFocusRing extends StatelessWidget {
     return M3ETheme.of(context).focusRingTheme;
   }
 
+  /// Whether the ambient theme allows keyboard focus ring / state chrome.
+  static bool indicatorsEnabledOf(BuildContext context) {
+    return M3ETheme.of(context).keyboardFocusIndicators;
+  }
+
   /// Whether [node] should show a keyboard focus ring.
-  static bool shouldShow(FocusNode node) {
+  ///
+  /// Pass [context] so [M3EThemeData.keyboardFocusIndicators] is respected.
+  static bool shouldShow(FocusNode node, [BuildContext? context]) {
+    if (context != null) {
+      final bool enabled =
+          M3ETheme.maybeOf(context)?.keyboardFocusIndicators ?? true;
+      if (!enabled) {
+        return false;
+      }
+    }
     if (!node.hasPrimaryFocus) {
       return false;
     }
@@ -76,6 +90,7 @@ class M3EFocusRing extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = M3ETheme.of(context);
     final ringTheme = theme.focusRingTheme;
+    final bool show = focused && theme.keyboardFocusIndicators;
     final resolvedColor = color ?? ringTheme.resolveColor(theme.colorScheme);
     final resolvedGap = gap ?? ringTheme.gap;
     final resolvedWidth = width ?? ringTheme.width;
@@ -89,7 +104,7 @@ class M3EFocusRing extends StatelessWidget {
     );
 
     return PhysicalModel(
-      elevation: focused ? _focusedElevation : 0,
+      elevation: show ? _focusedElevation : 0,
       color: const Color(0x00000000),
       shadowColor: const Color(0x00000000),
       child: Stack(
@@ -97,7 +112,7 @@ class M3EFocusRing extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           child,
-          if (focused)
+          if (show)
             Positioned(
               top: -outset,
               bottom: -outset,

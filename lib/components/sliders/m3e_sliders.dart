@@ -453,6 +453,9 @@ class _M3ESliderState extends State<M3ESlider> with TickerProviderStateMixin {
   /// Shows a focus outline for keyboard/traditional focus, matching desktop
   /// convention of hiding it after a pointer-driven focus grab.
   bool get _showFocusOutline {
+    if (!M3ETheme.of(context).keyboardFocusIndicators) {
+      return false;
+    }
     if (!_focusNode.hasFocus) {
       return false;
     }

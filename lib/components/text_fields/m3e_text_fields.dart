@@ -114,7 +114,10 @@ class _M3ETextFieldState extends State<M3ETextField> {
   }
 
   void _handleFocusInteractionChanged() {
-    final bool show = M3EFocusRing.shouldShow(_focusNode);
+    if (!mounted) {
+      return;
+    }
+    final bool show = M3EFocusRing.shouldShow(_focusNode, context);
     if (_showFocusRing != show) {
       setState(() => _showFocusRing = show);
     }
@@ -140,12 +143,15 @@ class _M3ETextFieldState extends State<M3ETextField> {
   void _handleFocusChange() {
     setState(() {
       _focused = _focusNode.hasFocus;
-      _showFocusRing = M3EFocusRing.shouldShow(_focusNode);
+      _showFocusRing = M3EFocusRing.shouldShow(_focusNode, context);
     });
   }
 
   void _handleHighlightModeChange(FocusHighlightMode mode) {
-    final bool show = M3EFocusRing.shouldShow(_focusNode);
+    if (!mounted) {
+      return;
+    }
+    final bool show = M3EFocusRing.shouldShow(_focusNode, context);
     if (show == _showFocusRing) {
       return;
     }

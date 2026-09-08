@@ -426,7 +426,10 @@ class _M3ESplitButtonState<T> extends State<M3ESplitButton<T>>
   }
 
   void _onTrailingFocusChanged() {
-    final focused = M3EFocusRing.shouldShow(_trailingFocusNode);
+    if (!mounted) {
+      return;
+    }
+    final focused = M3EFocusRing.shouldShow(_trailingFocusNode, context);
     if (_isTrailingFocused != focused) {
       setState(() => _isTrailingFocused = focused);
     }
