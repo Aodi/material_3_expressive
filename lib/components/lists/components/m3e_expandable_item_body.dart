@@ -63,26 +63,28 @@ extension _M3EExpandableItemBody on _M3EExpandableItemState {
       left: 0,
       right: 0,
       top: 0,
-      child: Offstage(
-        child: Padding(
-          padding: effectivePadding,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_collapsedHeight == null)
-                M3EMeasureSize(
-                  onChange: (size) =>
-                      setState(() => _collapsedHeight = size.height),
-                  child: widget.bodyBuilder(context, widget.index, 0),
-                ),
-              if (_expandedHeight == null)
-                M3EMeasureSize(
-                  onChange: (size) =>
-                      setState(() => _expandedHeight = size.height),
-                  child: widget.bodyBuilder(context, widget.index, 1),
-                ),
-            ],
+      child: ExcludeFocus(
+        child: Offstage(
+          child: Padding(
+            padding: effectivePadding,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_collapsedHeight == null)
+                  M3EMeasureSize(
+                    onChange: (size) =>
+                        setState(() => _collapsedHeight = size.height),
+                    child: widget.bodyBuilder(context, widget.index, 0),
+                  ),
+                if (_expandedHeight == null)
+                  M3EMeasureSize(
+                    onChange: (size) =>
+                        setState(() => _expandedHeight = size.height),
+                    child: widget.bodyBuilder(context, widget.index, 1),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -97,19 +99,22 @@ extension _M3EExpandableItemBody on _M3EExpandableItemState {
     required double translationY,
     required bool isEntirelyTappable,
   }) {
-    return SizedBox(
-      height: bodyHeight,
-      child: SingleChildScrollView(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: effectivePadding,
-        child: SizedBox(
-          width: double.infinity,
-          child: Builder(
-            builder: (context) => _buildBodyInteractiveContent(
-              d,
-              progress,
-              translationY: translationY,
-              isEntirelyTappable: isEntirelyTappable,
+    return ExcludeFocus(
+      excluding: progress < 1.0,
+      child: SizedBox(
+        height: bodyHeight,
+        child: SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: effectivePadding,
+          child: SizedBox(
+            width: double.infinity,
+            child: Builder(
+              builder: (context) => _buildBodyInteractiveContent(
+                d,
+                progress,
+                translationY: translationY,
+                isEntirelyTappable: isEntirelyTappable,
+              ),
             ),
           ),
         ),

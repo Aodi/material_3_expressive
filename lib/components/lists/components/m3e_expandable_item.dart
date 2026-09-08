@@ -361,6 +361,13 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
       );
     }
 
+    // Same local reading-order group as dropdown panel items: header, then
+    // revealed sublist rows, then the next sibling outside this group.
+    content = FocusTraversalGroup(
+      policy: ReadingOrderTraversalPolicy(),
+      child: content,
+    );
+
     return RepaintBoundary(
       child: Padding(
         padding: d.margin ?? EdgeInsets.zero,

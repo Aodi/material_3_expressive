@@ -536,6 +536,7 @@ class _ExpandablePreview extends StatelessWidget {
                 selection: nestedSelection,
                 selectionState: selectionState,
                 itemCount: nestedOrder.length,
+                onTap: nestedSelection ? null : (int index) {},
                 itemBuilder: (BuildContext context, int index) {
                   final String nestedId = nestedOrder[index];
                   return M3EListItem(

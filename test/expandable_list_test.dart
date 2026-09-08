@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_ui/material_ui.dart';
@@ -95,5 +96,69 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(expandedEvents, <int>[0, 1]);
     expect(find.text('This update includes security fixes.'), findsOneWidget);
+  });
+
+  testWidgets('expanded sublist participates in Tab traversal after header', (
+    WidgetTester tester,
+  ) async {
+    final List<String> taps = <String>[];
+    await tester.pumpWidget(
+      _host(
+        M3EExpandableList(
+          initiallyExpanded: const <int>{0},
+          data: <M3EExpandableData>[
+            M3EExpandableData(
+              title: 'Parent',
+              subtitle: 'Has nested rows',
+              expanded: M3EExpandableExpanded.list(
+                M3ECardList(
+                  embedded: true,
+                  itemCount: 2,
+                  onTap: (int index) => taps.add('nested-$index'),
+                  itemBuilder: (BuildContext context, int index) {
+                    return M3EListItem(headline: 'Nested $index');
+                  },
+                ),
+              ),
+            ),
+            M3EExpandableData(
+              title: 'Next parent',
+              subtitle: 'After sublist',
+              expanded: M3EExpandableExpanded.content(const Text('Body')),
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+
+    expect(find.text('Nested 0'), findsOneWidget);
+    expect(find.text('Nested 1'), findsOneWidget);
+
+    // Header, then nested rows (dropdown-style reading order).
+    expect(primaryFocus?.nextFocus(), isTrue);
+    await tester.pumpAndSettle();
+    expect(
+      primaryFocus?.context?.findAncestorWidgetOfExactType<M3ECardList>(),
+      isNull,
+    );
+
+    expect(primaryFocus?.nextFocus(), isTrue);
+    await tester.pumpAndSettle();
+    expect(
+      primaryFocus?.context?.findAncestorWidgetOfExactType<M3ECardList>(),
+      isNotNull,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(taps, <String>['nested-0']);
+
+    expect(primaryFocus?.nextFocus(), isTrue);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(taps, <String>['nested-0', 'nested-1']);
   });
 }

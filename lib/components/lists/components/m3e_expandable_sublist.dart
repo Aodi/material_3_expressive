@@ -70,22 +70,27 @@ class M3EExpandableSublist extends StatelessWidget {
     final double t = progress.clamp(0.0, 1.2);
     final double heightFactor = t.clamp(0.0, 1.0);
     final double gap = topGap ?? style.gap;
+    // Match dropdown panel items: only fully revealed rows are Tab stops.
+    final bool excludeFocus = heightFactor < 1.0;
 
-    return ClipRect(
-      child: Align(
-        alignment: Alignment.topCenter,
-        heightFactor: heightFactor,
-        child: Opacity(
-          opacity: heightFactor,
-          child: Transform.translate(
-            offset: Offset(0, (1.0 - t) * 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                if (gap > 0) SizedBox(height: gap),
-                child,
-              ],
+    return ExcludeFocus(
+      excluding: excludeFocus,
+      child: ClipRect(
+        child: Align(
+          alignment: Alignment.topCenter,
+          heightFactor: heightFactor,
+          child: Opacity(
+            opacity: heightFactor,
+            child: Transform.translate(
+              offset: Offset(0, (1.0 - t) * 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  if (gap > 0) SizedBox(height: gap),
+                  child,
+                ],
+              ),
             ),
           ),
         ),
