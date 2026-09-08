@@ -87,7 +87,11 @@ class _PlaygroundBodyState extends State<PlaygroundBody> {
     return ListView(
       primary: false,
       padding: EdgeInsets.zero,
-      children: <Widget>[preview, tailSection],
+      children: <Widget>[
+        // Keep interactive preview state when scrolled off-screen.
+        _PlaygroundKeepAlive(child: preview),
+        tailSection,
+      ],
     );
   }
 
@@ -111,6 +115,28 @@ class _PlaygroundBodyState extends State<PlaygroundBody> {
         ...controls,
       ],
     ];
+  }
+}
+
+/// Keeps a [ListView] child mounted so demo widget state survives scroll-away.
+class _PlaygroundKeepAlive extends StatefulWidget {
+  const _PlaygroundKeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_PlaygroundKeepAlive> createState() => _PlaygroundKeepAliveState();
+}
+
+class _PlaygroundKeepAliveState extends State<_PlaygroundKeepAlive>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
 

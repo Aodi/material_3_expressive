@@ -124,6 +124,10 @@ extension _M3EDropdownMenuActions<T> on _M3EDropdownMenuState<T> {
     if (item.selected) {
       return true;
     }
+    final int? limit = widget.limit;
+    if (limit != null) {
+      return _controller.selectedItems.length < limit;
+    }
     if (widget.maxSelections <= 0) {
       return true;
     }

@@ -103,6 +103,12 @@ class M3EDropdownMenu<T> extends StatefulWidget {
   /// Maximum number of selectable items. `0` means unlimited.
   final int maxSelections;
 
+  /// Maximum number of selections when multi-select applies.
+  ///
+  /// `null` (default) means unlimited. When non-null, must be greater than
+  /// zero. Takes precedence over [maxSelections] when set.
+  final int? limit;
+
   /// Called whenever the selection changes.
   final ValueChanged<List<M3EDropdownItem<T>>>? onSelectionChanged;
 
@@ -214,6 +220,7 @@ class M3EDropdownMenu<T> extends StatefulWidget {
     this.searchEnabled = false,
     this.showChipAnimation = true,
     this.maxSelections = 0,
+    this.limit,
     this.onSelectionChanged,
     this.onSearchChanged,
     this.controller,
@@ -236,7 +243,8 @@ class M3EDropdownMenu<T> extends StatefulWidget {
     this.closeMotion,
     this.splashFactory = NoSplash.splashFactory,
     this.haptic = M3EHapticFeedback.none,
-  }) : future = null;
+  }) : future = null,
+       assert(limit == null || limit > 0);
 
   /// Creates an [M3EDropdownMenu] that loads items asynchronously.
   const M3EDropdownMenu.future({
@@ -246,6 +254,7 @@ class M3EDropdownMenu<T> extends StatefulWidget {
     this.searchEnabled = false,
     this.showChipAnimation = false,
     this.maxSelections = 0,
+    this.limit,
     this.onSelectionChanged,
     this.onSearchChanged,
     this.controller,
@@ -268,7 +277,8 @@ class M3EDropdownMenu<T> extends StatefulWidget {
     this.closeMotion,
     this.splashFactory = NoSplash.splashFactory,
     this.haptic = M3EHapticFeedback.none,
-  }) : items = const [];
+  }) : items = const [],
+       assert(limit == null || limit > 0);
 
   @override
   State<M3EDropdownMenu<T>> createState() => _M3EDropdownMenuState<T>();

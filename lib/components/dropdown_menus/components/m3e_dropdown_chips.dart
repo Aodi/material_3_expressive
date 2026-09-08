@@ -184,7 +184,7 @@ class M3ESpringChipState<T> extends State<M3ESpringChip<T>>
             widget.cd.deleteIcon ??
                 Icon(
                   Icons.close,
-                  size: theme.resolvedIconTheme.size,
+                  size: labelStyle.fontSize ?? 12,
                   color: widget.scheme.onSecondaryContainer,
                 ),
           ],
