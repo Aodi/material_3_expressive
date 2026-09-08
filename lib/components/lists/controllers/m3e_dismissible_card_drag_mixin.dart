@@ -27,7 +27,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
 
   @override
   void handleDragStart(M3EDismissibleSlot slot) {
-    if (!slot.isVisible || isInteractionLocked) {
+    if (!slot.isVisible || _collapsingCount > 0) {
       return;
     }
 
@@ -37,13 +37,18 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     _roundnessCtrl?.stop(canceled: true);
 
     setState(() {
+      final bool isSameSlot = _dragSlotRef == slot;
       _dragSlotRef = slot;
       _dragSlotIndex = _slots.indexOf(slot);
-      _dragOffset = 0.0;
-      _neighbourFraction = 0.0;
-      _pastThreshold = false;
-      _detachPush = 0.0;
-      _roundnessFraction = 0.0;
+      _isDismissDragging = true;
+      if (!isSameSlot) {
+        _dragOffset = 0.0;
+        _neighbourFraction = 0.0;
+        _pastThreshold = false;
+        _pastActionThreshold = false;
+        _detachPush = 0.0;
+        _roundnessFraction = 0.0;
+      }
     });
   }
 
@@ -57,16 +62,44 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
 
     final swipeSpeed = d.delta.dx.abs();
     final multiplier = (1.0 + (swipeSpeed / 5.0)).clamp(1.0, 4.0);
-    final newOffset = _dragOffset + d.delta.dx;
+    var newOffset = _dragOffset + d.delta.dx;
     var newNeighbour = _neighbourFraction;
     var newRoundness = _roundnessFraction;
+
+    final int? dataIndex = _dataIndexForDragSlot();
+    final bool swipingRight = newOffset > 0;
+    final List<M3EListSwipeAction> actionList = dataIndex == null
+        ? const <M3EListSwipeAction>[]
+        : actionsFor(dataIndex, swipingRight: swipingRight);
+    final bool hasActions = actionList.isNotEmpty;
+
+    if (hasActions) {
+      final double actionsWidth = _computeActionsWidth(actionList);
+      final double maxExtent = actionsWidth + style.actionOverdragExtent;
+      if (newOffset.abs() > maxExtent) {
+        final double overdrag = newOffset.abs() - maxExtent;
+        final double dampedOverdrag = math.sqrt(overdrag) * 3.0;
+        newOffset = (maxExtent + dampedOverdrag) * newOffset.sign;
+      }
+
+      final bool crossedAction = newOffset.abs() >= actionsWidth;
+      if (crossedAction && !_pastActionThreshold) {
+        _pastActionThreshold = true;
+        if (style.enableFeedback) {
+          M3EHaptics.trigger(style.hapticOnThreshold);
+        }
+      } else if (!crossedAction && _pastActionThreshold) {
+        _pastActionThreshold = false;
+      }
+    }
 
     final savedOffset = _dragOffset;
     _dragOffset = newOffset;
     final newProgress = _dragProgress;
     _dragOffset = savedOffset;
 
-    final crossedNow = newProgress >= 1.0;
+    // With actions, do not enter full-dismiss threshold visuals.
+    final bool crossedNow = hasActions ? false : newProgress >= 1.0;
     if (crossedNow && !_pastThreshold) {
       _onCrossThreshold(newOffset, multiplier);
     } else if (!crossedNow && _pastThreshold) {
@@ -135,6 +168,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
             if (s == AnimationStatus.completed ||
                 s == AnimationStatus.dismissed) {
               _reEngaging = false;
+              _onMotionSettled(s);
             }
           })
           ..animateTo(target);
@@ -154,6 +188,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
               setState(() => _roundnessFraction = _roundnessCtrl!.value);
             }
           })
+          ..addStatusListener(_onMotionSettled)
           ..animateTo(target * _kPreThresholdRoundnessScale);
   }
 
@@ -195,6 +230,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
               setState(() => _detachPush = _pushCtrl!.value);
             }
           })
+          ..addStatusListener(_onMotionSettled)
           ..animateTo(target);
   }
 
@@ -217,6 +253,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
               setState(() => _neighbourFraction = _nbrCtrl!.value);
             }
           })
+          ..addStatusListener(_onMotionSettled)
           ..animateTo(target);
   }
 
@@ -239,6 +276,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
               setState(() => _roundnessFraction = _roundnessCtrl!.value);
             }
           })
+          ..addStatusListener(_onMotionSettled)
           ..animateTo(target);
   }
 
@@ -246,6 +284,9 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
 
   @override
   void handleDragEnd(DragEndDetails d) {
+    if (_isDismissDragging) {
+      setState(() => _isDismissDragging = false);
+    }
     if (_dragSlotRef == null) {
       return;
     }
@@ -258,14 +299,93 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     final velocity = d.velocity.pixelsPerSecond.dx.abs();
     final speedMul = (1.0 + (velocity / 1000.0)).clamp(1.0, 4.0);
 
+    final bool swipingRight = _dragOffset > 0;
+    final int? dataIndex = _dataIndexForDragSlot();
+    final List<M3EListSwipeAction> actionList = dataIndex == null
+        ? const <M3EListSwipeAction>[]
+        : actionsFor(dataIndex, swipingRight: swipingRight);
+
+    if (actionList.isNotEmpty) {
+      final double actionsWidth = _computeActionsWidth(actionList);
+      if (_dragOffset.abs() >= actionsWidth * style.actionPreviewThreshold) {
+        _snapToRevealed(actionsWidth * (swipingRight ? 1.0 : -1.0), speedMul);
+      } else {
+        _springBack(speedMul);
+      }
+      return;
+    }
+
     if (_dragProgress >= 1.0) {
-      final direction = _dragOffset > 0
+      final direction = swipingRight
           ? DismissDirection.startToEnd
           : DismissDirection.endToStart;
       _dismiss(_dragSlotIndex, speedMul, direction);
     } else {
       _springBack(speedMul);
     }
+  }
+
+  /// Closes an open action preview.
+  void closeActionPreview({double speedMul = 1.0}) {
+    if (_dragSlotRef == null) {
+      return;
+    }
+    _springBack(speedMul);
+  }
+
+  void _snapToRevealed(double targetOffset, double speedMul) {
+    _pushCtrl?.dispose();
+    _pushCtrl = null;
+    _detachPush = 0.0;
+    _pastThreshold = false;
+    _pastActionThreshold = true;
+    _reEngaging = false;
+
+    final back = style.springBackSpring;
+    _springCtrl?.dispose();
+    _springCtrl =
+        SingleMotionController(
+            motion: _spatialMotion(back, stiffness: back.stiffness * speedMul),
+            vsync: this,
+            initialValue: _dragOffset,
+          )
+          ..addListener(() {
+            if (mounted) {
+              setState(() => _dragOffset = _springCtrl!.value);
+            }
+          })
+          ..addStatusListener(_onMotionSettled)
+          ..animateTo(targetOffset);
+
+    _nbrCtrl?.dispose();
+    _nbrCtrl =
+        SingleMotionController(
+            motion: _spatialMotion(back, stiffness: back.stiffness * speedMul),
+            vsync: this,
+            initialValue: _neighbourFraction,
+          )
+          ..addListener(() {
+            if (mounted) {
+              setState(() => _neighbourFraction = _nbrCtrl!.value);
+            }
+          })
+          ..addStatusListener(_onMotionSettled)
+          ..animateTo(0);
+
+    _roundnessCtrl?.dispose();
+    _roundnessCtrl =
+        SingleMotionController(
+            motion: _spatialMotion(back, stiffness: back.stiffness * speedMul),
+            vsync: this,
+            initialValue: _roundnessFraction,
+          )
+          ..addListener(() {
+            if (mounted) {
+              setState(() => _roundnessFraction = _roundnessCtrl!.value);
+            }
+          })
+          ..addStatusListener(_onMotionSettled)
+          ..animateTo(0);
   }
 
   void _resetDragState() {
@@ -276,6 +396,8 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
       _detachPush = 0.0;
       _neighbourFraction = 0.0;
       _pastThreshold = false;
+      _pastActionThreshold = false;
+      _isDismissDragging = false;
       _reEngaging = false;
       _roundnessFraction = 0.0;
     });
@@ -300,6 +422,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     _roundnessCtrl?.dispose();
     _roundnessCtrl = null;
     _roundnessFraction = 0.0;
+    _pastActionThreshold = false;
 
     final ref = _dragSlotRef;
     final back = style.springBackSpring;
@@ -337,6 +460,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
               setState(() => _neighbourFraction = _nbrCtrl!.value);
             }
           })
+          ..addStatusListener(_onMotionSettled)
           ..animateTo(0);
   }
 
@@ -360,6 +484,21 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     _markSlotCollapsing(slot);
 
     M3EHaptics.trigger(style.hapticOnThreshold);
+
+    if (style.autoExecutePrimaryOnFullSwipe) {
+      final bool swipingRight = direction == DismissDirection.startToEnd;
+      final List<M3EListSwipeAction> actionList = actionsFor(
+        dataIndex,
+        swipingRight: swipingRight,
+      );
+      if (actionList.isNotEmpty) {
+        final M3EListSwipeAction primary = actionList.firstWhere(
+          (M3EListSwipeAction a) => a.isPrimary,
+          orElse: () => actionList.last,
+        );
+        primary.onPressed?.call();
+      }
+    }
 
     final colCtrl = _createCollapseController(slot, speedMul);
     _startFlyOut(slot, flyInitial, speedMul, colCtrl);
@@ -402,6 +541,8 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
       _detachPush = 0.0;
       _neighbourFraction = 0.0;
       _pastThreshold = false;
+      _pastActionThreshold = false;
+      _isDismissDragging = false;
       _reEngaging = false;
       _roundnessFraction = 0.0;
     });

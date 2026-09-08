@@ -3,7 +3,7 @@ part of 'm3e_dismissible_card_controller.dart';
 /// M3EDismissibleCardBuildMixin.
 
 mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
-    on M3EDismissibleCardMixin<T> {
+    on M3EDismissibleCardMixin<T>, M3EDismissibleCardDragMixin<T> {
   @override
   Widget buildSlot(BuildContext context, int slotIndex, [List<int>? visible]) {
     final slot = _slots[slotIndex];
@@ -63,22 +63,33 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
         if (actionWidth <= 0) {
           return const SizedBox.shrink();
         }
+        final Widget? bg = swipingRight
+            ? s.background
+            : (s.secondaryBackground ?? s.background);
+        if (bg == null) {
+          return const SizedBox.shrink();
+        }
+        final double edgePad = s.actionEdgePadding;
+        final double pillHeight = math.max(
+          s.actionMinHeight,
+          (slot.capturedHeight > 0 ? slot.capturedHeight : 56.0) -
+              s.actionVerticalInset,
+        );
+        final double pillWidth = math.max(0.0, actionWidth - 2 * edgePad);
         return Positioned.fill(
           bottom: s.gap,
           child: Align(
             alignment: swipingRight
                 ? Alignment.centerLeft
                 : Alignment.centerRight,
-            child: SizedBox(
-              width: actionWidth,
-              height: double.infinity,
-              child: Padding(
-                padding: s.margin ?? EdgeInsets.zero,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: edgePad),
+              child: SizedBox(
+                width: pillWidth,
+                height: pillHeight,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(bgRadius),
-                  child: swipingRight
-                      ? s.background
-                      : (s.secondaryBackground ?? s.background),
+                  borderRadius: BorderRadius.circular(pillHeight / 2),
+                  child: bg,
                 ),
               ),
             ),
@@ -157,14 +168,26 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
         computeRadius(slotIndex, slotPos, dragPos, visible);
     final nOff = computeNeighbourOffset(slotPos, dragPos);
     final swipingRight = _dragOffset > 0;
-    final activeBg = swipingRight
-        ? s.background
-        : (s.secondaryBackground ?? s.background);
+    final List<M3EListSwipeAction> actionList = actionsFor(
+      slotPos,
+      swipingRight: swipingRight,
+    );
+    final bool hasActions = actionList.isNotEmpty;
+    final Widget? activeBg = hasActions
+        ? null
+        : (swipingRight
+              ? s.background
+              : (s.secondaryBackground ?? s.background));
     final bgRadius = swipingRight
         ? s.backgroundBorderRadius
         : (s.secondaryBackgroundBorderRadius ?? s.backgroundBorderRadius);
     final revealed = _dragOffset.abs();
-    final actionWidth = (revealed - s.actionGap).clamp(0.0, revealed);
+    final actionWidth = (revealed - (hasActions ? 0 : s.actionGap)).clamp(
+      0.0,
+      revealed,
+    );
+    final bool showReveal =
+        isDragged && (actionWidth > 0 || _pastActionThreshold);
 
     return RepaintBoundary(
       child: Padding(
@@ -172,7 +195,15 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            if (isDragged && actionWidth > 0 && activeBg != null)
+            if (showReveal && hasActions)
+              _buildActiveActionsReveal(
+                slot: slot,
+                isLast: isLast,
+                swipingRight: swipingRight,
+                actionList: actionList,
+                gap: s.gap,
+              )
+            else if (showReveal && activeBg != null)
               _buildActiveActionBackground(
                 isLast: isLast,
                 swipingRight: swipingRight,
@@ -198,6 +229,124 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
     );
   }
 
+  Widget _buildActiveActionsReveal({
+    required M3EDismissibleSlot slot,
+    required bool isLast,
+    required bool swipingRight,
+    required List<M3EListSwipeAction> actionList,
+    required double gap,
+  }) {
+    final double actionsWidth = _computeActionsWidth(actionList);
+    final double currentOffset = _pastActionThreshold
+        ? math.max(_dragOffset.abs(), actionsWidth)
+        : _dragOffset.abs();
+    final double bgW = currentOffset.clamp(0.0, double.infinity);
+    if (bgW <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned.fill(
+      bottom: isLast ? 0 : gap,
+      child: RepaintBoundary(
+        child: Align(
+          alignment: swipingRight
+              ? Alignment.centerLeft
+              : Alignment.centerRight,
+          child: SizedBox(
+            width: bgW,
+            height: double.infinity,
+            child: _buildActionsRow(
+              actionList: actionList,
+              swipingRight: swipingRight,
+              currentOffset: currentOffset,
+              baseWidth: actionsWidth,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionsRow({
+    required List<M3EListSwipeAction> actionList,
+    required bool swipingRight,
+    required double currentOffset,
+    required double baseWidth,
+  }) {
+    final double spacing = style.actionSpacing;
+    final double edgePad = style.actionEdgePadding;
+    final int numActions = actionList.length;
+    final double revealProgress = baseWidth > 0
+        ? (currentOffset / baseWidth).clamp(0.0, 1.0)
+        : 1.0;
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double availableHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : 64.0;
+        final double availableWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : 0.0;
+        if (availableWidth <= 0 || numActions == 0) {
+          return const SizedBox.shrink();
+        }
+
+        final double horizontalPad = math.min(edgePad, availableWidth / 2);
+        final double innerWidth = math.max(
+          0.0,
+          availableWidth - 2 * horizontalPad,
+        );
+        if (innerWidth <= 0) {
+          return const SizedBox.shrink();
+        }
+
+        final int gapCount = numActions - 1;
+        final double rawGaps = gapCount > 0 ? spacing * gapCount : 0.0;
+        // Drop inter-action gaps until the reveal is wide enough to fit them.
+        final double usedGaps = rawGaps <= innerWidth ? rawGaps : 0.0;
+        final double gapBetween = gapCount > 0 ? usedGaps / gapCount : 0.0;
+        final double buttonHeight = math.max(
+          style.actionMinHeight,
+          availableHeight - style.actionVerticalInset,
+        );
+
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPad),
+          child: Row(
+            mainAxisAlignment: swipingRight
+                ? MainAxisAlignment.start
+                : MainAxisAlignment.end,
+            children: <Widget>[
+              for (int i = 0; i < actionList.length; i++) ...<Widget>[
+                if (i > 0) SizedBox(width: gapBetween),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (BuildContext context, BoxConstraints cell) {
+                      final M3EListSwipeAction action = actionList[i];
+                      final double resolvedHeight =
+                          action.height ?? buttonHeight;
+                      return Opacity(
+                        opacity: revealProgress,
+                        child: M3EListSwipeActionButton(
+                          action: action,
+                          width: cell.maxWidth,
+                          height: resolvedHeight,
+                          minWidth: style.actionMinWidth,
+                          onTriggered: closeActionPreview,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildActiveActionBackground({
     required bool isLast,
     required bool swipingRight,
@@ -206,24 +355,39 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
     required Widget activeBg,
     required double gap,
   }) {
+    final double edgePad = style.actionEdgePadding;
+
     return Positioned.fill(
       bottom: isLast ? 0 : gap,
       child: RepaintBoundary(
-        child: Align(
-          alignment: swipingRight
-              ? Alignment.centerLeft
-              : Alignment.centerRight,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(bgRadius),
-            child: SizedBox(
-              width: actionWidth,
-              height: double.infinity,
-              child: Opacity(
-                opacity: (_dragProgress * 3.0).clamp(0.0, 1.0),
-                child: _buildActiveBackground(activeBg, _dragProgress),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double availableHeight = constraints.maxHeight.isFinite
+                ? constraints.maxHeight
+                : 64.0;
+            final double pillHeight = math.max(
+              style.actionMinHeight,
+              availableHeight - style.actionVerticalInset,
+            );
+            final double pillWidth = math.max(0.0, actionWidth - 2 * edgePad);
+
+            return Align(
+              alignment: swipingRight
+                  ? Alignment.centerLeft
+                  : Alignment.centerRight,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: edgePad),
+                child: SizedBox(
+                  width: pillWidth,
+                  height: pillHeight,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(pillHeight / 2),
+                    child: activeBg,
+                  ),
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
@@ -255,12 +419,13 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
               onHorizontalDragStart: (_) {
                 _dismissDxAcc = 0;
                 // With reorder, wait for real horizontal travel so a long-press
-                // hold cannot lock dismiss and block reorder.
-                if (listReorderEnabled) {
+                // hold cannot lock dismiss and block reorder — unless preview
+                // is already open on this (or another) row.
+                if (listReorderEnabled && !isActionPreviewOpen) {
                   return;
                 }
                 if (M3EListReorderSessionScope.isActive(context) ||
-                    isInteractionLocked) {
+                    _collapsingCount > 0) {
                   return;
                 }
                 handleDragStart(slot);
@@ -274,7 +439,8 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
                     return;
                   }
                   _dismissDxAcc += details.delta.dx;
-                  if (_dismissDxAcc.abs() < kTouchSlop || isInteractionLocked) {
+                  if (_dismissDxAcc.abs() < kTouchSlop ||
+                      _collapsingCount > 0) {
                     return;
                   }
                   handleDragStart(slot);
@@ -311,13 +477,24 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
                               M3EListSelectionTrigger.doubleTap
                       ? () => features.onToggleSelection(slotPos)
                       : null;
-                  final VoidCallback? onPressed = isInteractionLocked
+                  final VoidCallback? boundPress = _collapsingCount > 0
                       ? null
                       : _bindSelectionTaps(
                           index: slotPos,
                           onTap: selectionTap,
                           onDoubleTap: onDoubleTap,
                         );
+                  final VoidCallback? onPressed =
+                      isActionPreviewOpen || boundPress != null
+                      ? () {
+                          if (isActionPreviewOpen) {
+                            closeActionPreview();
+                            return;
+                          }
+                          boundPress?.call();
+                        }
+                      : null;
+                  final bool suppressHover = _suppressCardHover;
                   final BorderRadius radius =
                       m3eSelectionRadius(
                         context,
@@ -349,9 +526,11 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
                             animationDuration: Duration.zero,
                             width: double.infinity,
                             padding: EdgeInsets.zero,
+                            enabled: !suppressHover,
                             onPressed: onPressed,
                             onLongPress:
-                                isInteractionLocked ||
+                                suppressHover ||
+                                    isInteractionLocked ||
                                     listReorderEnabled ||
                                     onLongPressCallback == null
                                 ? null
@@ -424,54 +603,5 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
       _lastSelectionTapIndex = index;
       onTap?.call();
     };
-  }
-
-  Widget _buildActiveBackground(Widget? bg, double progress) {
-    if (bg == null) {
-      return const SizedBox.shrink();
-    }
-    final iconOpacity = progress < 0.3
-        ? 0.0
-        : ((progress - 0.3) / 0.7).clamp(0.0, 1.0);
-    final iconScale = progress < 0.3
-        ? 0.8
-        : (0.8 + ((progress - 0.3) / 0.7) * 0.2).clamp(0.0, 1.0);
-
-    Widget wrapChild(Widget? child) {
-      if (child == null) {
-        return const SizedBox.shrink();
-      }
-      return Transform.scale(
-        scale: iconScale,
-        child: Opacity(opacity: iconOpacity, child: child),
-      );
-    }
-
-    if (bg is Container) {
-      return Container(
-        alignment: bg.alignment,
-        padding: bg.padding,
-        color: bg.color,
-        decoration: bg.decoration,
-        foregroundDecoration: bg.foregroundDecoration,
-        constraints: bg.constraints,
-        margin: bg.margin,
-        transform: bg.transform,
-        transformAlignment: bg.transformAlignment,
-        clipBehavior: bg.clipBehavior,
-        child: bg.child != null ? wrapChild(bg.child) : null,
-      );
-    }
-    if (bg is ColoredBox) {
-      return ColoredBox(color: bg.color, child: wrapChild(bg.child));
-    }
-    if (bg is DecoratedBox) {
-      return DecoratedBox(
-        decoration: bg.decoration,
-        position: bg.position,
-        child: wrapChild(bg.child),
-      );
-    }
-    return wrapChild(bg);
   }
 }

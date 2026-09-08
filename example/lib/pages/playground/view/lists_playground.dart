@@ -455,32 +455,33 @@ class _DismissiblePreview extends StatelessWidget {
       onReorder: reorder ? onReorder : null,
       itemCount: order.length,
       onDismiss: (int index, DismissDirection direction) async => true,
+      // Leading: classic full-dismiss strip (no actions).
+      // Trailing: multi-action preview snap.
+      trailingActionsBuilder: (int index) => <M3EListSwipeAction>[
+        M3EListSwipeAction(
+          icon: const Icon(M3EIcons.archive),
+          onPressed: () {},
+        ),
+        M3EListSwipeAction(
+          icon: const Icon(M3EIcons.delete),
+          isPrimary: true,
+          backgroundColor: theme.colorScheme.danger,
+          foregroundColor: theme.colorScheme.onError,
+          onPressed: () {},
+        ),
+      ],
       style: M3EDismissibleListStyle(
         background: ColoredBox(
           color: theme.colorScheme.success,
-          child: const Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
-              child: Icon(M3EIcons.check),
-            ),
-          ),
-        ),
-        secondaryBackground: ColoredBox(
-          color: theme.colorScheme.danger,
-          child: const Align(
-            alignment: Alignment.centerRight,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
-              child: Icon(M3EIcons.close),
-            ),
+          child: const Center(
+            child: Icon(M3EIcons.check, color: Color(0xFFFFFFFF)),
           ),
         ),
       ),
       itemBuilder: (BuildContext context, int index) {
         return M3EListItem(
           headline: '$headline ${order[index]}',
-          supportingText: 'Swipe to dismiss',
+          supportingText: 'Swipe for actions or dismiss',
           leading: showLeading ? const Icon(M3EIcons.schedule) : null,
         );
       },

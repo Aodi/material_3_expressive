@@ -19,6 +19,7 @@ class M3ECard extends StatelessWidget {
     this.variant = M3ECardVariant.elevated,
     this.onPressed,
     this.onLongPress,
+    this.enabled = true,
     this.padding = const EdgeInsets.all(16),
     this.clipBehavior = Clip.antiAlias,
     this.borderRadius,
@@ -48,6 +49,9 @@ class M3ECard extends StatelessWidget {
 
   /// onLongPress.
   final VoidCallback? onLongPress;
+
+  /// When false, hover/press state layers are suppressed even if callbacks are set.
+  final bool enabled;
 
   /// padding.
   final EdgeInsetsGeometry padding;
@@ -91,7 +95,9 @@ class M3ECard extends StatelessWidget {
   /// onStateChanged.
   final ValueChanged<M3EInteractionState>? onStateChanged;
 
-  bool get _isInteractive => onPressed != null || onLongPress != null;
+  bool get _hasCallbacks => onPressed != null || onLongPress != null;
+
+  bool get _isInteractive => enabled && _hasCallbacks;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +109,7 @@ class M3ECard extends StatelessWidget {
     final resolvedBorderRadius = borderRadius ?? cardTheme.borderRadius;
     final shape = RoundedRectangleBorder(borderRadius: resolvedBorderRadius);
 
-    if (!_isInteractive) {
+    if (!_hasCallbacks) {
       return _buildSurface(
         context,
         cardTheme,
@@ -114,6 +120,7 @@ class M3ECard extends StatelessWidget {
     }
 
     return M3ETappable(
+      enabled: enabled,
       onTap: onPressed,
       onLongPress: onLongPress,
       mouseCursor: mouseCursor,
@@ -127,7 +134,7 @@ class M3ECard extends StatelessWidget {
           cardTheme,
           resolvedBorderRadius,
           shape,
-          state,
+          enabled ? state : const M3EInteractionState(),
         );
       },
     );

@@ -12,6 +12,8 @@ class M3EDismissibleList extends StatefulWidget {
     this.onLongPress,
     this.colorBuilder,
     this.borderRadiusBuilder,
+    this.leadingActionsBuilder,
+    this.trailingActionsBuilder,
     this.style = const M3EDismissibleListStyle(),
     this.physics,
     this.scrollController,
@@ -51,6 +53,12 @@ class M3EDismissibleList extends StatefulWidget {
   /// Optional per-index border radius.
   final BorderRadius? Function(int index, M3ECardPosition position)?
   borderRadiusBuilder;
+
+  /// Start-to-end (LTR leading) swipe actions for [index].
+  final List<M3EListSwipeAction> Function(int index)? leadingActionsBuilder;
+
+  /// End-to-start (LTR trailing) swipe actions for [index].
+  final List<M3EListSwipeAction> Function(int index)? trailingActionsBuilder;
 
   /// style.
   final M3EDismissibleListStyle style;
@@ -146,6 +154,14 @@ class _M3EDismissibleListState extends State<M3EDismissibleList>
   get borderRadiusBuilder => widget.borderRadiusBuilder;
 
   @override
+  List<M3EListSwipeAction> Function(int index)? get leadingActionsBuilder =>
+      widget.leadingActionsBuilder;
+
+  @override
+  List<M3EListSwipeAction> Function(int index)? get trailingActionsBuilder =>
+      widget.trailingActionsBuilder;
+
+  @override
   void initState() {
     super.initState();
     initSlots();
@@ -234,6 +250,8 @@ class M3EDismissibleColumn extends StatefulWidget {
     this.onLongPress,
     this.colorBuilder,
     this.borderRadiusBuilder,
+    this.leadingActionsBuilder,
+    this.trailingActionsBuilder,
     this.style = const M3EDismissibleListStyle(),
     this.selection = false,
     this.reorder = false,
@@ -268,6 +286,12 @@ class M3EDismissibleColumn extends StatefulWidget {
   /// Optional per-index border radius.
   final BorderRadius? Function(int index, M3ECardPosition position)?
   borderRadiusBuilder;
+
+  /// Start-to-end (LTR leading) swipe actions for [index].
+  final List<M3EListSwipeAction> Function(int index)? leadingActionsBuilder;
+
+  /// End-to-start (LTR trailing) swipe actions for [index].
+  final List<M3EListSwipeAction> Function(int index)? trailingActionsBuilder;
 
   /// style.
   final M3EDismissibleListStyle style;
@@ -306,6 +330,8 @@ class M3EDismissibleColumn extends StatefulWidget {
     Color? Function(int index)? colorBuilder,
     BorderRadius? Function(int index, M3ECardPosition position)?
     borderRadiusBuilder,
+    List<M3EListSwipeAction> Function(int index)? leadingActionsBuilder,
+    List<M3EListSwipeAction> Function(int index)? trailingActionsBuilder,
     M3EDismissibleListStyle style = const M3EDismissibleListStyle(),
     bool selection = false,
     bool reorder = false,
@@ -326,6 +352,8 @@ class M3EDismissibleColumn extends StatefulWidget {
       onLongPress: onLongPress,
       colorBuilder: colorBuilder,
       borderRadiusBuilder: borderRadiusBuilder,
+      leadingActionsBuilder: leadingActionsBuilder,
+      trailingActionsBuilder: trailingActionsBuilder,
       style: style,
       selection: selection,
       reorder: reorder,
@@ -388,6 +416,14 @@ class _M3EDismissibleColumnState extends State<M3EDismissibleColumn>
   @override
   BorderRadius? Function(int index, M3ECardPosition position)?
   get borderRadiusBuilder => widget.borderRadiusBuilder;
+
+  @override
+  List<M3EListSwipeAction> Function(int index)? get leadingActionsBuilder =>
+      widget.leadingActionsBuilder;
+
+  @override
+  List<M3EListSwipeAction> Function(int index)? get trailingActionsBuilder =>
+      widget.trailingActionsBuilder;
 
   @override
   void initState() {

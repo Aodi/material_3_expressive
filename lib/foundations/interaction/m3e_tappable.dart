@@ -131,6 +131,14 @@ class _M3ETappableState extends State<M3ETappable>
         oldWidget.focusNode != widget.focusNode) {
       _applyFocusableToNode();
     }
+    final bool wasInteractive =
+        oldWidget.enabled &&
+        (oldWidget.onTap != null || oldWidget.onLongPress != null);
+    final bool isInteractive = widget._isInteractive;
+    if (wasInteractive && !isInteractive) {
+      _update(_state.copyWith(hovered: false, pressed: false));
+      _animateScale(1);
+    }
   }
 
   void _applyFocusableToNode() {

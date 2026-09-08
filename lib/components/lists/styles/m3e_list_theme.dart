@@ -202,6 +202,27 @@ class M3EListDismissibleTheme {
   /// defaultActionGap.
   static const double defaultActionGap = 8;
 
+  /// defaultActionSpacing.
+  static const double defaultActionSpacing = 8;
+
+  /// defaultActionEdgePadding.
+  static const double defaultActionEdgePadding = 8;
+
+  /// Fraction of actions width at which the preview snaps open on release.
+  static const double defaultActionPreviewThreshold = 0.35;
+
+  /// Extra drag past the actions width before rubber-band overdrag.
+  static const double defaultActionOverdragExtent = 24;
+
+  /// Vertical inset subtracted from the row height for action pills.
+  static const double defaultActionVerticalInset = 8;
+
+  /// Minimum action / dismiss pill height.
+  static const double defaultActionMinHeight = 28;
+
+  /// Minimum visual width for action pills (keeps icons inside while revealing).
+  static const double defaultActionMinWidth = 40;
+
   /// defaultDismissThreshold.
   static const double defaultDismissThreshold = 0.2;
 
@@ -228,6 +249,13 @@ class M3EListDismissibleTheme {
     this.innerRadius = defaultInnerRadius,
     this.gap = defaultGap,
     this.actionGap = defaultActionGap,
+    this.actionSpacing = defaultActionSpacing,
+    this.actionEdgePadding = defaultActionEdgePadding,
+    this.actionPreviewThreshold = defaultActionPreviewThreshold,
+    this.actionOverdragExtent = defaultActionOverdragExtent,
+    this.actionVerticalInset = defaultActionVerticalInset,
+    this.actionMinHeight = defaultActionMinHeight,
+    this.actionMinWidth = defaultActionMinWidth,
     this.dismissThreshold = defaultDismissThreshold,
     this.neighbourPull = defaultNeighbourPull,
     this.neighbourReach = defaultNeighbourReach,
@@ -259,6 +287,27 @@ class M3EListDismissibleTheme {
 
   /// Horizontal gap between a swiped card and its revealed action background.
   final double actionGap;
+
+  /// Spacing between revealed swipe action buttons.
+  final double actionSpacing;
+
+  /// Horizontal padding at the leading / trailing edges of the action row.
+  final double actionEdgePadding;
+
+  /// Fraction of actions width required to snap the preview open on release.
+  final double actionPreviewThreshold;
+
+  /// Extra pixels past the actions width before rubber-band overdrag.
+  final double actionOverdragExtent;
+
+  /// Vertical inset subtracted from the list row height for action pills.
+  final double actionVerticalInset;
+
+  /// Minimum height for action / dismiss pills.
+  final double actionMinHeight;
+
+  /// Minimum visual width for action pills while revealing / hiding.
+  final double actionMinWidth;
 
   /// dismissThreshold.
   final double dismissThreshold;
@@ -311,6 +360,13 @@ class M3EListDismissibleTheme {
     double? innerRadius,
     double? gap,
     double? actionGap,
+    double? actionSpacing,
+    double? actionEdgePadding,
+    double? actionPreviewThreshold,
+    double? actionOverdragExtent,
+    double? actionVerticalInset,
+    double? actionMinHeight,
+    double? actionMinWidth,
     double? dismissThreshold,
     double? neighbourPull,
     int? neighbourReach,
@@ -330,6 +386,14 @@ class M3EListDismissibleTheme {
       innerRadius: innerRadius ?? this.innerRadius,
       gap: gap ?? this.gap,
       actionGap: actionGap ?? this.actionGap,
+      actionSpacing: actionSpacing ?? this.actionSpacing,
+      actionEdgePadding: actionEdgePadding ?? this.actionEdgePadding,
+      actionPreviewThreshold:
+          actionPreviewThreshold ?? this.actionPreviewThreshold,
+      actionOverdragExtent: actionOverdragExtent ?? this.actionOverdragExtent,
+      actionVerticalInset: actionVerticalInset ?? this.actionVerticalInset,
+      actionMinHeight: actionMinHeight ?? this.actionMinHeight,
+      actionMinWidth: actionMinWidth ?? this.actionMinWidth,
       dismissThreshold: dismissThreshold ?? this.dismissThreshold,
       neighbourPull: neighbourPull ?? this.neighbourPull,
       neighbourReach: neighbourReach ?? this.neighbourReach,

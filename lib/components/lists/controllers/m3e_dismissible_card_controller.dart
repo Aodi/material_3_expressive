@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/gestures.dart' show kTouchSlop;
@@ -11,9 +12,11 @@ import '../components/m3e_list_drag_proxy_scope.dart';
 import '../components/m3e_list_feature_scope.dart';
 import '../components/m3e_list_item_scope.dart';
 import '../components/m3e_list_reorder_session_scope.dart';
+import '../components/m3e_list_swipe_action_button.dart';
 import '../enums/m3e_list_enums.dart';
 import '../enums/m3e_list_selection_enums.dart';
 import '../models/m3e_dismissible_slot.dart';
+import '../models/m3e_list_swipe_action.dart';
 import '../styles/m3e_dismissible_list_style.dart';
 import '../styles/m3e_list_theme.dart';
 import '../utils/m3e_list_selection_fill.dart';
@@ -66,6 +69,14 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
   BorderRadius? Function(int index, M3ECardPosition position)?
   get borderRadiusBuilder => null;
 
+  /// Start-to-end swipe actions for a data index.
+  List<M3EListSwipeAction> Function(int index)? get leadingActionsBuilder =>
+      null;
+
+  /// End-to-start swipe actions for a data index.
+  List<M3EListSwipeAction> Function(int index)? get trailingActionsBuilder =>
+      null;
+
   /// When true, all cards use [M3EDismissibleListStyle.innerRadius].
   bool get embedded => false;
 
@@ -77,6 +88,8 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
   int _dragSlotIndex = -1;
   double _dragOffset = 0;
   bool _pastThreshold = false;
+  bool _pastActionThreshold = false;
+  bool _isDismissDragging = false;
   bool _reEngaging = false;
   double _neighbourFraction = 0;
   double _roundnessFraction = 0;
@@ -106,6 +119,68 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
 
   /// Accumulated horizontal delta before dismiss locks (reorder-safe).
   double _dismissDxAcc = 0;
+
+  /// True while a row is held open on its action preview.
+  bool get isActionPreviewOpen =>
+      _dragSlotRef != null && (_pastActionThreshold || _dragOffset.abs() > 0.5);
+
+  /// True while dismiss drag or settle springs are moving cards.
+  bool get _suppressCardHover {
+    if (_isDismissDragging) {
+      return true;
+    }
+    return _isMotionAnimating(_springCtrl) ||
+        _isMotionAnimating(_nbrCtrl) ||
+        _isMotionAnimating(_pushCtrl) ||
+        _isMotionAnimating(_roundnessCtrl);
+  }
+
+  bool _isMotionAnimating(SingleMotionController? controller) =>
+      controller != null && controller.isAnimating;
+
+  void _onMotionSettled(AnimationStatus status) {
+    if (status != AnimationStatus.completed &&
+        status != AnimationStatus.dismissed) {
+      return;
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  /// Actions for [dataIndex] in [direction] (empty if none).
+  List<M3EListSwipeAction> actionsFor(
+    int dataIndex, {
+    required bool swipingRight,
+  }) {
+    final List<M3EListSwipeAction>? built = swipingRight
+        ? leadingActionsBuilder?.call(dataIndex)
+        : trailingActionsBuilder?.call(dataIndex);
+    return built ?? const <M3EListSwipeAction>[];
+  }
+
+  double _computeActionsWidth(List<M3EListSwipeAction> actionList) {
+    if (actionList.isEmpty) {
+      return 0;
+    }
+    var total = 0.0;
+    for (final M3EListSwipeAction action in actionList) {
+      total += action.width;
+    }
+    if (actionList.length > 1) {
+      total += (actionList.length - 1) * style.actionSpacing;
+    }
+    total += 2 * style.actionEdgePadding;
+    return total;
+  }
+
+  int? _dataIndexForDragSlot() {
+    if (_dragSlotIndex < 0) {
+      return null;
+    }
+    final int dataIndex = computeVisibleIndices().indexOf(_dragSlotIndex);
+    return dataIndex < 0 ? null : dataIndex;
+  }
 
   /// initSlots.
 
