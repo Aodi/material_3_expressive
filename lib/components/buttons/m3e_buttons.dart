@@ -12,6 +12,9 @@ import 'components/m3e_radius_and_padding_motion.dart';
 import 'enums/m3e_button_enums.dart';
 import 'utils/m3e_button_gradient_layer.dart';
 
+export 'components/m3e_no_overflow_strategy.dart';
+export 'components/m3e_overflow_strategy.dart';
+export 'components/m3e_scroll_overflow_strategy.dart';
 export 'enums/m3e_button_enums.dart';
 export 'models/m3e_button_measurements.dart';
 export 'res/m3e_button_constants.dart';
