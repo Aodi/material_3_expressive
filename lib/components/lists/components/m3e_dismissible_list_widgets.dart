@@ -18,6 +18,11 @@ class M3EDismissibleList extends StatefulWidget {
     this.listPadding,
     this.shrinkWrap = false,
     this.clipBehavior = Clip.hardEdge,
+    this.selection = false,
+    this.selectionController,
+    this.onSelectionChanged,
+    this.selectionState,
+    this.embedded = false,
     super.key,
   });
 
@@ -62,6 +67,21 @@ class M3EDismissibleList extends StatefulWidget {
   /// clipBehavior.
   final Clip clipBehavior;
 
+  /// Enables list selection.
+  final bool selection;
+
+  /// Optional selection controller; ancestor scope wins.
+  final M3ESelectionController? selectionController;
+
+  /// Called when selection indices change.
+  final ValueChanged<Set<int>>? onSelectionChanged;
+
+  /// Optional selection state override.
+  final M3EListSelectionState? selectionState;
+
+  /// When true, all cards use inner radius (no first/last outer extremities).
+  final bool embedded;
+
   @override
   State<M3EDismissibleList> createState() => _M3EDismissibleListState();
 }
@@ -76,11 +96,22 @@ class _M3EDismissibleListState extends State<M3EDismissibleList>
   int get swipeItemCount => widget.itemCount;
 
   @override
-  Widget swipeItemBuilder(BuildContext context, int dataIndex) =>
-      widget.itemBuilder(context, dataIndex);
+  Widget swipeItemBuilder(BuildContext context, int dataIndex) {
+    return Builder(
+      builder: (BuildContext context) {
+        return M3EListItemIndex(
+          index: dataIndex,
+          child: widget.itemBuilder(context, dataIndex),
+        );
+      },
+    );
+  }
 
   @override
   M3EDismissibleListStyle get style => widget.style;
+
+  @override
+  bool get embedded => widget.embedded;
 
   @override
   Future<bool> Function(int, DismissDirection)? get onDismissCallback =>
@@ -124,7 +155,7 @@ class _M3EDismissibleListState extends State<M3EDismissibleList>
 
   Widget _buildList(BuildContext context) {
     final visible = computeVisibleIndices();
-    return ListView.builder(
+    Widget list = ListView.builder(
       controller: widget.scrollController,
       physics: widget.physics,
       padding: widget.listPadding,
@@ -133,6 +164,20 @@ class _M3EDismissibleListState extends State<M3EDismissibleList>
       itemCount: slots.length,
       itemBuilder: (ctx, i) => buildSlot(ctx, i, visible),
     );
+
+    if (widget.selection) {
+      list = M3EListFeatureHost(
+        itemCount: widget.itemCount,
+        selection: true,
+        reorder: false,
+        selectionController: widget.selectionController,
+        onSelectionChanged: widget.onSelectionChanged,
+        selectionState: widget.selectionState,
+        child: list,
+      );
+    }
+
+    return list;
   }
 }
 
@@ -150,6 +195,11 @@ class M3EDismissibleColumn extends StatefulWidget {
     this.colorBuilder,
     this.borderRadiusBuilder,
     this.style = const M3EDismissibleListStyle(),
+    this.selection = false,
+    this.selectionController,
+    this.onSelectionChanged,
+    this.selectionState,
+    this.embedded = false,
     super.key,
   });
 
@@ -179,6 +229,21 @@ class M3EDismissibleColumn extends StatefulWidget {
   /// style.
   final M3EDismissibleListStyle style;
 
+  /// Enables list selection.
+  final bool selection;
+
+  /// Optional selection controller.
+  final M3ESelectionController? selectionController;
+
+  /// Called when selection indices change.
+  final ValueChanged<Set<int>>? onSelectionChanged;
+
+  /// Optional selection state override.
+  final M3EListSelectionState? selectionState;
+
+  /// When true, all cards use inner radius (no first/last outer extremities).
+  final bool embedded;
+
   /// of.
 
   factory M3EDismissibleColumn.of({
@@ -190,6 +255,11 @@ class M3EDismissibleColumn extends StatefulWidget {
     BorderRadius? Function(int index, M3ECardPosition position)?
     borderRadiusBuilder,
     M3EDismissibleListStyle style = const M3EDismissibleListStyle(),
+    bool selection = false,
+    M3ESelectionController? selectionController,
+    ValueChanged<Set<int>>? onSelectionChanged,
+    M3EListSelectionState? selectionState,
+    bool embedded = false,
     Key? key,
   }) {
     return M3EDismissibleColumn(
@@ -202,6 +272,11 @@ class M3EDismissibleColumn extends StatefulWidget {
       colorBuilder: colorBuilder,
       borderRadiusBuilder: borderRadiusBuilder,
       style: style,
+      selection: selection,
+      selectionController: selectionController,
+      onSelectionChanged: onSelectionChanged,
+      selectionState: selectionState,
+      embedded: embedded,
     );
   }
 
@@ -219,11 +294,22 @@ class _M3EDismissibleColumnState extends State<M3EDismissibleColumn>
   int get swipeItemCount => widget.itemCount;
 
   @override
-  Widget swipeItemBuilder(BuildContext context, int dataIndex) =>
-      widget.itemBuilder(context, dataIndex);
+  Widget swipeItemBuilder(BuildContext context, int dataIndex) {
+    return Builder(
+      builder: (BuildContext context) {
+        return M3EListItemIndex(
+          index: dataIndex,
+          child: widget.itemBuilder(context, dataIndex),
+        );
+      },
+    );
+  }
 
   @override
   M3EDismissibleListStyle get style => widget.style;
+
+  @override
+  bool get embedded => widget.embedded;
 
   @override
   Future<bool> Function(int, DismissDirection)? get onDismissCallback =>
@@ -267,12 +353,26 @@ class _M3EDismissibleColumnState extends State<M3EDismissibleColumn>
 
   Widget _buildColumn(BuildContext context) {
     final visible = computeVisibleIndices();
-    return Column(
+    Widget column = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (int i = 0; i < slots.length; i++) buildSlot(context, i, visible),
       ],
     );
+
+    if (widget.selection) {
+      column = M3EListFeatureHost(
+        itemCount: widget.itemCount,
+        selection: true,
+        reorder: false,
+        selectionController: widget.selectionController,
+        onSelectionChanged: widget.onSelectionChanged,
+        selectionState: widget.selectionState,
+        child: column,
+      );
+    }
+
+    return column;
   }
 }

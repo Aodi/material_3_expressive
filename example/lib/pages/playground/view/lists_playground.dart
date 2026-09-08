@@ -24,12 +24,39 @@ class _ListsPlaygroundState extends State<ListsPlayground> {
   M3ECardVariant _variant = M3ECardVariant.outlined;
   bool _showLeading = true;
   bool _showTrailing = true;
+  bool _selection = false;
+  bool _reorder = false;
+  bool _singleSelect = false;
+  bool _doubleTapTrigger = false;
+  bool _useSublist = true;
+  bool _showSelectedIcon = true;
   String _headline = 'Wireless charging';
   String _supporting = 'On · Fast charge enabled';
+  List<String> _order = <String>['0', '1', '2'];
+
+  M3EListSelectionState get _selectionState => M3EListSelectionState(
+    mode: _singleSelect
+        ? M3EListSelectionMode.single
+        : M3EListSelectionMode.multiple,
+    selectedIcon: _showSelectedIcon ? const Icon(M3EIcons.check_circle) : null,
+    trigger: _doubleTapTrigger
+        ? M3EListSelectionTrigger.doubleTap
+        : M3EListSelectionTrigger.icon,
+  );
+
+  void _onReorder(int oldIndex, int newIndex) {
+    setState(() {
+      final String item = _order.removeAt(oldIndex);
+      _order.insert(newIndex, item);
+    });
+  }
 
   List<PlaySnippet> get _snippets {
     final String headline = playDartString(_headline);
     final String supporting = playDartString(_supporting);
+    final String selectionFeature = _selection ? '\n  selection: true,' : '';
+    final String features =
+        '$selectionFeature${_reorder ? '\n  reorder: true,\n  onReorder: (int a, int b) {},' : ''}';
     final String sample = switch (_kind) {
       _ListKind.item =>
         '''
@@ -41,7 +68,7 @@ M3EListItem(
       _ListKind.cardList =>
         '''
 M3ECardList(
-  variant: M3ECardVariant.${_variant.name},
+  variant: M3ECardVariant.${_variant.name},$features
   itemCount: 3,
   itemBuilder: (BuildContext context, int index) {
     return M3EListItem(
@@ -53,7 +80,7 @@ M3ECardList(
       _ListKind.dismissible =>
         '''
 M3EDismissibleColumn(
-  itemCount: 3,
+  itemCount: 3,$selectionFeature
   onDismiss: (int index, DismissDirection direction) async => true,
   itemBuilder: (BuildContext context, int index) {
     return M3EListItem(
@@ -68,7 +95,17 @@ M3EExpandableList(
     M3EExpandableData(
       title: $headline,
       subtitle: $supporting,${_showLeading ? '\n      leading: const Icon(M3EIcons.battery_alert),' : ''}
-      body: const Text('Expanded body'),
+      expanded: ${_useSublist ? '''M3EExpandableExpanded.list(
+        M3ECardList(
+          embedded: true,
+          itemCount: 2,${_selection ? '\n          selection: true,' : ''}${_reorder ? '\n          reorder: true,\n          onReorder: (int a, int b) {},' : ''}
+          itemBuilder: (BuildContext context, int index) {
+            return M3EListItem(headline: 'Child \${index + 1}');
+          },
+        ),
+      ),''' : '''M3EExpandableExpanded.content(
+        const Text('Expanded body'),
+      ),'''}
     ),
   ],
 );''',
@@ -97,15 +134,29 @@ M3EExpandableList(
               variant: _variant,
               showLeading: _showLeading,
               showTrailing: _showTrailing,
+              selection: _selection,
+              reorder: _reorder,
+              selectionState: _selectionState,
+              order: _order,
+              onReorder: _onReorder,
             ),
             _ListKind.dismissible => _DismissiblePreview(
               headline: _headline,
               showLeading: _showLeading,
+              selection: _selection,
+              selectionState: _selectionState,
+              order: _order,
             ),
             _ListKind.expandable => _ExpandablePreview(
               headline: _headline,
               supporting: _supporting,
               showLeading: _showLeading,
+              useSublist: _useSublist,
+              selection: _selection,
+              reorder: _reorder,
+              selectionState: _selectionState,
+              nestedOrder: _order,
+              onNestedReorder: _onReorder,
             ),
           },
         ),
@@ -152,8 +203,58 @@ M3EExpandableList(
               value: _showTrailing,
               onChanged: (bool v) => setState(() => _showTrailing = v),
             ),
+            if (_kind == _ListKind.expandable)
+              PlaySwitch(
+                label: 'List expansion',
+                value: _useSublist,
+                onChanged: (bool v) => setState(() => _useSublist = v),
+              ),
           ],
         ),
+        if (_kind == _ListKind.cardList ||
+            _kind == _ListKind.dismissible ||
+            (_kind == _ListKind.expandable && _useSublist))
+          PlayControlPanel(
+            title: _kind == _ListKind.expandable
+                ? 'Sublist selection & reorder'
+                : (_kind == _ListKind.dismissible
+                      ? 'Selection'
+                      : 'Selection & reorder'),
+            children: <Widget>[
+              PlaySwitch(
+                label: 'Selection',
+                value: _selection,
+                onChanged: (bool v) => setState(() => _selection = v),
+              ),
+              if (_kind != _ListKind.dismissible)
+                PlaySwitch(
+                  label: 'Reorder',
+                  value: _reorder,
+                  onChanged: (bool v) => setState(() => _reorder = v),
+                ),
+              if (_selection) ...<Widget>[
+                PlaySwitch(
+                  label: 'Single select',
+                  value: _singleSelect,
+                  onChanged: (bool v) => setState(() => _singleSelect = v),
+                ),
+                PlaySwitch(
+                  label: 'Selected icon (leading flip)',
+                  value: _showSelectedIcon,
+                  onChanged: (bool v) {
+                    setState(() => _showSelectedIcon = v);
+                  },
+                ),
+                PlaySwitch(
+                  label: 'Double-tap trigger',
+                  value: _doubleTapTrigger,
+                  onChanged: (bool v) {
+                    setState(() => _doubleTapTrigger = v);
+                  },
+                ),
+              ],
+            ],
+          ),
       ],
     );
   }
@@ -191,6 +292,11 @@ class _CardListPreview extends StatelessWidget {
     required this.variant,
     required this.showLeading,
     required this.showTrailing,
+    required this.selection,
+    required this.reorder,
+    required this.selectionState,
+    required this.order,
+    required this.onReorder,
   });
 
   final String headline;
@@ -198,15 +304,25 @@ class _CardListPreview extends StatelessWidget {
   final M3ECardVariant variant;
   final bool showLeading;
   final bool showTrailing;
+  final bool selection;
+  final bool reorder;
+  final M3EListSelectionState selectionState;
+  final List<String> order;
+  final ReorderCallback onReorder;
 
   @override
   Widget build(BuildContext context) {
     return M3ECardList(
       variant: variant,
-      itemCount: 3,
+      selection: selection,
+      reorder: reorder,
+      selectionState: selectionState,
+      onReorder: reorder ? onReorder : null,
+      itemCount: order.length,
       itemBuilder: (BuildContext context, int index) {
+        final String id = order[index];
         return M3EListItem(
-          headline: '$headline $index',
+          headline: '$headline $id',
           supportingText: supporting,
           leading: showLeading ? const Icon(M3EIcons.inbox) : null,
           trailing: showTrailing ? const Icon(M3EIcons.chevron_right) : null,
@@ -220,16 +336,24 @@ class _DismissiblePreview extends StatelessWidget {
   const _DismissiblePreview({
     required this.headline,
     required this.showLeading,
+    required this.selection,
+    required this.selectionState,
+    required this.order,
   });
 
   final String headline;
   final bool showLeading;
+  final bool selection;
+  final M3EListSelectionState selectionState;
+  final List<String> order;
 
   @override
   Widget build(BuildContext context) {
     final M3EThemeData theme = M3ETheme.of(context);
     return M3EDismissibleColumn(
-      itemCount: 3,
+      selection: selection,
+      selectionState: selectionState,
+      itemCount: order.length,
       onDismiss: (int index, DismissDirection direction) async => true,
       style: M3EDismissibleListStyle(
         background: ColoredBox(
@@ -255,7 +379,7 @@ class _DismissiblePreview extends StatelessWidget {
       ),
       itemBuilder: (BuildContext context, int index) {
         return M3EListItem(
-          headline: '$headline $index',
+          headline: '$headline ${order[index]}',
           supportingText: 'Swipe to dismiss',
           leading: showLeading ? const Icon(M3EIcons.schedule) : null,
         );
@@ -269,44 +393,80 @@ class _ExpandablePreview extends StatelessWidget {
     required this.headline,
     required this.supporting,
     required this.showLeading,
+    required this.useSublist,
+    required this.selection,
+    required this.reorder,
+    required this.selectionState,
+    required this.nestedOrder,
+    required this.onNestedReorder,
   });
 
   final String headline;
   final String supporting;
   final bool showLeading;
+  final bool useSublist;
+  final bool selection;
+  final bool reorder;
+  final M3EListSelectionState selectionState;
+  final List<String> nestedOrder;
+  final ReorderCallback onNestedReorder;
 
   @override
   Widget build(BuildContext context) {
     final M3EThemeData theme = M3ETheme.of(context);
     return M3EExpandableList(
+      initiallyExpanded: const <int>{0},
       data: <M3EExpandableData>[
         M3EExpandableData(
           title: headline,
           subtitle: supporting,
           leading: showLeading ? const Icon(M3EIcons.battery_alert) : null,
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'Expanded body content for the list item.',
-                style: theme.typeScale.bodyMedium,
-              ),
-              const SizedBox(height: 8),
-              M3EButton(
-                style: M3EButtonStyle.tonal,
-                onPressed: () {},
-                child: const Text('Action'),
-              ),
-            ],
-          ),
+          expanded: useSublist
+              ? M3EExpandableExpanded.list(
+                  M3ECardList(
+                    embedded: true,
+                    selection: selection,
+                    reorder: reorder,
+                    selectionState: selectionState,
+                    onReorder: reorder ? onNestedReorder : null,
+                    itemCount: nestedOrder.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final String id = nestedOrder[index];
+                      return M3EListItem(
+                        headline: 'Nested $id',
+                        supportingText: 'Sublist row',
+                        leading: const Icon(M3EIcons.folder),
+                      );
+                    },
+                  ),
+                )
+              : M3EExpandableExpanded.content(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Expanded body content for the list item.',
+                        style: theme.typeScale.bodyMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      M3EButton(
+                        style: M3EButtonStyle.tonal,
+                        onPressed: () {},
+                        child: const Text('Action'),
+                      ),
+                    ],
+                  ),
+                ),
         ),
         M3EExpandableData(
           title: 'System update',
           subtitle: 'Version 2.4.0 is ready',
           leading: showLeading ? const Icon(M3EIcons.system_update) : null,
-          body: Text(
-            'Security fixes and performance improvements.',
-            style: theme.typeScale.bodyMedium,
+          expanded: M3EExpandableExpanded.content(
+            Text(
+              'Security fixes and performance improvements.',
+              style: theme.typeScale.bodyMedium,
+            ),
           ),
         ),
       ],

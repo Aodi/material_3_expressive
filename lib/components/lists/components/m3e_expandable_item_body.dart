@@ -205,16 +205,19 @@ extension _M3EExpandableItemInteraction on _M3EExpandableItemState {
     required VoidCallback onTap,
     required Widget child,
   }) {
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () {
-        M3EFocusInteraction.instance.notePointerInteraction();
-        onTap();
-      },
-      onTapDown: isHeader ? (_) => _handleTapDown() : null,
-      onTapUp: isHeader ? (_) => _handleTapUp() : null,
-      onTapCancel: isHeader ? () => _handleTapCancel() : null,
-      child: child,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () {
+          M3EFocusInteraction.instance.notePointerInteraction();
+          onTap();
+        },
+        onTapDown: isHeader ? (_) => _handleTapDown() : null,
+        onTapUp: isHeader ? (_) => _handleTapUp() : null,
+        onTapCancel: isHeader ? () => _handleTapCancel() : null,
+        child: child,
+      ),
     );
   }
 
@@ -226,30 +229,33 @@ extension _M3EExpandableItemInteraction on _M3EExpandableItemState {
     required Widget child,
     FocusNode? focusNode,
   }) {
-    return InkWell(
-      customBorder: isIcon ? const CircleBorder() : null,
-      splashColor: d.splashColor,
-      highlightColor: d.highlightColor,
-      splashFactory: d.splashFactory,
-      enableFeedback: d.enableFeedback,
+    final M3EColorScheme scheme = M3ETheme.of(context).colorScheme;
+    return M3ETappable(
       onTap: () {
         M3EFocusInteraction.instance.notePointerInteraction();
         onTap();
       },
       focusNode: focusNode,
-      onFocusChange: focusNode == null
-          ? null
-          : (_) => _handleToggleFocusChanged(),
-      onHover: isHeader ? _handleHoverChanged : null,
-      onTapDown: (_) {
-        M3EFocusInteraction.instance.notePointerInteraction();
-        if (isHeader) {
-          _handleTapDown();
-        }
+      mouseCursor: SystemMouseCursors.click,
+      materialInk: true,
+      onStateChanged: isHeader
+          ? (M3EInteractionState state) {
+              if (_isPressed != state.pressed) {
+                setState(() => _isPressed = state.pressed);
+              }
+              if (focusNode != null) {
+                _handleToggleFocusChanged();
+              }
+            }
+          : null,
+      builder: (BuildContext context, M3EInteractionState state) {
+        return M3EStateLayerOverlay(
+          state: state,
+          color: scheme.onSurface,
+          shape: isIcon ? const CircleBorder() : const RoundedRectangleBorder(),
+          child: child,
+        );
       },
-      onTapUp: isHeader ? (_) => _handleTapUp() : null,
-      onTapCancel: isHeader ? () => _handleTapCancel() : null,
-      child: child,
     );
   }
 }

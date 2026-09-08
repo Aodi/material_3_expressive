@@ -2,29 +2,44 @@ import 'package:flutter/widgets.dart';
 
 import '../../foundations/foundations.dart';
 import '../cards/m3e_cards.dart';
+import '../selection/controllers/m3e_selection_controller.dart';
 import 'components/m3e_card_list_item.dart';
 import 'components/m3e_expandable_builders.dart';
 import 'components/m3e_expandable_data.dart';
+import 'components/m3e_expandable_expanded.dart';
 import 'components/m3e_expandable_list_base.dart';
+import 'components/m3e_list_feature_host.dart';
+import 'components/m3e_list_feature_scope.dart';
 import 'components/m3e_list_item_scope.dart';
+import 'components/m3e_list_reorder_host.dart';
 import 'controllers/m3e_dismissible_card_controller.dart';
 import 'enums/m3e_list_enums.dart';
+import 'enums/m3e_list_selection_enums.dart';
 import 'styles/m3e_dismissible_list_style.dart';
 import 'styles/m3e_expandable_style.dart';
+import 'styles/m3e_list_reorder_state.dart';
+import 'styles/m3e_list_selection_state.dart';
 import 'styles/m3e_list_theme.dart';
+import 'utils/m3e_list_immediate_tap.dart';
+import 'utils/m3e_list_row_features.dart';
 import 'utils/m3e_list_selection_fill.dart';
 
 export 'components/m3e_card_list_item.dart'
     show calculateCardPosition, calculateCardRadius;
 export 'components/m3e_expandable_data.dart';
+export 'components/m3e_expandable_expanded.dart';
 export 'components/m3e_expandable_item.dart';
+export 'components/m3e_list_feature_scope.dart';
 export 'components/m3e_list_item_scope.dart';
 export 'controllers/m3e_dismissible_card_controller.dart';
 export 'enums/m3e_expandable_enums.dart';
 export 'enums/m3e_list_enums.dart';
+export 'enums/m3e_list_selection_enums.dart';
 export 'models/m3e_dismissible_slot.dart';
 export 'styles/m3e_dismissible_list_style.dart';
 export 'styles/m3e_expandable_style.dart';
+export 'styles/m3e_list_reorder_state.dart';
+export 'styles/m3e_list_selection_state.dart';
 export 'styles/m3e_list_theme.dart';
 export 'utils/m3e_measure_size.dart';
 
@@ -127,34 +142,44 @@ class M3EListItem extends StatelessWidget {
         crossAxisAlignment: threeLine
             ? CrossAxisAlignment.start
             : CrossAxisAlignment.center,
-        children: _buildChildren(theme),
+        children: _buildChildrenFor(context, theme),
       ),
     );
   }
 
-  List<Widget> _buildChildren(M3EThemeData theme) {
+  List<Widget> _buildChildrenFor(BuildContext context, M3EThemeData theme) {
     final scheme = theme.colorScheme;
     final listTheme = theme.listTheme.item;
+    final int? index = M3EListItemIndex.maybeOf(context);
+    final Widget? resolvedLeading = m3eResolveListLeading(
+      context: context,
+      index: index,
+      leading: leading,
+    );
+    final Widget? resolvedTrailing = m3eResolveListTrailing(
+      context: context,
+      trailing: trailing,
+    );
     return <Widget>[
-      if (leading != null) ...<Widget>[
+      if (resolvedLeading != null) ...<Widget>[
         IconTheme.merge(
           data: IconThemeData(
             color: listTheme.iconColor(scheme),
             size: listTheme.iconSize,
           ),
-          child: leading!,
+          child: resolvedLeading,
         ),
         SizedBox(width: listTheme.gap),
       ],
       Expanded(child: _buildText(theme)),
-      if (trailing != null) ...<Widget>[
+      if (resolvedTrailing != null) ...<Widget>[
         SizedBox(width: listTheme.gap),
         IconTheme.merge(
           data: IconThemeData(
             color: listTheme.iconColor(scheme),
             size: listTheme.iconSize,
           ),
-          child: trailing!,
+          child: resolvedTrailing,
         ),
       ],
     ];
@@ -275,6 +300,31 @@ class M3ECardList extends StatelessWidget {
   /// If null, an empty container is shown.
   final Widget? emptyBuilder;
 
+  /// Enables list selection (single/multiple via theme selection state).
+  final bool selection;
+
+  /// Enables long-press reorder. Requires [onReorder].
+  final bool reorder;
+
+  /// Optional selection controller; ancestor [M3ESelectionScope] wins.
+  final M3ESelectionController? selectionController;
+
+  /// Called when selection indices change.
+  final ValueChanged<Set<int>>? onSelectionChanged;
+
+  /// Called after a reorder drop. Required when [reorder] is true.
+  final ReorderCallback? onReorder;
+
+  /// Optional selection state override (else [M3EListTheme.selection]).
+  final M3EListSelectionState? selectionState;
+
+  /// Optional reorder state override (else [M3EListTheme.reorder]).
+  final M3EListReorderState? reorderState;
+
+  /// When true, first/last/single cards use [innerRadius] on all corners
+  /// (same as middle items). Use for nested lists under expandable headers.
+  final bool embedded;
+
   /// Whether this list uses [ListView.builder] (true) or [Column] (false).
   final bool _isBuilder;
 
@@ -327,7 +377,16 @@ class M3ECardList extends StatelessWidget {
     this.variant,
     this.border,
     this.emptyBuilder,
-  }) : _isBuilder = false,
+    this.selection = false,
+    this.reorder = false,
+    this.selectionController,
+    this.onSelectionChanged,
+    this.onReorder,
+    this.selectionState,
+    this.reorderState,
+    this.embedded = false,
+  }) : assert(!reorder || onReorder != null),
+       _isBuilder = false,
        controller = null,
        physics = null,
        shrinkWrap = false,
@@ -358,7 +417,16 @@ class M3ECardList extends StatelessWidget {
     this.physics,
     this.shrinkWrap = false,
     this.listPadding,
-  }) : _isBuilder = true;
+    this.selection = false,
+    this.reorder = false,
+    this.selectionController,
+    this.onSelectionChanged,
+    this.onReorder,
+    this.selectionState,
+    this.reorderState,
+    this.embedded = false,
+  }) : assert(!reorder || onReorder != null),
+       _isBuilder = true;
 
   @override
   Widget build(BuildContext context) {
@@ -370,13 +438,31 @@ class M3ECardList extends StatelessWidget {
     final Widget? localEmptyBuilder = emptyBuilder;
 
     if (itemCount == 0 && localEmptyBuilder != null) {
+      final Widget empty = localEmptyBuilder;
       return localMargin != null
-          ? Padding(padding: localMargin, child: localEmptyBuilder)
-          : localEmptyBuilder;
+          ? Padding(padding: localMargin, child: empty)
+          : empty;
     }
 
-    if (_isBuilder) {
-      final Widget list = ListView.builder(
+    Widget list;
+    if (reorder) {
+      final M3EListReorderState rs =
+          reorderState ?? M3ETheme.of(context).listTheme.reorder;
+      list = M3EListReorderHost(
+        itemCount: itemCount,
+        onReorder: onReorder!,
+        reorderState: rs,
+        gap: gap,
+        scrollable: _isBuilder,
+        controller: controller,
+        physics: physics,
+        shrinkWrap: shrinkWrap,
+        padding: listPadding,
+        itemBuilder: (BuildContext context, int index) =>
+            _buildItem(context, index, itemCount),
+      );
+    } else if (_isBuilder) {
+      list = ListView.builder(
         controller: controller,
         physics: physics,
         shrinkWrap: shrinkWrap,
@@ -384,46 +470,108 @@ class M3ECardList extends StatelessWidget {
         itemCount: itemCount,
         itemBuilder: (context, index) => _buildItem(context, index, itemCount),
       );
-      return localMargin != null
-          ? Padding(padding: localMargin, child: list)
-          : list;
+    } else {
+      list = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(
+          itemCount,
+          (index) => _buildItem(context, index, itemCount),
+        ),
+      );
     }
 
-    final Widget column = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(
-        itemCount,
-        (index) => _buildItem(context, index, itemCount),
-      ),
-    );
+    if (selection || reorder) {
+      list = M3EListFeatureHost(
+        itemCount: itemCount,
+        selection: selection,
+        reorder: reorder,
+        selectionController: selectionController,
+        onSelectionChanged: onSelectionChanged,
+        selectionState: selectionState,
+        reorderState: reorderState,
+        child: list,
+      );
+    }
+
     return localMargin != null
-        ? Padding(padding: localMargin, child: column)
-        : column;
+        ? Padding(padding: localMargin, child: list)
+        : list;
   }
 
   Widget _buildItem(BuildContext context, int index, int total) {
-    final cardListTheme = M3ETheme.of(context).listTheme.cardList;
-    final M3ECardPosition position = calculateCardPosition(index, total);
-    return M3ECardListItem(
-      index: index,
-      position: position,
-      outerRadius: outerRadius,
-      innerRadius: innerRadius,
-      gap: gap,
-      color: color,
-      resolvedColor:
-          colorBuilder?.call(index) ?? m3eSelectionFill(context, index),
-      resolvedBorderRadius: borderRadiusBuilder?.call(index, position),
-      padding: padding,
-      onTap: onTap,
-      onLongPress: onLongPress,
-      semanticLabel: semanticLabelBuilder?.call(index),
-      mouseCursor: mouseCursor,
-      haptic: haptic,
-      variant: variant ?? cardListTheme.variant,
-      border: border ?? cardListTheme.border,
-      child: itemBuilder(context, index),
+    return Builder(
+      builder: (BuildContext context) {
+        final cardListTheme = M3ETheme.of(context).listTheme.cardList;
+        final M3ECardPosition position = calculateCardPosition(index, total);
+        final M3EListFeatureScope? features = M3EListFeatureScope.maybeOf(
+          context,
+        );
+
+        Widget child = itemBuilder(context, index);
+        child = M3EListItemIndex(index: index, child: child);
+
+        final void Function(int index)? tapForIndex = _resolveOnTap(features);
+        final VoidCallback? onTap = tapForIndex == null
+            ? null
+            : () => tapForIndex(index);
+        final VoidCallback? onDoubleTap =
+            features != null &&
+                features.selectionEnabled &&
+                features.selectionState.trigger ==
+                    M3EListSelectionTrigger.doubleTap
+            ? () => features.onToggleSelection(index)
+            : null;
+
+        // When reorder is on, long-press is owned by the reorder host.
+        final void Function(int index)? longPress = reorder
+            ? null
+            : onLongPress;
+
+        return M3EListTapBinder(
+          onTap: onTap,
+          onDoubleTap: onDoubleTap,
+          builder: (BuildContext context, VoidCallback? onPressed) {
+            return M3ECardListItem(
+              index: index,
+              position: position,
+              outerRadius: outerRadius,
+              innerRadius: innerRadius,
+              gap: gap,
+              embedded: embedded,
+              color: color,
+              resolvedColor:
+                  colorBuilder?.call(index) ?? m3eSelectionFill(context, index),
+              resolvedBorderRadius:
+                  borderRadiusBuilder?.call(index, position) ??
+                  m3eSelectionRadius(context, index, outerRadius: outerRadius),
+              padding: padding,
+              onTap: onPressed == null ? null : (_) => onPressed(),
+              onLongPress: longPress,
+              semanticLabel: semanticLabelBuilder?.call(index),
+              mouseCursor: mouseCursor,
+              haptic: haptic,
+              variant: variant ?? cardListTheme.variant,
+              border: border ?? cardListTheme.border,
+              child: child,
+            );
+          },
+        );
+      },
     );
+  }
+
+  void Function(int index)? _resolveOnTap(M3EListFeatureScope? features) {
+    if (features == null || !features.selectionEnabled) {
+      return onTap;
+    }
+    return (int index) {
+      final bool inMode = features.controller?.isSelectionMode ?? false;
+      if (inMode) {
+        features.onToggleSelection(index);
+        return;
+      }
+      onTap?.call(index);
+    };
   }
 }
 
@@ -435,6 +583,10 @@ class M3ECardList extends StatelessWidget {
 ///   [ListView.builder]
 /// - [M3EExpandableList.sliver] / [M3EExpandableList.sliverBuilder]:
 ///   [SliverList.builder] for [CustomScrollView]
+///
+/// Selection and reorder are not supported on the main expandable rows.
+/// Nest an [M3ECardList] (or similar) via [M3EExpandableExpanded.list] so those
+/// features use the nested list's own API.
 class M3EExpandableList extends M3EExpandableListBase {
   /// M3EExpandableList.
   M3EExpandableList({
@@ -458,6 +610,7 @@ class M3EExpandableList extends M3EExpandableListBase {
            data,
            style ?? const M3EExpandableStyle(),
          ),
+         expandedBuilder: m3eSimpleExpandedBuilder(data),
        );
 
   /// builder.
@@ -467,6 +620,7 @@ class M3EExpandableList extends M3EExpandableListBase {
     required super.itemCount,
     required super.headerBuilder,
     required super.bodyBuilder,
+    super.expandedBuilder,
     super.allowMultipleExpanded,
     super.initiallyExpanded,
     super.style,
@@ -502,6 +656,7 @@ class M3EExpandableList extends M3EExpandableListBase {
            data,
            style ?? const M3EExpandableStyle(),
          ),
+         expandedBuilder: m3eSimpleExpandedBuilder(data),
        );
 
   /// scrollableBuilder.
@@ -511,6 +666,7 @@ class M3EExpandableList extends M3EExpandableListBase {
     required super.itemCount,
     required super.headerBuilder,
     required super.bodyBuilder,
+    super.expandedBuilder,
     super.allowMultipleExpanded,
     super.initiallyExpanded,
     super.style,
@@ -546,6 +702,7 @@ class M3EExpandableList extends M3EExpandableListBase {
            data,
            style ?? const M3EExpandableStyle(),
          ),
+         expandedBuilder: m3eSimpleExpandedBuilder(data),
        );
 
   /// sliverBuilder.
@@ -555,6 +712,7 @@ class M3EExpandableList extends M3EExpandableListBase {
     required super.itemCount,
     required super.headerBuilder,
     required super.bodyBuilder,
+    super.expandedBuilder,
     super.allowMultipleExpanded,
     super.initiallyExpanded,
     super.style,

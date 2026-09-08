@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
-import 'package:material_ui/material_ui.dart' show InkWell, Tooltip;
+import 'package:material_ui/material_ui.dart' show Tooltip;
 import 'package:motor/motor.dart';
 
 import '../../../foundations/foundations.dart';
@@ -10,6 +10,9 @@ import '../enums/m3e_expandable_enums.dart';
 import '../styles/m3e_expandable_style.dart';
 import '../utils/m3e_expandable_spring_motion.dart';
 import '../utils/m3e_measure_size.dart';
+import 'm3e_card_list_item.dart';
+import 'm3e_expandable_expanded.dart';
+import 'm3e_expandable_sublist.dart';
 
 part 'm3e_expandable_item_body.dart';
 
@@ -37,6 +40,7 @@ class M3EExpandableItem extends StatefulWidget {
     required this.expandMotion,
     required this.collapseMotion,
     required this.onToggle,
+    this.expanded,
   });
 
   /// index.
@@ -54,6 +58,9 @@ class M3EExpandableItem extends StatefulWidget {
 
   /// bodyBuilder.
   final M3EExpandableBodyBuilder bodyBuilder;
+
+  /// Optional expanded content (list rows or freeform child).
+  final M3EExpandableExpanded? expanded;
 
   /// decoration.
   final M3EExpandableStyle decoration;
@@ -75,7 +82,6 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
     with TickerProviderStateMixin {
   late final SingleMotionController _expandCtrl;
 
-  bool _isHovered = false;
   bool _isPressed = false;
 
   /// Node of the item's single toggle target (whole card or header row).
@@ -117,11 +123,16 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
     }
   }
 
-  void _handleHoverChanged(bool hovering) =>
-      setState(() => _isHovered = hovering);
   void _handleTapDown() => setState(() => _isPressed = true);
   void _handleTapUp() => setState(() => _isPressed = false);
   void _handleTapCancel() => setState(() => _isPressed = false);
+
+  void _handleCardStateChanged(M3EInteractionState state) {
+    if (_isPressed == state.pressed) {
+      return;
+    }
+    setState(() => _isPressed = state.pressed);
+  }
 
   void _handleToggleFocusChanged() {
     if (!mounted) {
@@ -146,8 +157,24 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
     super.dispose();
   }
 
+  bool get _hasListExpansion {
+    final M3EExpandableExpanded? expanded = widget.expanded;
+    return expanded != null && expanded.isList;
+  }
+
   BorderRadius _buildEffectiveRadius() {
     final d = widget.decoration;
+
+    if (_hasListExpansion) {
+      return m3eExpandableParentRadius(
+        globalPosition: calculateCardPosition(widget.index, widget.totalCount),
+        outerRadius: d.outerRadius,
+        innerRadius: _isPressed ? d.pressedRadius : d.innerRadius,
+        isExpanded: widget.isExpanded,
+        hasSublist: true,
+      );
+    }
+
     final isFirst = widget.index == 0;
     final isLast = widget.index == widget.totalCount - 1;
     final isSingle = widget.totalCount == 1;
@@ -160,9 +187,7 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
       return BorderRadius.circular(d.outerRadius);
     }
 
-    final effectiveInnerRadius = _isPressed
-        ? d.pressedRadius
-        : (_isHovered ? d.hoverRadius : d.innerRadius);
+    final effectiveInnerRadius = _isPressed ? d.pressedRadius : d.innerRadius;
 
     if (isFirst) {
       return BorderRadius.vertical(
@@ -185,12 +210,14 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
     final scheme = theme.colorScheme;
     final d = widget.decoration;
     final isLast = widget.index == widget.totalCount - 1;
+    final bool hasList = _hasListExpansion;
 
     final canTapHeader = d.tapHeaderToToggle;
     final canTapBody =
         (widget.isExpanded && d.tapBodyToCollapse) ||
         (!widget.isExpanded && d.tapBodyToExpand);
-    final entireCardTappable = !d.tapIconToToggle && canTapHeader && canTapBody;
+    final entireCardTappable =
+        !d.tapIconToToggle && canTapHeader && canTapBody && !hasList;
 
     final outerTap = entireCardTappable ? widget.onToggle : null;
     final headerTap =
@@ -202,18 +229,43 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
         ? (widget.isExpanded ? d.collapseTooltip : d.expandTooltip)
         : null;
 
+    final Widget headerCard = _buildAnimatedContainer(
+      scheme,
+      d,
+      outerTap,
+      headerTap,
+      outerTooltip,
+      bodyInsideCard: !hasList,
+    );
+
+    Widget content = headerCard;
+    if (hasList) {
+      content = Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          headerCard,
+          AnimatedBuilder(
+            animation: _expandCtrl,
+            builder: (BuildContext context, Widget? _) {
+              return M3EExpandableSublist(
+                progress: _expandCtrl.value,
+                style: d,
+                topGap: widget.expanded!.topGap,
+                child: widget.expanded!.child,
+              );
+            },
+          ),
+        ],
+      );
+    }
+
     return RepaintBoundary(
       child: Padding(
         padding: d.margin ?? EdgeInsets.zero,
         child: Padding(
           padding: EdgeInsets.only(bottom: isLast ? 0 : d.gap),
-          child: _buildAnimatedContainer(
-            scheme,
-            d,
-            outerTap,
-            headerTap,
-            outerTooltip,
-          ),
+          child: content,
         ),
       ),
     );
@@ -224,8 +276,15 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
     M3EExpandableStyle d,
     VoidCallback? outerTap,
     VoidCallback? headerTap,
-    String? outerTooltip,
-  ) {
+    String? outerTooltip, {
+    required bool bodyInsideCard,
+  }) {
+    // Card-level press matches [M3ECardList]: pointer cursor + hover state layer.
+    // List expansions are header-only cards, so header taps live on the card.
+    final VoidCallback? cardPress =
+        outerTap ?? (!bodyInsideCard ? headerTap : null);
+    final bool cardHandlesTap = cardPress != null;
+
     Widget content = AnimatedBuilder(
       animation: _expandCtrl,
       builder: (context, child) {
@@ -237,26 +296,31 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
             _buildHeader(
               d,
               progress,
-              headerTap,
-              isEntirelyTappable: outerTap != null,
+              cardHandlesTap ? null : headerTap,
+              isEntirelyTappable: outerTap != null || cardHandlesTap,
             ),
-            _buildExpandableBody(
-              d,
-              progress,
-              isEntirelyTappable: outerTap != null,
-            ),
+            if (bodyInsideCard)
+              _buildExpandableBody(
+                d,
+                progress,
+                isEntirelyTappable: outerTap != null || cardHandlesTap,
+              ),
           ],
         );
       },
     );
 
-    content = _buildInteractionWrapper(
-      d,
-      onTap: outerTap,
-      tooltip: outerTooltip,
-      focusNode: outerTap != null ? _toggleFocusNode : null,
-      child: content,
-    );
+    if (!cardHandlesTap) {
+      content = _buildInteractionWrapper(
+        d,
+        onTap: outerTap,
+        tooltip: outerTooltip,
+        focusNode: outerTap != null ? _toggleFocusNode : null,
+        child: content,
+      );
+    } else if (outerTooltip != null) {
+      content = Tooltip(message: outerTooltip, child: content);
+    }
 
     return TweenAnimationBuilder<BorderRadius?>(
       duration: const Duration(milliseconds: 40),
@@ -267,21 +331,24 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
       ),
       builder: (context, animatedRadius, child) {
         final BorderRadius radius = animatedRadius ?? _buildEffectiveRadius();
-        // The card clips its content, so the ring wraps it from the outside.
-        return M3EFocusRing(
-          focused: _focused,
-          radius: radius,
-          child: M3ECard(
-            variant: M3ECardVariant.filled,
-            borderRadius: radius,
-            color: d.color ?? scheme.surfaceContainerHighest,
-            elevation: d.elevation,
-            border: d.border,
-            padding: EdgeInsets.zero,
-            width: double.infinity,
-            child: child!,
-          ),
+        final Widget card = M3ECard(
+          variant: M3ECardVariant.filled,
+          borderRadius: radius,
+          color: d.color ?? scheme.surfaceContainerHighest,
+          elevation: d.elevation,
+          border: d.border,
+          padding: EdgeInsets.zero,
+          width: double.infinity,
+          onPressed: cardPress,
+          onStateChanged: cardHandlesTap ? _handleCardStateChanged : null,
+          mouseCursor: cardHandlesTap ? SystemMouseCursors.click : null,
+          child: child!,
         );
+        if (cardHandlesTap) {
+          // [M3ECard] owns focus ring when interactive.
+          return card;
+        }
+        return M3EFocusRing(focused: _focused, radius: radius, child: card);
       },
       child: content,
     );

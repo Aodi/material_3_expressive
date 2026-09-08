@@ -6,10 +6,13 @@ import 'package:motor/motor.dart';
 import '../../../foundations/foundations.dart';
 import '../../cards/m3e_cards.dart';
 import '../components/m3e_card_radius_motion.dart';
+import '../components/m3e_list_feature_scope.dart';
 import '../components/m3e_list_item_scope.dart';
 import '../enums/m3e_list_enums.dart';
+import '../enums/m3e_list_selection_enums.dart';
 import '../models/m3e_dismissible_slot.dart';
 import '../styles/m3e_dismissible_list_style.dart';
+import '../styles/m3e_list_theme.dart';
 import '../utils/m3e_list_selection_fill.dart';
 
 part 'm3e_dismissible_card_drag_mixin.dart';
@@ -71,6 +74,9 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
   /// Optional per-index border radius override.
   BorderRadius? Function(int index, M3ECardPosition position)?
   get borderRadiusBuilder => null;
+
+  /// When true, all cards use [M3EDismissibleListStyle.innerRadius].
+  bool get embedded => false;
 
   final List<M3EDismissibleSlot> _slots = [];
   M3EDismissibleSlot? _dragSlotRef;
@@ -214,6 +220,13 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
     final or = s.outerRadius;
     final sr = s.selectedBorderRadius ?? or;
     final ir = s.innerRadius;
+
+    if (embedded) {
+      if (slotIndex == _dragSlotIndex && _pastThreshold) {
+        return BorderRadius.circular(sr);
+      }
+      return BorderRadius.circular(ir);
+    }
 
     if (total == 1) {
       return BorderRadius.circular(or);

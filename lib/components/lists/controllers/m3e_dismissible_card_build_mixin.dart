@@ -152,7 +152,7 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
         : slotPos == total - 1
         ? M3ECardPosition.last
         : M3ECardPosition.middle;
-    final br =
+    final BorderRadius layoutRadius =
         borderRadiusBuilder?.call(slotPos, position) ??
         computeRadius(slotIndex, slotPos, dragPos, visible);
     final nOff = computeNeighbourOffset(slotPos, dragPos);
@@ -185,9 +185,10 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
               context,
               slot: slot,
               slotPos: slotPos,
+              position: position,
               isLast: isLast,
               isDragged: isDragged,
-              borderRadius: br,
+              layoutRadius: layoutRadius,
               neighbourOffset: nOff,
               style: s,
             ),
@@ -232,13 +233,15 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
     BuildContext context, {
     required M3EDismissibleSlot slot,
     required int slotPos,
+    required M3ECardPosition position,
     required bool isLast,
     required bool isDragged,
-    required BorderRadius borderRadius,
+    required BorderRadius layoutRadius,
     required double neighbourOffset,
     required M3EDismissibleListStyle style,
   }) {
     final s = style;
+
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : s.gap),
       child: Transform.translate(
@@ -250,42 +253,131 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
           onHorizontalDragStart: (_) => handleDragStart(slot),
           onHorizontalDragUpdate: handleDragUpdate,
           onHorizontalDragEnd: handleDragEnd,
-          child: M3ECardRadiusMotion(
-            snap: _dragSlotRef != null,
-            radius: borderRadius,
-            builder: (BuildContext context, BorderRadius animatedRadius) {
-              return M3ECard(
-                variant: M3ECardVariant.filled,
-                surfaceKey: _measureKey(slot),
-                borderRadius: animatedRadius,
-                color:
-                    colorBuilder?.call(slotPos) ??
-                    m3eSelectionFill(context, slotPos) ??
-                    s.color ??
-                    M3ETheme.of(context).colorScheme.surfaceContainerHighest,
-                border: s.border,
-                animationDuration: Duration.zero,
-                width: double.infinity,
-                padding: EdgeInsets.zero,
-                onPressed: isInteractionLocked || onTapCallback == null
-                    ? null
-                    : () => onTapCallback!(slotPos),
-                onLongPress: isInteractionLocked || onLongPressCallback == null
-                    ? null
-                    : () => onLongPressCallback!(slotPos),
-                haptic: s.hapticOnTap,
-                child: Padding(
-                  padding: s.padding ?? const EdgeInsets.all(16),
-                  child: M3EListItemScope(
-                    child: swipeItemBuilder(context, slotPos),
-                  ),
-                ),
+          child: Builder(
+            builder: (BuildContext context) {
+              final M3EListFeatureScope? features = M3EListFeatureScope.maybeOf(
+                context,
+              );
+              final VoidCallback? userTap = onTapCallback == null
+                  ? null
+                  : () => onTapCallback!(slotPos);
+              final VoidCallback? selectionTap = _resolveSelectionTap(
+                features: features,
+                index: slotPos,
+                userTap: userTap,
+              );
+              final VoidCallback? onDoubleTap =
+                  features != null &&
+                      features.selectionEnabled &&
+                      features.selectionState.trigger ==
+                          M3EListSelectionTrigger.doubleTap
+                  ? () => features.onToggleSelection(slotPos)
+                  : null;
+              final VoidCallback? onPressed = isInteractionLocked
+                  ? null
+                  : _bindSelectionTaps(
+                      index: slotPos,
+                      onTap: selectionTap,
+                      onDoubleTap: onDoubleTap,
+                    );
+              final BorderRadius radius =
+                  m3eSelectionRadius(
+                    context,
+                    slotPos,
+                    outerRadius: s.outerRadius,
+                  ) ??
+                  layoutRadius;
+              final bool selected = m3eSelectionFill(context, slotPos) != null;
+              return M3ECardRadiusMotion(
+                snap: _dragSlotRef != null || selected,
+                radius: radius,
+                builder: (BuildContext context, BorderRadius animatedRadius) {
+                  return M3ECard(
+                    variant: M3ECardVariant.filled,
+                    surfaceKey: _measureKey(slot),
+                    borderRadius: animatedRadius,
+                    color:
+                        colorBuilder?.call(slotPos) ??
+                        m3eSelectionFill(context, slotPos) ??
+                        s.color ??
+                        M3ETheme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                    border: s.border,
+                    animationDuration: Duration.zero,
+                    width: double.infinity,
+                    padding: EdgeInsets.zero,
+                    onPressed: onPressed,
+                    onLongPress:
+                        isInteractionLocked || onLongPressCallback == null
+                        ? null
+                        : () => onLongPressCallback!(slotPos),
+                    haptic: s.hapticOnTap,
+                    child: Padding(
+                      padding:
+                          s.padding ??
+                          M3EListDismissibleTheme.defaultItemPadding,
+                      child: M3EListItemScope(
+                        child: swipeItemBuilder(context, slotPos),
+                      ),
+                    ),
+                  );
+                },
               );
             },
           ),
         ),
       ),
     );
+  }
+
+  /// Matches [M3ECardList] tap routing using a context under the feature host.
+  VoidCallback? _resolveSelectionTap({
+    required M3EListFeatureScope? features,
+    required int index,
+    required VoidCallback? userTap,
+  }) {
+    if (features == null || !features.selectionEnabled) {
+      return userTap;
+    }
+    return () {
+      final bool inMode = features.controller?.isSelectionMode ?? false;
+      if (inMode) {
+        features.onToggleSelection(index);
+        return;
+      }
+      userTap?.call();
+    };
+  }
+
+  DateTime? _lastSelectionTapAt;
+  int? _lastSelectionTapIndex;
+
+  /// Immediate tap + optional double-tap, surviving mid-tap rebuilds.
+  VoidCallback? _bindSelectionTaps({
+    required int index,
+    required VoidCallback? onTap,
+    required VoidCallback? onDoubleTap,
+  }) {
+    if (onTap == null && onDoubleTap == null) {
+      return null;
+    }
+    return () {
+      final DateTime now = DateTime.now();
+      if (onDoubleTap != null &&
+          _lastSelectionTapIndex == index &&
+          _lastSelectionTapAt != null &&
+          now.difference(_lastSelectionTapAt!) <=
+              const Duration(milliseconds: 280)) {
+        _lastSelectionTapAt = null;
+        _lastSelectionTapIndex = null;
+        onDoubleTap();
+        return;
+      }
+      _lastSelectionTapAt = now;
+      _lastSelectionTapIndex = index;
+      onTap?.call();
+    };
   }
 
   Widget _buildActiveBackground(Widget? bg, double progress) {

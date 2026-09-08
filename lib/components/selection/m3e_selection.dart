@@ -6,6 +6,7 @@ import 'components/m3e_selection_scope.dart';
 import 'controllers/m3e_selection_controller.dart';
 
 export 'components/m3e_selection_app_bar.dart';
+export 'components/m3e_selection_flip.dart';
 export 'components/m3e_selection_leading.dart';
 export 'components/m3e_selection_scope.dart';
 export 'controllers/m3e_selection_controller.dart';

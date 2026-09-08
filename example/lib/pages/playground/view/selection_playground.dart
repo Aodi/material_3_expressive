@@ -184,22 +184,12 @@ class _SelectionDemoHostState extends State<_SelectionDemoHost> {
   Widget _leading(BuildContext context, int index) {
     final M3EThemeData theme = M3ETheme.of(context);
     final M3EColorScheme scheme = theme.colorScheme;
-    final bool selected = _selection.isSelected(index);
-    return M3ESelectionLeading(
-      selected: selected,
-      onTap: () => _selection.toggle(index),
-      selectedChild: CircleAvatar(
-        backgroundColor: scheme.primary,
-        foregroundColor: scheme.onPrimary,
-        child: Icon(M3EIcons.check, size: 20, color: scheme.onPrimary),
-      ),
-      child: CircleAvatar(
-        backgroundColor: _avatarColor(index, scheme),
-        foregroundColor: scheme.onPrimary,
-        child: Text(
-          _items[index].title.substring(0, 1),
-          style: theme.typeScale.titleMedium.copyWith(color: scheme.onPrimary),
-        ),
+    return CircleAvatar(
+      backgroundColor: _avatarColor(index, scheme),
+      foregroundColor: scheme.onPrimary,
+      child: Text(
+        _items[index].title.substring(0, 1),
+        style: theme.typeScale.titleMedium.copyWith(color: scheme.onPrimary),
       ),
     );
   }
@@ -228,13 +218,6 @@ class _SelectionDemoHostState extends State<_SelectionDemoHost> {
     }
   }
 
-  BorderRadius? _radiusBuilder(int index, M3ECardPosition position) {
-    if (!_selection.isSelected(index)) {
-      return null;
-    }
-    return BorderRadius.circular(M3EListCardListTheme.defaultOuterRadius);
-  }
-
   static const EdgeInsets _listPadding = EdgeInsets.symmetric(
     horizontal: 16,
     vertical: 8,
@@ -243,9 +226,12 @@ class _SelectionDemoHostState extends State<_SelectionDemoHost> {
   Widget _body(M3EThemeData theme) {
     if (widget.dismissible) {
       return M3EDismissibleList(
+        selection: true,
+        selectionState: const M3EListSelectionState(
+          selectedIcon: Icon(M3EIcons.check_circle),
+        ),
         itemCount: _items.length,
         listPadding: _listPadding,
-        borderRadiusBuilder: _radiusBuilder,
         onTap: _onTap,
         onLongPress: _onLongPress,
         onDismiss: (int index, DismissDirection direction) async {
@@ -273,9 +259,12 @@ class _SelectionDemoHostState extends State<_SelectionDemoHost> {
       );
     }
     return M3ECardList.builder(
+      selection: true,
+      selectionState: const M3EListSelectionState(
+        selectedIcon: Icon(M3EIcons.check_circle),
+      ),
       itemCount: _items.length,
       listPadding: _listPadding,
-      borderRadiusBuilder: _radiusBuilder,
       onTap: _onTap,
       onLongPress: _onLongPress,
       haptic: M3EHapticFeedback.medium,

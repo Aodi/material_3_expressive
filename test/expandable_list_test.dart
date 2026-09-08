@@ -2,16 +2,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_ui/material_ui.dart';
 
-const List<M3EExpandableData> _items = <M3EExpandableData>[
+final List<M3EExpandableData> _items = <M3EExpandableData>[
   M3EExpandableData(
     title: 'Battery level low',
     subtitle: 'Plug in your device.',
-    body: Text('Your battery is at 10%.'),
+    expanded: M3EExpandableExpanded.content(
+      const Text('Your battery is at 10%.'),
+    ),
   ),
   M3EExpandableData(
     title: 'System update available',
     subtitle: 'Version 2.4.0 is ready.',
-    body: Text('This update includes security fixes.'),
+    expanded: M3EExpandableExpanded.content(
+      const Text('This update includes security fixes.'),
+    ),
   ),
 ];
 

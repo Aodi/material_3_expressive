@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 
 import '../../../foundations/foundations.dart';
 import '../../cards/enums/m3e_card_variant.dart';
+import 'm3e_list_reorder_state.dart';
+import 'm3e_list_selection_state.dart';
 
 /// Theme values for `M3EListItem`.
 @immutable
@@ -325,11 +327,12 @@ class M3EListExpandableTheme {
   static const double defaultTitleSubtitleGap = 4;
 
   /// defaultHeaderPadding.
-  static const EdgeInsets defaultHeaderPadding = EdgeInsets.fromLTRB(
-    16,
-    14,
-    16,
-    2,
+  ///
+  /// Balanced insets for title + subtitle in the header (subtitle used to live
+  /// in the body, which previously owned the bottom padding).
+  static const EdgeInsets defaultHeaderPadding = EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 14,
   );
 
   /// defaultBodyPadding.
@@ -476,6 +479,8 @@ class M3EListTheme extends M3EThemeExtension<M3EListTheme> {
     this.cardList = M3EListCardListTheme.defaults,
     this.dismissible = M3EListDismissibleTheme.defaults,
     this.expandable = M3EListExpandableTheme.defaults,
+    this.selection = M3EListSelectionState.defaults,
+    this.reorder = M3EListReorderState.defaults,
   });
 
   /// defaults.
@@ -495,18 +500,28 @@ class M3EListTheme extends M3EThemeExtension<M3EListTheme> {
   /// expandable.
   final M3EListExpandableTheme expandable;
 
+  /// Selection visuals and triggers for list variants.
+  final M3EListSelectionState selection;
+
+  /// Reorder visuals and motion for list variants.
+  final M3EListReorderState reorder;
+
   @override
   M3EListTheme copyWith({
     M3EListItemTheme? item,
     M3EListCardListTheme? cardList,
     M3EListDismissibleTheme? dismissible,
     M3EListExpandableTheme? expandable,
+    M3EListSelectionState? selection,
+    M3EListReorderState? reorder,
   }) {
     return M3EListTheme(
       item: item ?? this.item,
       cardList: cardList ?? this.cardList,
       dismissible: dismissible ?? this.dismissible,
       expandable: expandable ?? this.expandable,
+      selection: selection ?? this.selection,
+      reorder: reorder ?? this.reorder,
     );
   }
 
