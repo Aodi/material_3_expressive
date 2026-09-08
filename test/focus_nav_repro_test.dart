@@ -644,7 +644,7 @@ void main() {
     expect(pressed, 1);
   });
 
-  testWidgets('selection dialog Enter selects focused radio', (
+  testWidgets('selection dialog Enter selects focused row', (
     WidgetTester tester,
   ) async {
     List<String>? result;
@@ -676,26 +676,43 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
-    // Tab stops are the radios (enabled), not a disabled-looking shell.
-    final Finder radioB = find.ancestor(
-      of: find.text('B'),
-      matching: find.byType(M3ERadio<String>),
-    );
-    expect(radioB, findsOneWidget);
-
+    // Row is the Tab stop; embedded radio is not.
     final Finder optionFocus = find.descendant(
-      of: radioB,
+      of: find.bySemanticsLabel('B'),
       matching: find.byType(FocusableActionDetector),
     );
-    final FocusableActionDetector detector = tester.widget(optionFocus);
-    expect(detector.enabled, isTrue);
+    final FocusableActionDetector detector = tester
+        .widgetList<FocusableActionDetector>(optionFocus)
+        .firstWhere((FocusableActionDetector d) => d.enabled);
     final FocusNode? node = detector.focusNode;
     expect(node, isNotNull);
+    expect(node!.skipTraversal, isFalse);
+    expect(node.canRequestFocus, isTrue);
+
+    final Finder radioFocus = find.descendant(
+      of: find.byType(M3ERadio<String>),
+      matching: find.byType(FocusableActionDetector),
+    );
+    for (final FocusableActionDetector radioDetector
+        in tester.widgetList<FocusableActionDetector>(radioFocus)) {
+      expect(radioDetector.enabled, isFalse);
+      expect(radioDetector.focusNode?.skipTraversal, isTrue);
+    }
 
     M3EFocusInteraction.instance.noteKeyboardHighlight();
-    node!.requestFocus();
+    node.requestFocus();
     await tester.pumpAndSettle();
     expect(node.hasPrimaryFocus, isTrue);
+
+    final M3EFocusRing rowRing = tester
+        .widgetList<M3EFocusRing>(
+          find.descendant(
+            of: find.bySemanticsLabel('B'),
+            matching: find.byType(M3EFocusRing),
+          ),
+        )
+        .firstWhere((M3EFocusRing r) => r.focused);
+    expect(rowRing.focused, isTrue);
 
     await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
@@ -704,6 +721,134 @@ void main() {
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
     expect(result, <String>['B']);
+  });
+
+  testWidgets('selection dialog Tab visits option rows under shell order', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: M3ETheme(
+          data: M3EThemeData.light(),
+          child: FocusTraversalGroup(
+            policy: OrderedTraversalPolicy(),
+            child: Scaffold(
+              body: Column(
+                children: <Widget>[
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(0),
+                    child: FocusTraversalGroup(
+                      child: M3EButton.filled(
+                        onPressed: () {},
+                        child: const Text('Chrome'),
+                      ),
+                    ),
+                  ),
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(1),
+                    child: Expanded(
+                      child: Builder(
+                        builder: (BuildContext context) {
+                          return Center(
+                            child: M3EButton.filled(
+                              onPressed: () {
+                                M3EDialog.showSelectionScreen(
+                                  context,
+                                  title: 'Plan',
+                                  options: const <String>[
+                                    'Standard',
+                                    'Pro',
+                                    'Team',
+                                  ],
+                                );
+                              },
+                              child: const Text('Open selection'),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open selection'));
+    await tester.pumpAndSettle();
+
+    M3EFocusInteraction.instance.noteKeyboardHighlight();
+    final Set<String> hit = <String>{};
+    for (var i = 0; i < 8; i++) {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      final FocusNode? primary = FocusManager.instance.primaryFocus;
+      primary?.context?.visitAncestorElements((Element element) {
+        final Widget widget = element.widget;
+        if (widget is Semantics && widget.properties.label != null) {
+          hit.add(widget.properties.label!);
+          return false;
+        }
+        return true;
+      });
+    }
+
+    expect(
+      hit.intersection(<String>{'Standard', 'Pro', 'Team'}),
+      isNotEmpty,
+      reason: 'Tab must reach selection rows (example-shell traversal)',
+    );
+
+    // Focused row must paint a keyboard focus ring (visible Tab feedback).
+    expect(
+      tester
+          .widgetList<M3EFocusRing>(find.byType(M3EFocusRing))
+          .any((M3EFocusRing r) => r.focused),
+      isTrue,
+    );
+  });
+
+  testWidgets('checkbox focusable false skips Tab traversal', (
+    WidgetTester tester,
+  ) async {
+    final rowFocus = FocusNode(debugLabel: 'row');
+    addTearDown(rowFocus.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: M3ETheme(
+          data: M3EThemeData.light(),
+          child: Scaffold(
+            body: M3ETappable(
+              focusNode: rowFocus,
+              onTap: () {},
+              builder: (BuildContext context, M3EInteractionState state) {
+                return M3ECheckbox(
+                  value: false,
+                  onChanged: (_) {},
+                  focusable: false,
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final Finder checkboxDetector = find.descendant(
+      of: find.byType(M3ECheckbox),
+      matching: find.byType(FocusableActionDetector),
+    );
+    final FocusableActionDetector detector = tester.widget(checkboxDetector);
+    expect(detector.enabled, isFalse);
+    expect(detector.focusNode?.canRequestFocus, isFalse);
+    expect(detector.focusNode?.skipTraversal, isTrue);
   });
 
   testWidgets('focus ring paints above opaque sibling without extra gap', (

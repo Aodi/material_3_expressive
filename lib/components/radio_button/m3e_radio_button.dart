@@ -19,6 +19,7 @@ class M3ERadio<T> extends StatelessWidget {
     required this.onChanged,
     this.label,
     this.error = false,
+    this.focusable = true,
     this.focusNode,
     this.autofocus = false,
     this.semanticLabel,
@@ -42,6 +43,11 @@ class M3ERadio<T> extends StatelessWidget {
 
   final bool error;
 
+  /// Whether this radio is a keyboard Tab stop.
+  ///
+  /// Set to false when embedded in a focusable parent (e.g. a list row).
+  final bool focusable;
+
   /// focusNode.
   final FocusNode? focusNode;
 
@@ -64,6 +70,7 @@ class M3ERadio<T> extends StatelessWidget {
       builder: (BuildContext context) => M3ETappable(
         onTap: _enabled ? () => onChanged!(value) : null,
         enabled: _enabled,
+        focusable: focusable,
         focusNode: focusNode,
         autofocus: autofocus,
         semanticLabel: semanticLabel,

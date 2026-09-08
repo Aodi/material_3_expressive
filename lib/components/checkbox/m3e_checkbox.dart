@@ -26,6 +26,7 @@ class M3ECheckbox extends StatefulWidget {
     this.checkedChild,
     this.uncheckedChild,
     this.checkIconPadding,
+    this.focusable = true,
     this.focusNode,
     this.autofocus = false,
     this.semanticLabel,
@@ -69,6 +70,11 @@ class M3ECheckbox extends StatefulWidget {
   /// shift it left/up. Does not apply to [checkedChild], indeterminate, or
   /// unchecked.
   final EdgeInsetsGeometry? checkIconPadding;
+
+  /// Whether this checkbox is a keyboard Tab stop.
+  ///
+  /// Set to false when embedded in a focusable parent (e.g. a list row).
+  final bool focusable;
 
   /// focusNode.
   final FocusNode? focusNode;
@@ -149,6 +155,7 @@ class _M3ECheckboxState extends State<M3ECheckbox>
       builder: (BuildContext context) => M3ETappable(
         onTap: _enabled ? _handleTap : null,
         enabled: _enabled,
+        focusable: widget.focusable,
         focusNode: widget.focusNode,
         autofocus: widget.autofocus,
         semanticLabel: widget.semanticLabel,

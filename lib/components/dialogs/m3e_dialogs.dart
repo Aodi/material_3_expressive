@@ -1,6 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'package:material_ui/material_ui.dart'
-    show InkWell, Material, MaterialType;
 
 import '../../foundations/foundations.dart';
 import '../buttons/m3e_buttons.dart';
@@ -371,7 +369,11 @@ class _M3ESelectionDialogState extends State<_M3ESelectionDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               for (final String option in widget.options)
-                _buildSelectionItem(dialogTheme: dialogTheme, option: option),
+                _buildSelectionItem(
+                  theme: theme,
+                  dialogTheme: dialogTheme,
+                  option: option,
+                ),
             ],
           ),
         ),
@@ -395,59 +397,71 @@ class _M3ESelectionDialogState extends State<_M3ESelectionDialog> {
   }
 
   Widget _buildSelectionItem({
+    required M3EThemeData theme,
     required M3EDialogTheme dialogTheme,
     required String option,
   }) {
     final EdgeInsets padding = dialogTheme.padding;
+    final ShapeBorder shape = const RoundedRectangleBorder();
 
-    // Whole-row pointer target; keyboard focus stays on the radio/checkbox so
-    // Enter activates the real control (enabled look + Tab stops preserved).
-    return Semantics(
-      label: option,
-      button: true,
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          onTap: () {
-            if (widget.multiSelect) {
-              _toggleMulti(option);
-            } else {
-              _selectSingle(option);
-            }
-          },
+    // Row owns Tab / Enter; embedded radio/checkbox stay enabled visually but
+    // are not Tab stops ([focusable]: false + [ExcludeFocus]).
+    return M3ETappable(
+      onTap: () {
+        if (widget.multiSelect) {
+          _toggleMulti(option);
+        } else {
+          _selectSingle(option);
+        }
+      },
+      materialInk: true,
+      semanticLabel: option,
+      builder: (BuildContext context, M3EInteractionState state) {
+        return M3EFocusRing(
+          focused: state.focused,
+          radius: BorderRadius.zero,
           child: SizedBox(
             height: dialogTheme.selectionItemHeight,
             width: double.infinity,
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: padding.left,
-                right: padding.right,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: ExcludeSemantics(
-                  child: IgnorePointer(
-                    child: widget.multiSelect
-                        ? M3ECheckbox(
-                            value: _selected.contains(option),
-                            onChanged: (_) => _toggleMulti(option),
-                            label: Text(option),
-                          )
-                        : M3ERadio<String>(
-                            value: option,
-                            groupValue: _selected.isEmpty
-                                ? null
-                                : _selected.first,
-                            label: Text(option),
-                            onChanged: _selectSingle,
-                          ),
+            child: M3EStateLayerOverlay(
+              state: state,
+              color: theme.colorScheme.onSurface,
+              shape: shape,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: padding.left,
+                  right: padding.right,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ExcludeSemantics(
+                    child: ExcludeFocus(
+                      child: IgnorePointer(
+                        child: widget.multiSelect
+                            ? M3ECheckbox(
+                                value: _selected.contains(option),
+                                onChanged: (_) => _toggleMulti(option),
+                                label: Text(option),
+                                focusable: false,
+                              )
+                            : M3ERadio<String>(
+                                value: option,
+                                groupValue: _selected.isEmpty
+                                    ? null
+                                    : _selected.first,
+                                label: Text(option),
+                                onChanged: _selectSingle,
+                                focusable: false,
+                              ),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

@@ -25,6 +25,7 @@ class M3ETappable extends StatefulWidget {
     this.onTap,
     this.onLongPress,
     this.enabled = true,
+    this.focusable = true,
     this.focusNode,
     this.autofocus = false,
     this.mouseCursor,
@@ -50,6 +51,12 @@ class M3ETappable extends StatefulWidget {
 
   /// Whether the surface accepts interaction.
   final bool enabled;
+
+  /// Whether this surface is a keyboard Tab stop.
+  ///
+  /// When false, pointer activation still works but Tab skips the surface
+  /// (use for controls embedded in a focusable parent row).
+  final bool focusable;
 
   /// Optional focus node; one is created internally when null.
   final FocusNode? focusNode;
@@ -102,13 +109,34 @@ class _M3ETappableState extends State<M3ETappable>
   bool _focusHighlight = false;
 
   FocusNode get _effectiveFocusNode =>
-      widget.focusNode ?? (_internalFocusNode ??= FocusNode());
+      widget.focusNode ??
+      (_internalFocusNode ??= FocusNode(
+        canRequestFocus: widget.focusable,
+        skipTraversal: !widget.focusable,
+      ));
 
   @override
   void initState() {
     super.initState();
     _scaleController = AnimationController.unbounded(vsync: this, value: 1);
     M3EFocusInteraction.instance.addListener(_onFocusInteractionChanged);
+    _applyFocusableToNode();
+  }
+
+  @override
+  void didUpdateWidget(covariant M3ETappable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusable != widget.focusable ||
+        oldWidget.focusNode != widget.focusNode) {
+      _applyFocusableToNode();
+    }
+  }
+
+  void _applyFocusableToNode() {
+    final FocusNode node = _effectiveFocusNode;
+    node
+      ..canRequestFocus = widget.focusable
+      ..skipTraversal = !widget.focusable;
   }
 
   @override
@@ -349,9 +377,9 @@ class _M3ETappableState extends State<M3ETappable>
     }
 
     Widget focused = FocusableActionDetector(
-      enabled: interactive,
+      enabled: interactive && widget.focusable,
       focusNode: _effectiveFocusNode,
-      autofocus: widget.autofocus,
+      autofocus: widget.autofocus && widget.focusable,
       onShowFocusHighlight: _handleShowFocusHighlight,
       actions: <Type, Action<Intent>>{
         // Desktop/mobile: Enter → ActivateIntent. Web: Enter → ButtonActivateIntent.
@@ -365,7 +393,7 @@ class _M3ETappableState extends State<M3ETappable>
 
     // Local shortcuts so FABs and other tappables activate on Enter even when
     // an ancestor remaps keys (or omits ActivateIntent).
-    if (!interactive) {
+    if (!interactive || !widget.focusable) {
       return focused;
     }
     return Shortcuts(
