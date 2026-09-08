@@ -107,7 +107,7 @@ Future<void> _listOwnedSelection(WidgetTester tester) async {
 }
 
 Future<void> _listPrefersAncestorScope(WidgetTester tester) async {
-  final M3ESelectionController controller = M3ESelectionController()..select(2);
+  final controller = M3ESelectionController()..select(2);
   addTearDown(controller.dispose);
 
   await _pump(
@@ -135,7 +135,7 @@ Future<void> _listPrefersAncestorScope(WidgetTester tester) async {
 }
 
 Future<void> _cardListReorder(WidgetTester tester) async {
-  final List<String> items = <String>['A', 'B', 'C'];
+  final items = <String>['A', 'B', 'C'];
   await _pump(
     tester,
     StatefulBuilder(
@@ -278,11 +278,11 @@ Future<void> _expandableLeadingSelectDoesNotExpand(WidgetTester tester) async {
       selectionState: const M3EListSelectionState(
         selectedIcon: Icon(M3EIcons.check_circle),
       ),
-      data: <M3EExpandableData>[
+      data: const <M3EExpandableData>[
         M3EExpandableData(
           title: 'Section',
-          leading: const Icon(M3EIcons.inbox),
-          expanded: M3EExpandableExpanded.content(const Text('BODY')),
+          leading: Icon(M3EIcons.inbox),
+          expanded: M3EExpandableExpanded.content(Text('BODY')),
         ),
       ],
     ),
@@ -308,12 +308,12 @@ Future<void> _expandableNestedLastClosesBottom(WidgetTester tester) async {
   await _pump(
     tester,
     M3EExpandableList(
-      style: const M3EExpandableStyle(outerRadius: outer, innerRadius: inner),
+      style: const M3EExpandableStyle(outerRadius: outer),
       initiallyExpanded: const <int>{1},
       data: <M3EExpandableData>[
-        M3EExpandableData(
+        const M3EExpandableData(
           title: 'First',
-          expanded: M3EExpandableExpanded.content(const Text('First body')),
+          expanded: M3EExpandableExpanded.content(Text('First body')),
         ),
         M3EExpandableData(
           title: 'Last parent',
@@ -321,7 +321,6 @@ Future<void> _expandableNestedLastClosesBottom(WidgetTester tester) async {
             M3ECardList(
               embedded: true,
               outerRadius: outer,
-              innerRadius: inner,
               itemCount: 2,
               itemBuilder: (BuildContext context, int index) {
                 return M3EListItem(headline: 'Nest $index');
@@ -356,48 +355,19 @@ Future<void> _expandableNestedLastClosesBottom(WidgetTester tester) async {
 }
 
 Future<void> _expandableParentReorderIgnoresNested(WidgetTester tester) async {
-  final List<String> parents = <String>['Parent A', 'Parent B'];
-  final List<String> nested = <String>['Nest 0', 'Nest 1', 'Nest 2'];
+  final parents = <String>['Parent A', 'Parent B'];
+  final nested = <String>['Nest 0', 'Nest 1', 'Nest 2'];
   var parentReorderCount = 0;
 
   await _pump(
     tester,
     StatefulBuilder(
       builder: (BuildContext context, StateSetter setState) {
-        return M3EExpandableList(
-          reorder: true,
-          initiallyExpanded: const <int>{0},
-          onReorder: (int oldIndex, int newIndex) {
-            parentReorderCount++;
-            setState(() {
-              final String item = parents.removeAt(oldIndex);
-              parents.insert(newIndex, item);
-            });
-          },
-          data: <M3EExpandableData>[
-            for (int i = 0; i < parents.length; i++)
-              M3EExpandableData(
-                title: parents[i],
-                expanded: i == 0
-                    ? M3EExpandableExpanded.list(
-                        M3ECardList(
-                          embedded: true,
-                          reorder: true,
-                          onReorder: (int oldIndex, int newIndex) {
-                            setState(() {
-                              final String item = nested.removeAt(oldIndex);
-                              nested.insert(newIndex, item);
-                            });
-                          },
-                          itemCount: nested.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            return M3EListItem(headline: nested[index]);
-                          },
-                        ),
-                      )
-                    : M3EExpandableExpanded.content(const Text('Other body')),
-              ),
-          ],
+        return _nestedExpandableReorderList(
+          parents: parents,
+          nested: nested,
+          setState: setState,
+          onParentReorder: () => parentReorderCount++,
         );
       },
     ),
@@ -425,9 +395,52 @@ Future<void> _expandableParentReorderIgnoresNested(WidgetTester tester) async {
   expect(find.text('Nest 0'), findsOneWidget);
 }
 
+Widget _nestedExpandableReorderList({
+  required List<String> parents,
+  required List<String> nested,
+  required StateSetter setState,
+  required VoidCallback onParentReorder,
+}) {
+  return M3EExpandableList(
+    reorder: true,
+    initiallyExpanded: const <int>{0},
+    onReorder: (int oldIndex, int newIndex) {
+      onParentReorder();
+      setState(() {
+        final String item = parents.removeAt(oldIndex);
+        parents.insert(newIndex, item);
+      });
+    },
+    data: <M3EExpandableData>[
+      for (int i = 0; i < parents.length; i++)
+        M3EExpandableData(
+          title: parents[i],
+          expanded: i == 0
+              ? M3EExpandableExpanded.list(
+                  M3ECardList(
+                    embedded: true,
+                    reorder: true,
+                    onReorder: (int oldIndex, int newIndex) {
+                      setState(() {
+                        final String item = nested.removeAt(oldIndex);
+                        nested.insert(newIndex, item);
+                      });
+                    },
+                    itemCount: nested.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      return M3EListItem(headline: nested[index]);
+                    },
+                  ),
+                )
+              : const M3EExpandableExpanded.content(Text('Other body')),
+        ),
+    ],
+  );
+}
+
 Future<void> _expandableReorderRestores(WidgetTester tester) async {
-  final List<String> titles = <String>['Alpha', 'Beta', 'Gamma'];
-  final List<String> bodies = <String>['Alpha body', 'Beta body', 'Gamma body'];
+  final titles = <String>['Alpha', 'Beta', 'Gamma'];
+  final bodies = <String>['Alpha body', 'Beta body', 'Gamma body'];
 
   await _pump(
     tester,
@@ -480,7 +493,7 @@ Future<void> _expandableReorderRestores(WidgetTester tester) async {
 }
 
 Future<void> _tapNotDelayed(WidgetTester tester) async {
-  final List<int> taps = <int>[];
+  final taps = <int>[];
   await _pump(
     tester,
     M3ECardList(
@@ -505,22 +518,7 @@ Future<void> _dismissibleSelection(WidgetTester tester) async {
   Set<int>? last;
   await _pump(
     tester,
-    M3EDismissibleColumn(
-      selection: true,
-      selectionState: const M3EListSelectionState(
-        mode: M3EListSelectionMode.single,
-        selectedIcon: Icon(M3EIcons.check_circle),
-      ),
-      onSelectionChanged: (Set<int> s) => last = s,
-      itemCount: 2,
-      onDismiss: (int index, DismissDirection direction) async => false,
-      itemBuilder: (BuildContext context, int index) {
-        return M3EListItem(
-          headline: 'Row $index',
-          leading: const Icon(M3EIcons.schedule),
-        );
-      },
-    ),
+    _dismissibleSelectionColumn(onSelectionChanged: (Set<int> s) => last = s),
   );
 
   expect(find.byType(M3ESelectionFlip), findsNWidgets(2));
@@ -543,6 +541,43 @@ Future<void> _dismissibleSelection(WidgetTester tester) async {
   expect(radius?.topLeft, radius?.topRight);
 
   // Double-tap trigger on second row.
+  await _pumpDoubleTapDismissible(
+    tester,
+    onSelectionChanged: (Set<int> s) => last = s,
+  );
+  last = null;
+  await tester.tap(find.text('Double'));
+  await tester.pump(const Duration(milliseconds: 40));
+  await tester.tap(find.text('Double'));
+  await tester.pumpAndSettle();
+  expect(last, <int>{0});
+}
+
+Widget _dismissibleSelectionColumn({
+  required ValueChanged<Set<int>> onSelectionChanged,
+}) {
+  return M3EDismissibleColumn(
+    selection: true,
+    selectionState: const M3EListSelectionState(
+      mode: M3EListSelectionMode.single,
+      selectedIcon: Icon(M3EIcons.check_circle),
+    ),
+    onSelectionChanged: onSelectionChanged,
+    itemCount: 2,
+    onDismiss: (int index, DismissDirection direction) async => false,
+    itemBuilder: (BuildContext context, int index) {
+      return M3EListItem(
+        headline: 'Row $index',
+        leading: const Icon(M3EIcons.schedule),
+      );
+    },
+  );
+}
+
+Future<void> _pumpDoubleTapDismissible(
+  WidgetTester tester, {
+  required ValueChanged<Set<int>> onSelectionChanged,
+}) async {
   await tester.pumpWidget(
     M3EMaterialApp(
       data: M3EThemeData.light(seedColor: const Color(0xFF6750A4)),
@@ -552,7 +587,7 @@ Future<void> _dismissibleSelection(WidgetTester tester) async {
           selectionState: const M3EListSelectionState(
             trigger: M3EListSelectionTrigger.doubleTap,
           ),
-          onSelectionChanged: (Set<int> s) => last = s,
+          onSelectionChanged: onSelectionChanged,
           itemCount: 1,
           onDismiss: (int index, DismissDirection direction) async => false,
           itemBuilder: (BuildContext context, int index) {
@@ -563,16 +598,10 @@ Future<void> _dismissibleSelection(WidgetTester tester) async {
     ),
   );
   await tester.pumpAndSettle();
-  last = null;
-  await tester.tap(find.text('Double'));
-  await tester.pump(const Duration(milliseconds: 40));
-  await tester.tap(find.text('Double'));
-  await tester.pumpAndSettle();
-  expect(last, <int>{0});
 }
 
 Future<void> _dismissibleReorder(WidgetTester tester) async {
-  final List<String> items = <String>['A', 'B', 'C'];
+  final items = <String>['A', 'B', 'C'];
   await _pump(
     tester,
     StatefulBuilder(
@@ -616,7 +645,7 @@ Future<void> _dismissibleReorder(WidgetTester tester) async {
 
 Future<void> _dismissibleReorderDismissExclusion(WidgetTester tester) async {
   var dismissCalls = 0;
-  final List<String> items = <String>['A', 'B', 'C'];
+  final items = <String>['A', 'B', 'C'];
   await _pump(
     tester,
     StatefulBuilder(
@@ -655,7 +684,7 @@ Future<void> _dismissibleReorderDismissExclusion(WidgetTester tester) async {
   expect(dismissCalls, 0);
 
   // While dismissing (including spring-back), long-press must not reorder.
-  final List<String> before = List<String>.from(items);
+  final before = List<String>.from(items);
   final TestGesture dismiss = await tester.startGesture(
     tester.getCenter(find.text(items.first)),
   );

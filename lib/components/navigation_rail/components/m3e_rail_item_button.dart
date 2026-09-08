@@ -157,15 +157,7 @@ class _M3ERailItemButtonState extends State<M3ERailItemButton> {
         ? (theme.indicatorShapeFull ??
               RoundedRectangleBorder(borderRadius: M3EShapes.roundSet.xs))
         : const RoundedRectangleBorder();
-    final Widget scaledIcon = M3ENavIconScale(
-      selected: selected,
-      child: IconTheme.merge(
-        data: IconThemeData(color: fg, size: theme.iconSize),
-        child: selected && widget.selectedIcon != null
-            ? widget.selectedIcon!
-            : widget.icon,
-      ),
-    );
+    final Widget scaledIcon = _buildScaledIcon(fg: fg, theme: theme);
     final Widget content = expanded
         ? _buildExpandedContent(
             m3e: m3e,
@@ -179,7 +171,66 @@ class _M3ERailItemButtonState extends State<M3ERailItemButton> {
             fg: fg,
             scaledIcon: scaledIcon,
           );
-    final material = Material(
+    final Widget material = _buildItemMaterial(
+      theme: theme,
+      expanded: expanded,
+      bg: bg,
+      shape: shape,
+      fg: fg,
+      content: content,
+    );
+    Widget sized = ConstrainedBox(
+      constraints: BoxConstraints(minHeight: height),
+      child: material,
+    );
+    if (expanded) {
+      sized = M3EFocusRing(
+        focused: _focused,
+        radius: _ringRadius(shape),
+        child: sized,
+      );
+    }
+    final Widget withTooltip = expanded
+        ? sized
+        : Tooltip(
+            message: widget.semanticLabel ?? widget.label,
+            preferBelow: false,
+            child: sized,
+          );
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: expanded ? null : (widget.semanticLabel ?? widget.label),
+      child: expanded
+          ? _wrapExpandedFocus(withTooltip)
+          : MouseRegion(cursor: SystemMouseCursors.click, child: withTooltip),
+    );
+  }
+
+  Widget _buildScaledIcon({
+    required Color fg,
+    required M3ENavigationRailTheme theme,
+  }) {
+    return M3ENavIconScale(
+      selected: widget.isSelected,
+      child: IconTheme.merge(
+        data: IconThemeData(color: fg, size: theme.iconSize),
+        child: widget.isSelected && widget.selectedIcon != null
+            ? widget.selectedIcon!
+            : widget.icon,
+      ),
+    );
+  }
+
+  Widget _buildItemMaterial({
+    required M3ENavigationRailTheme theme,
+    required bool expanded,
+    required Color bg,
+    required ShapeBorder shape,
+    required Color fg,
+    required Widget content,
+  }) {
+    return Material(
       key: expanded ? widget.indicatorKey : null,
       color: bg,
       shape: shape,
@@ -211,56 +262,34 @@ class _M3ERailItemButtonState extends State<M3ERailItemButton> {
         ),
       ),
     );
-    Widget sized = ConstrainedBox(
-      constraints: BoxConstraints(minHeight: height),
-      child: material,
-    );
-    if (expanded) {
-      sized = M3EFocusRing(
-        focused: _focused,
-        radius: _ringRadius(shape),
-        child: sized,
-      );
-    }
-    final Widget withTooltip = expanded
-        ? sized
-        : Tooltip(
-            message: widget.semanticLabel ?? widget.label,
-            preferBelow: false,
-            child: sized,
-          );
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: expanded ? null : (widget.semanticLabel ?? widget.label),
-      child: expanded
-          ? FocusableActionDetector(
-              focusNode: _focusNode,
-              mouseCursor: SystemMouseCursors.click,
-              onShowFocusHighlight: _handleFocusHighlight,
-              actions: <Type, Action<Intent>>{
-                ActivateIntent: CallbackAction<ActivateIntent>(
-                  onInvoke: (ActivateIntent intent) {
-                    _select();
-                    return null;
-                  },
-                ),
-                ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
-                  onInvoke: (ButtonActivateIntent intent) {
-                    _select();
-                    return null;
-                  },
-                ),
-              },
-              child: Listener(
-                behavior: HitTestBehavior.translucent,
-                onPointerDown: (_) {
-                  M3EFocusInteraction.instance.notePointerInteraction();
-                },
-                child: withTooltip,
-              ),
-            )
-          : MouseRegion(cursor: SystemMouseCursors.click, child: withTooltip),
+  }
+
+  Widget _wrapExpandedFocus(Widget child) {
+    return FocusableActionDetector(
+      focusNode: _focusNode,
+      mouseCursor: SystemMouseCursors.click,
+      onShowFocusHighlight: _handleFocusHighlight,
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (ActivateIntent intent) {
+            _select();
+            return null;
+          },
+        ),
+        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+          onInvoke: (ButtonActivateIntent intent) {
+            _select();
+            return null;
+          },
+        ),
+      },
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) {
+          M3EFocusInteraction.instance.notePointerInteraction();
+        },
+        child: child,
+      ),
     );
   }
 

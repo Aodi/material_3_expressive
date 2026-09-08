@@ -4,18 +4,16 @@ import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_ui/material_ui.dart';
 
 final List<M3EExpandableData> _items = <M3EExpandableData>[
-  M3EExpandableData(
+  const M3EExpandableData(
     title: 'Battery level low',
     subtitle: 'Plug in your device.',
-    expanded: M3EExpandableExpanded.content(
-      const Text('Your battery is at 10%.'),
-    ),
+    expanded: M3EExpandableExpanded.content(Text('Your battery is at 10%.')),
   ),
-  M3EExpandableData(
+  const M3EExpandableData(
     title: 'System update available',
     subtitle: 'Version 2.4.0 is ready.',
     expanded: M3EExpandableExpanded.content(
-      const Text('This update includes security fixes.'),
+      Text('This update includes security fixes.'),
     ),
   ),
 ];
@@ -32,14 +30,60 @@ Widget _host(Widget child) {
   );
 }
 
+Widget _expandedSublistForTabTraversal(List<String> taps) {
+  return M3EExpandableList(
+    initiallyExpanded: const <int>{0},
+    data: <M3EExpandableData>[
+      M3EExpandableData(
+        title: 'Parent',
+        subtitle: 'Has nested rows',
+        expanded: M3EExpandableExpanded.list(
+          M3ECardList(
+            embedded: true,
+            itemCount: 2,
+            onTap: (int index) => taps.add('nested-$index'),
+            itemBuilder: (BuildContext context, int index) {
+              return M3EListItem(headline: 'Nested $index');
+            },
+          ),
+        ),
+      ),
+      const M3EExpandableData(
+        title: 'Next parent',
+        subtitle: 'After sublist',
+        expanded: M3EExpandableExpanded.content(Text('Body')),
+      ),
+    ],
+  );
+}
+
+Future<void> _pumpExpandedSublistForTabTraversal(
+  WidgetTester tester,
+  List<String> taps,
+) async {
+  await tester.pumpWidget(_host(_expandedSublistForTabTraversal(taps)));
+  await tester.pumpAndSettle();
+  FocusManager.instance.highlightStrategy =
+      FocusHighlightStrategy.alwaysTraditional;
+}
+
 void main() {
+  registerExpandableListRendersTitlesTests();
+  registerExpandableListExpandsAndReportsTests();
+  registerExpandableListSingleExpandTests();
+  registerExpandableSublistTabTraversalTests();
+}
+
+void registerExpandableListRendersTitlesTests() {
   testWidgets('M3EExpandableList renders item titles', (tester) async {
     await tester.pumpWidget(_host(M3EExpandableList(data: _items)));
 
     expect(find.text('Battery level low'), findsOneWidget);
     expect(find.text('System update available'), findsOneWidget);
   });
+}
 
+void registerExpandableListExpandsAndReportsTests() {
   testWidgets('M3EExpandableList expands item and reports change', (
     tester,
   ) async {
@@ -66,7 +110,9 @@ void main() {
     expect(changedExpanded, isTrue);
     expect(find.text('Your battery is at 10%.'), findsOneWidget);
   });
+}
 
+void registerExpandableListSingleExpandTests() {
   testWidgets('M3EExpandableList single-expand collapses prior item', (
     tester,
   ) async {
@@ -97,42 +143,14 @@ void main() {
     expect(expandedEvents, <int>[0, 1]);
     expect(find.text('This update includes security fixes.'), findsOneWidget);
   });
+}
 
+void registerExpandableSublistTabTraversalTests() {
   testWidgets('expanded sublist participates in Tab traversal after header', (
     WidgetTester tester,
   ) async {
-    final List<String> taps = <String>[];
-    await tester.pumpWidget(
-      _host(
-        M3EExpandableList(
-          initiallyExpanded: const <int>{0},
-          data: <M3EExpandableData>[
-            M3EExpandableData(
-              title: 'Parent',
-              subtitle: 'Has nested rows',
-              expanded: M3EExpandableExpanded.list(
-                M3ECardList(
-                  embedded: true,
-                  itemCount: 2,
-                  onTap: (int index) => taps.add('nested-$index'),
-                  itemBuilder: (BuildContext context, int index) {
-                    return M3EListItem(headline: 'Nested $index');
-                  },
-                ),
-              ),
-            ),
-            M3EExpandableData(
-              title: 'Next parent',
-              subtitle: 'After sublist',
-              expanded: M3EExpandableExpanded.content(const Text('Body')),
-            ),
-          ],
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    FocusManager.instance.highlightStrategy =
-        FocusHighlightStrategy.alwaysTraditional;
+    final taps = <String>[];
+    await _pumpExpandedSublistForTabTraversal(tester, taps);
 
     expect(find.text('Nested 0'), findsOneWidget);
     expect(find.text('Nested 1'), findsOneWidget);

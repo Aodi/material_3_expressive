@@ -148,7 +148,7 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
     }
   }
 
-  /// Actions for [dataIndex] in [direction] (empty if none).
+  /// Actions for the given data index in the swipe direction (empty if none).
   List<M3EListSwipeAction> actionsFor(
     int dataIndex, {
     required bool swipingRight,
@@ -164,14 +164,13 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
       return 0;
     }
     var total = 0.0;
-    for (final M3EListSwipeAction action in actionList) {
+    for (final action in actionList) {
       total += action.width;
     }
     if (actionList.length > 1) {
       total += (actionList.length - 1) * style.actionSpacing;
     }
-    total += 2 * style.actionEdgePadding;
-    return total;
+    return total += 2 * style.actionEdgePadding;
   }
 
   int? _dataIndexForDragSlot() {
@@ -288,22 +287,62 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
     final total = visible.length;
     final isFirst = slotPos == 0;
     final isLast = slotPos == total - 1;
-
     final or = s.outerRadius;
     final sr = s.selectedBorderRadius ?? or;
     final ir = s.innerRadius;
 
+    final BorderRadius? early = _computeRadiusEarlyExit(
+      slotIndex: slotIndex,
+      total: total,
+      or: or,
+      sr: sr,
+      ir: ir,
+      isFirst: isFirst,
+      isLast: isLast,
+      dragPos: dragPos,
+      slotPos: slotPos,
+    );
+    if (early != null) {
+      return early;
+    }
+
+    final facingR = lerpDouble(ir, or, _roundnessFraction)!;
+    final subtleR = _pastThreshold
+        ? ir
+        : lerpDouble(ir, or, _roundnessFraction * 0.3)!;
+    return _computeDragNeighborRadius(
+      slotIndex: slotIndex,
+      slotPos: slotPos,
+      dragPos: dragPos,
+      isFirst: isFirst,
+      isLast: isLast,
+      or: or,
+      sr: sr,
+      facingR: facingR,
+      subtleR: subtleR,
+    );
+  }
+
+  BorderRadius? _computeRadiusEarlyExit({
+    required int slotIndex,
+    required int total,
+    required double or,
+    required double sr,
+    required double ir,
+    required bool isFirst,
+    required bool isLast,
+    required int dragPos,
+    required int slotPos,
+  }) {
     if (embedded) {
       if (slotIndex == _dragSlotIndex && _pastThreshold) {
         return BorderRadius.circular(sr);
       }
       return BorderRadius.circular(ir);
     }
-
     if (total == 1) {
       return BorderRadius.circular(or);
     }
-
     if (dragPos < 0 || (slotPos - dragPos).abs() > 1) {
       return BorderRadius.only(
         topLeft: Radius.circular(isFirst ? or : ir),
@@ -312,15 +351,21 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
         bottomRight: Radius.circular(isLast ? or : ir),
       );
     }
+    return null;
+  }
 
-    final facingR = lerpDouble(ir, or, _roundnessFraction)!;
-    final subtleR = _pastThreshold
-        ? ir
-        : lerpDouble(ir, or, _roundnessFraction * 0.3)!;
-
+  BorderRadius _computeDragNeighborRadius({
+    required int slotIndex,
+    required int slotPos,
+    required int dragPos,
+    required bool isFirst,
+    required bool isLast,
+    required double or,
+    required double sr,
+    required double facingR,
+    required double subtleR,
+  }) {
     final isDragged = slotIndex == _dragSlotIndex;
-    final isAbove = slotPos < dragPos;
-
     if (isDragged) {
       if (_pastThreshold) {
         return BorderRadius.circular(sr);
@@ -332,8 +377,7 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
         bottomRight: Radius.circular(isLast ? or : facingR),
       );
     }
-
-    if (isAbove) {
+    if (slotPos < dragPos) {
       return BorderRadius.only(
         topLeft: Radius.circular(isFirst ? or : subtleR),
         topRight: Radius.circular(isFirst ? or : subtleR),
@@ -341,7 +385,6 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
         bottomRight: Radius.circular(isLast ? or : facingR),
       );
     }
-
     return BorderRadius.only(
       topLeft: Radius.circular(isFirst ? or : facingR),
       topRight: Radius.circular(isFirst ? or : facingR),

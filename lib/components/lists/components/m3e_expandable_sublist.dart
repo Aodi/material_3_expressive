@@ -36,9 +36,10 @@ BorderRadius m3eExpandableParentRadius({
 
 /// Animates a nested list expansion under an expandable parent header.
 ///
-/// Does not wrap rows in cards — pass an [M3ECardList] (or similar) as [child]
-/// so gaps, selection, and reorder stay with that list. The expandable parent
-/// supplies nest-scope hints so a last parent can close nested bottom radii.
+/// Does not wrap rows in cards — pass a card-backed list (or similar) as
+/// [child] so gaps, selection, and reorder stay with that list. The expandable
+/// parent supplies nest-scope hints so a last parent can close nested bottom
+/// radii.
 class M3EExpandableSublist extends StatelessWidget {
   /// Creates a nested-list expansion wrapper.
   const M3EExpandableSublist({
@@ -49,7 +50,7 @@ class M3EExpandableSublist extends StatelessWidget {
     super.key,
   });
 
-  /// Nested list widget (typically [M3ECardList]).
+  /// Nested list widget (typically a card-backed list).
   final Widget child;
 
   /// Expand progress `0..1` (may overshoot).
@@ -58,7 +59,8 @@ class M3EExpandableSublist extends StatelessWidget {
   /// Expandable decoration (default gap when [topGap] is null).
   final M3EExpandableStyle style;
 
-  /// Override for the gap above the nested list; defaults to [style.gap].
+  /// Override for the gap above the nested list; defaults to
+  /// [M3EExpandableStyle.gap].
   final double? topGap;
 
   @override

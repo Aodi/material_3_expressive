@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-import '../../selection/controllers/m3e_selection_controller.dart';
 import '../../selection/components/m3e_selection_scope.dart';
+import '../../selection/controllers/m3e_selection_controller.dart';
 import '../enums/m3e_list_selection_enums.dart';
 import '../styles/m3e_list_selection_state.dart';
 

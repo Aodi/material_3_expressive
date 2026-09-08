@@ -112,7 +112,36 @@ extension _M3ESearchBarContentBuild on _M3ESearchBarState {
       input: input,
     );
 
-    final Widget content = Stack(
+    final Widget content = _buildBarStackContent(
+      styles: styles,
+      textDirection: textDirection,
+      barTheme: barTheme,
+      scheme: scheme,
+      actionIconSize: actionIconSize,
+      idleHintStyle: idleHintStyle,
+      editingRow: editingRow,
+      idleGrouped: idleGrouped,
+    );
+
+    // Ring hugs the bar itself, so it tracks the expand-on-focus inset.
+    return M3EFocusRing(
+      focused: _showFocusRing,
+      radius: _barFocusRingRadius(styles.shape, barTheme),
+      child: _buildBarMaterial(styles: styles, content: content),
+    );
+  }
+
+  Widget _buildBarStackContent({
+    required _BarResolvedStyles styles,
+    required TextDirection textDirection,
+    required M3ESearchBarTheme barTheme,
+    required M3EColorScheme scheme,
+    required double actionIconSize,
+    required TextStyle idleHintStyle,
+    required Widget editingRow,
+    required bool idleGrouped,
+  }) {
+    return Stack(
       fit: StackFit.passthrough,
       alignment: Alignment.center,
       children: <Widget>[
@@ -136,8 +165,13 @@ extension _M3ESearchBarContentBuild on _M3ESearchBarState {
           ),
       ],
     );
+  }
 
-    final Widget bar = Opacity(
+  Widget _buildBarMaterial({
+    required _BarResolvedStyles styles,
+    required Widget content,
+  }) {
+    return Opacity(
       opacity: widget.enabled ? 1 : M3ESearchConstants.disabledOpacity,
       child: Material(
         elevation: styles.elevation,
@@ -170,13 +204,6 @@ extension _M3ESearchBarContentBuild on _M3ESearchBarState {
           ),
         ),
       ),
-    );
-
-    // Ring hugs the bar itself, so it tracks the expand-on-focus inset.
-    return M3EFocusRing(
-      focused: _showFocusRing,
-      radius: _barFocusRingRadius(styles.shape, barTheme),
-      child: bar,
     );
   }
 

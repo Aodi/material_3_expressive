@@ -541,32 +541,45 @@ class _M3ENavSelectionIndicatorState extends State<M3ENavSelectionIndicator>
     final double mainExtent = (maxMain - minMain) + _baseMain;
     final double mainStart = minMain - _baseMain / 2;
     final double radius = math.min(_crossSize, _baseMain) / 2;
-
-    if (widget.axis == Axis.vertical) {
-      return Positioned(
-        left: _crossCenter - _crossSize / 2,
-        top: mainStart,
-        width: _crossSize,
-        height: mainExtent,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: widget.color,
-            borderRadius: BorderRadius.circular(radius),
-          ),
-        ),
-      );
-    }
-    return Positioned(
-      top: _crossCenter - _crossSize / 2,
-      left: mainStart,
-      height: _crossSize,
-      width: mainExtent,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: widget.color,
-          borderRadius: BorderRadius.circular(radius),
-        ),
-      ),
+    return _m3eNavSelectionPill(
+      axis: widget.axis,
+      color: widget.color,
+      crossCenter: _crossCenter,
+      crossSize: _crossSize,
+      mainStart: mainStart,
+      mainExtent: mainExtent,
+      radius: radius,
     );
   }
+}
+
+Widget _m3eNavSelectionPill({
+  required Axis axis,
+  required Color color,
+  required double crossCenter,
+  required double crossSize,
+  required double mainStart,
+  required double mainExtent,
+  required double radius,
+}) {
+  final decoration = BoxDecoration(
+    color: color,
+    borderRadius: BorderRadius.circular(radius),
+  );
+  if (axis == Axis.vertical) {
+    return Positioned(
+      left: crossCenter - crossSize / 2,
+      top: mainStart,
+      width: crossSize,
+      height: mainExtent,
+      child: DecoratedBox(decoration: decoration),
+    );
+  }
+  return Positioned(
+    top: crossCenter - crossSize / 2,
+    left: mainStart,
+    height: crossSize,
+    width: mainExtent,
+    child: DecoratedBox(decoration: decoration),
+  );
 }

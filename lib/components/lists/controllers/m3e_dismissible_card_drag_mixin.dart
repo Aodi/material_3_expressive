@@ -37,7 +37,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     _roundnessCtrl?.stop(canceled: true);
 
     setState(() {
-      final bool isSameSlot = _dragSlotRef == slot;
+      final isSameSlot = _dragSlotRef == slot;
       _dragSlotRef = slot;
       _dragSlotIndex = _slots.indexOf(slot);
       _isDismissDragging = true;
@@ -66,31 +66,15 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     var newNeighbour = _neighbourFraction;
     var newRoundness = _roundnessFraction;
 
-    final int? dataIndex = _dataIndexForDragSlot();
-    final bool swipingRight = newOffset > 0;
-    final List<M3EListSwipeAction> actionList = dataIndex == null
+    final dataIndex = _dataIndexForDragSlot();
+    final swipingRight = newOffset > 0;
+    final actionList = dataIndex == null
         ? const <M3EListSwipeAction>[]
         : actionsFor(dataIndex, swipingRight: swipingRight);
-    final bool hasActions = actionList.isNotEmpty;
+    final hasActions = actionList.isNotEmpty;
 
     if (hasActions) {
-      final double actionsWidth = _computeActionsWidth(actionList);
-      final double maxExtent = actionsWidth + style.actionOverdragExtent;
-      if (newOffset.abs() > maxExtent) {
-        final double overdrag = newOffset.abs() - maxExtent;
-        final double dampedOverdrag = math.sqrt(overdrag) * 3.0;
-        newOffset = (maxExtent + dampedOverdrag) * newOffset.sign;
-      }
-
-      final bool crossedAction = newOffset.abs() >= actionsWidth;
-      if (crossedAction && !_pastActionThreshold) {
-        _pastActionThreshold = true;
-        if (style.enableFeedback) {
-          M3EHaptics.trigger(style.hapticOnThreshold);
-        }
-      } else if (!crossedAction && _pastActionThreshold) {
-        _pastActionThreshold = false;
-      }
+      newOffset = _applyActionRevealConstraints(newOffset, actionList);
     }
 
     final savedOffset = _dragOffset;
@@ -98,23 +82,76 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     final newProgress = _dragProgress;
     _dragOffset = savedOffset;
 
-    // With actions, do not enter full-dismiss threshold visuals.
-    final bool crossedNow = hasActions ? false : newProgress >= 1.0;
-    if (crossedNow && !_pastThreshold) {
-      _onCrossThreshold(newOffset, multiplier);
-    } else if (!crossedNow && _pastThreshold) {
-      _onReEngageThreshold(newOffset, savedOffset, multiplier);
-    } else if (!_pastThreshold) {
-      final pre = _onPreThreshold(newProgress);
-      newNeighbour = pre.neighbour;
-      newRoundness = pre.roundness;
-    }
+    final visuals = _applyDismissThresholdVisuals(
+      hasActions: hasActions,
+      newProgress: newProgress,
+      newOffset: newOffset,
+      savedOffset: savedOffset,
+      multiplier: multiplier,
+      neighbour: newNeighbour,
+      roundness: newRoundness,
+    );
+    newNeighbour = visuals.neighbour;
+    newRoundness = visuals.roundness;
 
     setState(() {
       _dragOffset = newOffset;
       _neighbourFraction = newNeighbour;
       _roundnessFraction = newRoundness;
     });
+  }
+
+  /// Damps overdrag past action width and updates action-threshold haptics.
+  double _applyActionRevealConstraints(
+    double newOffset,
+    List<M3EListSwipeAction> actionList,
+  ) {
+    final actionsWidth = _computeActionsWidth(actionList);
+    final maxExtent = actionsWidth + style.actionOverdragExtent;
+    var offset = newOffset;
+    if (offset.abs() > maxExtent) {
+      final overdrag = offset.abs() - maxExtent;
+      final dampedOverdrag = math.sqrt(overdrag) * 3.0;
+      offset = (maxExtent + dampedOverdrag) * offset.sign;
+    }
+
+    final crossedAction = offset.abs() >= actionsWidth;
+    if (crossedAction && !_pastActionThreshold) {
+      _pastActionThreshold = true;
+      if (style.enableFeedback) {
+        M3EHaptics.trigger(style.hapticOnThreshold);
+      }
+    } else if (!crossedAction && _pastActionThreshold) {
+      _pastActionThreshold = false;
+    }
+    return offset;
+  }
+
+  /// Applies dismiss-threshold cross / re-engage / pre-threshold visuals.
+  ({double neighbour, double roundness}) _applyDismissThresholdVisuals({
+    required bool hasActions,
+    required double newProgress,
+    required double newOffset,
+    required double savedOffset,
+    required double multiplier,
+    required double neighbour,
+    required double roundness,
+  }) {
+    // With actions, do not enter full-dismiss threshold visuals.
+    final crossedNow = !hasActions && newProgress >= 1.0;
+    if (crossedNow && !_pastThreshold) {
+      _onCrossThreshold(newOffset, multiplier);
+      return (neighbour: neighbour, roundness: roundness);
+    }
+    if (!crossedNow && _pastThreshold) {
+      _onReEngageThreshold(newOffset, savedOffset, multiplier);
+      return (neighbour: neighbour, roundness: roundness);
+    }
+    if (!_pastThreshold) {
+      final pre = _onPreThreshold(newProgress);
+      return (neighbour: pre.neighbour, roundness: pre.roundness);
+    }
+    return (neighbour: neighbour, roundness: roundness);
   }
 
   void _onCrossThreshold(double newOffset, double multiplier) {
@@ -486,7 +523,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     M3EHaptics.trigger(style.hapticOnThreshold);
 
     if (style.autoExecutePrimaryOnFullSwipe) {
-      final bool swipingRight = direction == DismissDirection.startToEnd;
+      final swipingRight = direction == DismissDirection.startToEnd;
       final List<M3EListSwipeAction> actionList = actionsFor(
         dataIndex,
         swipingRight: swipingRight,

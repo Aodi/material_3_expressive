@@ -4,6 +4,12 @@ import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_ui/material_ui.dart';
 
 void main() {
+  registerDismissiblePreviewSnapTests();
+  registerDismissibleReorderBlockedTests();
+  registerDismissibleFullDismissTests();
+}
+
+void registerDismissiblePreviewSnapTests() {
   testWidgets('dismissible action preview snaps open and closes on card tap', (
     WidgetTester tester,
   ) async {
@@ -70,70 +76,89 @@ void main() {
     expect(archiveTaps, 1);
     expect(find.byIcon(M3EIcons.archive), findsNothing);
   });
+}
 
+List<M3EListSwipeAction> _previewSwipeActions(int index) {
+  return const <M3EListSwipeAction>[
+    M3EListSwipeAction(icon: Icon(M3EIcons.archive), width: 56),
+    M3EListSwipeAction(icon: Icon(M3EIcons.delete), width: 56, isPrimary: true),
+  ];
+}
+
+void _applyListReorder(
+  List<String> items,
+  StateSetter setState,
+  int oldIndex,
+  int newIndex,
+) {
+  setState(() {
+    final String item = items.removeAt(oldIndex);
+    items.insert(newIndex, item);
+  });
+}
+
+Widget _reorderBlockedColumn(List<String> items, StateSetter setState) {
+  return M3EDismissibleColumn(
+    reorder: true,
+    onReorder: (int oldIndex, int newIndex) {
+      _applyListReorder(items, setState, oldIndex, newIndex);
+    },
+    itemCount: items.length,
+    onDismiss: (int index, DismissDirection direction) async => false,
+    trailingActionsBuilder: _previewSwipeActions,
+    itemBuilder: (BuildContext context, int index) {
+      return M3EListItem(headline: items[index]);
+    },
+  );
+}
+
+Widget _reorderBlockedDismissibleHost(List<String> items) {
+  return M3EMaterialApp(
+    data: M3EThemeData.light(seedColor: const Color(0xFF6750A4)),
+    home: Scaffold(
+      body: StatefulBuilder(
+        builder: (BuildContext context, StateSetter setState) {
+          return _reorderBlockedColumn(items, setState);
+        },
+      ),
+    ),
+  );
+}
+
+Future<void> _openActionPreviewThenAttemptReorder(WidgetTester tester) async {
+  final TestGesture open = await tester.startGesture(
+    tester.getCenter(find.text('A')),
+  );
+  await open.moveBy(const Offset(-100, 0));
+  await tester.pump();
+  await open.up();
+  await tester.pumpAndSettle();
+
+  final TestGesture reorder = await tester.startGesture(
+    tester.getCenter(find.text('A')),
+  );
+  await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+  await reorder.moveBy(const Offset(0, 120));
+  await tester.pump();
+  await reorder.up();
+  await tester.pumpAndSettle();
+}
+
+void registerDismissibleReorderBlockedTests() {
   testWidgets('dismissible action preview blocks reorder long-press', (
     WidgetTester tester,
   ) async {
-    final List<String> items = <String>['A', 'B', 'C'];
-    await tester.pumpWidget(
-      M3EMaterialApp(
-        data: M3EThemeData.light(seedColor: const Color(0xFF6750A4)),
-        home: Scaffold(
-          body: StatefulBuilder(
-            builder: (BuildContext context, StateSetter setState) {
-              return M3EDismissibleColumn(
-                reorder: true,
-                onReorder: (int oldIndex, int newIndex) {
-                  setState(() {
-                    final String item = items.removeAt(oldIndex);
-                    items.insert(newIndex, item);
-                  });
-                },
-                itemCount: items.length,
-                onDismiss: (int index, DismissDirection direction) async =>
-                    false,
-                trailingActionsBuilder: (int index) => <M3EListSwipeAction>[
-                  const M3EListSwipeAction(
-                    icon: Icon(M3EIcons.archive),
-                    width: 56,
-                  ),
-                  const M3EListSwipeAction(
-                    icon: Icon(M3EIcons.delete),
-                    width: 56,
-                    isPrimary: true,
-                  ),
-                ],
-                itemBuilder: (BuildContext context, int index) {
-                  return M3EListItem(headline: items[index]);
-                },
-              );
-            },
-          ),
-        ),
-      ),
-    );
+    final items = <String>['A', 'B', 'C'];
+    await tester.pumpWidget(_reorderBlockedDismissibleHost(items));
     await tester.pumpAndSettle();
 
-    final TestGesture open = await tester.startGesture(
-      tester.getCenter(find.text('A')),
-    );
-    await open.moveBy(const Offset(-100, 0));
-    await tester.pump();
-    await open.up();
-    await tester.pumpAndSettle();
-
-    final List<String> before = List<String>.from(items);
-    final TestGesture reorder = await tester.startGesture(
-      tester.getCenter(find.text('A')),
-    );
-    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
-    await reorder.moveBy(const Offset(0, 120));
-    await tester.pump();
-    await reorder.up();
-    await tester.pumpAndSettle();
+    final before = List<String>.from(items);
+    await _openActionPreviewThenAttemptReorder(tester);
     expect(items, before);
   });
+}
 
+void registerDismissibleFullDismissTests() {
   testWidgets('dismissible without actions still full-dismisses', (
     WidgetTester tester,
   ) async {
@@ -152,7 +177,6 @@ void main() {
               },
               style: const M3EDismissibleListStyle(
                 background: ColoredBox(color: Color(0xFF00FF00)),
-                dismissThreshold: 0.2,
               ),
               itemBuilder: (BuildContext context, int index) {
                 return const M3EListItem(headline: 'Only');

@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-/// Marks a subtree where ancestor [M3EListReorderHost] long-press must not
+/// Marks a subtree where an ancestor reorder host's long-press must not
 /// start a drag (e.g. an expandable nested sublist with its own gestures).
 class M3EListReorderExclude extends StatelessWidget {
   /// Creates an exclude region for parent list reorder.

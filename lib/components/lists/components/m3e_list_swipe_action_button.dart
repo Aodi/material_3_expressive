@@ -66,7 +66,6 @@ class M3EListSwipeActionButton extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(resolvedHeight / 2),
         child: OverflowBox(
-          alignment: Alignment.center,
           minWidth: visualWidth,
           maxWidth: visualWidth,
           minHeight: resolvedHeight,
@@ -75,10 +74,7 @@ class M3EListSwipeActionButton extends StatelessWidget {
             icon: action.icon,
             onPressed: handlePress,
             variant: variant,
-            size: M3EIconButtonSize.sm,
-            shape: M3EIconButtonShapeVariant.round,
             enableFeedback: false,
-            haptic: M3EHapticFeedback.none,
             visualSize: Size(visualWidth, resolvedHeight),
             decoration: decoration,
           ),

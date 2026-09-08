@@ -257,6 +257,89 @@ extension _M3EDropdownMenuField<T> on _M3EDropdownMenuState<T> {
     );
   }
 
+  KeyEventResult _handleFieldKeyEvent(FocusNode node, KeyEvent event) {
+    if (!widget.enabled || event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      return _handleFieldEscapeKey();
+    }
+    if (_isFieldActivateKey(event.logicalKey)) {
+      return _handleFieldActivateKey();
+    }
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleFieldEscapeKey() {
+    if (_controller.isOpen) {
+      _close();
+    } else if (_focusNode.hasPrimaryFocus) {
+      _focusNode.unfocus();
+    }
+    return KeyEventResult.handled;
+  }
+
+  KeyEventResult _handleFieldActivateKey() {
+    // Only the field shell toggles. Chips / clear own ActivateIntent when
+    // they have primary focus — do not steal Enter/Space from them.
+    if (!_focusNode.hasPrimaryFocus) {
+      return KeyEventResult.ignored;
+    }
+    _toggle();
+    return KeyEventResult.handled;
+  }
+
+  WidgetStateProperty<Color?> _fieldOverlayColor(Color fgColor) {
+    return WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.pressed)) {
+        return fgColor.withValues(alpha: 0.10);
+      }
+      if (states.contains(WidgetState.hovered)) {
+        return fgColor.withValues(alpha: 0.05);
+      }
+      return Colors.transparent;
+    });
+  }
+
+  void _onFieldHover(bool hover) => setState(() => _isHoveredField = hover);
+
+  void _onFieldTapDown(TapDownDetails _) {
+    M3EFocusInteraction.instance.notePointerInteraction();
+    setState(() => _isPressedField = true);
+  }
+
+  void _onFieldTapUp(TapUpDetails _) {
+    _focusNode.requestFocus();
+    setState(() => _isPressedField = false);
+  }
+
+  void _onFieldTapCancel() => setState(() => _isPressedField = false);
+
+  Widget _buildFieldInkWell({
+    required M3EDropdownFieldStyle fd,
+    required Color fgColor,
+    required Widget child,
+  }) {
+    return InkWell(
+      // Field Focus above owns keyboard focus; InkWell is pointer-only.
+      canRequestFocus: false,
+      excludeFromSemantics: true,
+      splashFactory: fd.splashFactory ?? widget.splashFactory,
+      splashColor: fd.splashColor,
+      highlightColor: fd.highlightColor,
+      overlayColor: _fieldOverlayColor(fgColor),
+      mouseCursor: widget.enabled
+          ? (fd.mouseCursor ?? SystemMouseCursors.click)
+          : SystemMouseCursors.forbidden,
+      onTap: widget.enabled ? () => _toggle(fromPointer: true) : null,
+      onHover: _onFieldHover,
+      onTapDown: _onFieldTapDown,
+      onTapUp: _onFieldTapUp,
+      onTapCancel: _onFieldTapCancel,
+      child: Padding(padding: fd.padding, child: child),
+    );
+  }
+
   Widget _buildFieldMaterial({
     required M3EDropdownFieldStyle fd,
     required Color bgColor,
@@ -269,71 +352,19 @@ extension _M3EDropdownMenuField<T> on _M3EDropdownMenuState<T> {
       focusNode: _focusNode,
       canRequestFocus: widget.enabled,
       parentNode: _portalController.isShowing ? _focusTrapScope : null,
-      onKeyEvent: (FocusNode node, KeyEvent event) {
-        if (!widget.enabled) {
-          return KeyEventResult.ignored;
-        }
-        if (event is! KeyDownEvent) {
-          return KeyEventResult.ignored;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.escape) {
-          if (_controller.isOpen) {
-            _close();
-          } else if (_focusNode.hasPrimaryFocus) {
-            _focusNode.unfocus();
-          }
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.enter ||
-            event.logicalKey == LogicalKeyboardKey.numpadEnter ||
-            event.logicalKey == LogicalKeyboardKey.space) {
-          // Only the field shell toggles. Chips / clear own ActivateIntent when
-          // they have primary focus — do not steal Enter/Space from them.
-          if (!_focusNode.hasPrimaryFocus) {
-            return KeyEventResult.ignored;
-          }
-          _toggle();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
+      onKeyEvent: _handleFieldKeyEvent,
       child: Material(
         color: bgColor,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(borderRadius: radius, side: borderSide),
-        child: InkWell(
-          // Field Focus above owns keyboard focus; InkWell is pointer-only.
-          canRequestFocus: false,
-          excludeFromSemantics: true,
-          splashFactory: fd.splashFactory ?? widget.splashFactory,
-          splashColor: fd.splashColor,
-          highlightColor: fd.highlightColor,
-          overlayColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.pressed)) {
-              return fgColor.withValues(alpha: 0.10);
-            }
-            if (states.contains(WidgetState.hovered)) {
-              return fgColor.withValues(alpha: 0.05);
-            }
-            return Colors.transparent;
-          }),
-          mouseCursor: widget.enabled
-              ? (fd.mouseCursor ?? SystemMouseCursors.click)
-              : SystemMouseCursors.forbidden,
-          onTap: widget.enabled ? () => _toggle(fromPointer: true) : null,
-          onHover: (hover) => setState(() => _isHoveredField = hover),
-          onTapDown: (_) {
-            M3EFocusInteraction.instance.notePointerInteraction();
-            setState(() => _isPressedField = true);
-          },
-          onTapUp: (_) {
-            _focusNode.requestFocus();
-            setState(() => _isPressedField = false);
-          },
-          onTapCancel: () => setState(() => _isPressedField = false),
-          child: Padding(padding: fd.padding, child: child),
-        ),
+        child: _buildFieldInkWell(fd: fd, fgColor: fgColor, child: child),
       ),
     );
   }
+}
+
+bool _isFieldActivateKey(LogicalKeyboardKey key) {
+  return key == LogicalKeyboardKey.enter ||
+      key == LogicalKeyboardKey.numpadEnter ||
+      key == LogicalKeyboardKey.space;
 }

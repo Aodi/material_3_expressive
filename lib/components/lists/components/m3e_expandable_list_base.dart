@@ -2,10 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../foundations/foundations.dart';
+import '../../selection/components/m3e_selection_scope.dart';
 import '../../selection/controllers/m3e_selection_controller.dart';
 import '../styles/m3e_expandable_style.dart';
 import '../styles/m3e_list_reorder_state.dart';
 import '../styles/m3e_list_selection_state.dart';
+import '../styles/m3e_list_theme.dart';
 import 'm3e_expandable_expanded.dart';
 import 'm3e_expandable_item.dart';
 import 'm3e_list_feature_scope.dart';
@@ -134,7 +136,7 @@ mixin M3EExpandableStateMixin<T extends M3EExpandableListBase> on State<T> {
     _snapCollapse = false;
     setState(() {
       _expandedIndices = _expandedIndices
-          .map((int i) => _remapIndexAfterMove(i, from, to))
+          .map((int i) => _m3eRemapIndexAfterMove(i, from, to))
           .toSet();
       if (pending != null && pending == from) {
         _expandedIndices.add(to);
@@ -152,32 +154,14 @@ mixin M3EExpandableStateMixin<T extends M3EExpandableListBase> on State<T> {
       return;
     }
     final Set<int> remapped = controller.selectedIndices
-        .map((int i) => _remapIndexAfterMove(i, from, to))
+        .map((int i) => _m3eRemapIndexAfterMove(i, from, to))
         .toSet();
     if (setEquals(remapped, controller.selectedIndices)) {
       return;
     }
     controller.clear();
-    for (final int i in remapped) {
-      controller.select(i);
-    }
+    remapped.forEach(controller.select);
     widget.onSelectionChanged?.call(controller.selectedIndices);
-  }
-
-  int _remapIndexAfterMove(int index, int from, int to) {
-    if (index == from) {
-      return to;
-    }
-    if (from < to) {
-      if (index > from && index <= to) {
-        return index - 1;
-      }
-    } else if (from > to) {
-      if (index >= to && index < from) {
-        return index + 1;
-      }
-    }
-    return index;
   }
 
   /// handleToggle.
@@ -256,7 +240,20 @@ mixin M3EExpandableStateMixin<T extends M3EExpandableListBase> on State<T> {
       ),
     );
 
-    item = M3EListItemIndex(index: index, child: item);
-    return item;
+    return item = M3EListItemIndex(index: index, child: item);
   }
+}
+
+/// Remaps [index] after an item moves from [from] to [to].
+int _m3eRemapIndexAfterMove(int index, int from, int to) {
+  if (index == from) {
+    return to;
+  }
+  if (from < to && index > from && index <= to) {
+    return index - 1;
+  }
+  if (from > to && index >= to && index < from) {
+    return index + 1;
+  }
+  return index;
 }

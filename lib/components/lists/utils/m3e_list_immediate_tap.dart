@@ -12,7 +12,7 @@ class M3EListTapBinder extends StatefulWidget {
     super.key,
   });
 
-  /// Builds the child with a composed [onPressed] callback.
+  /// Builds the child with a composed onPressed callback.
   final Widget Function(BuildContext context, VoidCallback? onPressed) builder;
 
   /// Immediate single-tap handler.
@@ -39,7 +39,7 @@ class _M3EListTapBinderState extends State<M3EListTapBinder> {
   }
 
   void _handleTap() {
-    final DateTime now = DateTime.now();
+    final now = DateTime.now();
     final DateTime? last = _lastTapAt;
     if (widget.onDoubleTap != null &&
         last != null &&

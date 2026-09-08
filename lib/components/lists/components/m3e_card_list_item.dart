@@ -59,7 +59,7 @@ BorderRadius calculateCardRadius({
   }
 }
 
-/// A single card item within an [M3ECardList].
+/// A single card item within a card-backed list.
 class M3ECardListItem extends StatelessWidget {
   /// M3ECardListItem.
   const M3ECardListItem({

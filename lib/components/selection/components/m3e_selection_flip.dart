@@ -175,7 +175,7 @@ class _ExpandTapTarget extends SingleChildRenderObjectWidget {
 }
 
 class _RenderExpandTapTarget extends RenderProxyBox {
-  _RenderExpandTapTarget({required double minSize}) : _minSize = minSize;
+  _RenderExpandTapTarget({required this._minSize});
 
   double _minSize;
 
@@ -201,7 +201,7 @@ class _RenderExpandTapTarget extends RenderProxyBox {
       return false;
     }
     // Map out-of-bounds taps onto the child so InkWell still wins.
-    final Offset clamped = Offset(
+    final clamped = Offset(
       position.dx.clamp(0.0, size.width),
       position.dy.clamp(0.0, size.height),
     );

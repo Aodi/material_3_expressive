@@ -38,7 +38,7 @@ class M3EListReorderHost extends StatefulWidget {
   /// Number of items.
   final int itemCount;
 
-  /// Builds each item at [index].
+  /// Builds each item at the given index.
   final IndexedWidgetBuilder itemBuilder;
 
   /// Called after a successful drop.
@@ -76,7 +76,8 @@ class M3EListReorderHost extends StatefulWidget {
   /// Invoked after [onReorder] when the index changed.
   final void Function(int from, int to)? onDragSettled;
 
-  /// When set, long-press only starts a drag if this returns true for [index].
+  /// When set, long-press only starts a drag if this returns true for the
+  /// given index.
   final bool Function(int index)? canStartDrag;
 
   @override
@@ -127,8 +128,7 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
   }
 
   double _itemHeight(int index) {
-    final RenderBox? box =
-        _keyFor(index).currentContext?.findRenderObject() as RenderBox?;
+    final box = _keyFor(index).currentContext?.findRenderObject() as RenderBox?;
     return box?.size.height ?? 56;
   }
 
@@ -149,27 +149,36 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
   }
 
   void _onPointerDown(int index, PointerDownEvent event) {
-    if (_dragIndex != null) {
-      return;
-    }
-    if (widget.canStartDrag != null && !widget.canStartDrag!(index)) {
-      return;
-    }
-    if (_isOverReorderExclude(index, event.position)) {
+    if (!_canArmLongPress(index, event.position)) {
       return;
     }
     _activePointer = event.pointer;
     _pointerDownGlobal = event.position;
     _cancelPendingLongPress();
-    _longPressTimer = Timer(kLongPressTimeout, () {
-      if (!mounted || _activePointer != event.pointer) {
-        return;
-      }
-      if (widget.canStartDrag != null && !widget.canStartDrag!(index)) {
-        return;
-      }
-      unawaited(_beginDrag(index, event.position, event.pointer));
-    });
+    _longPressTimer = Timer(
+      kLongPressTimeout,
+      () => _onLongPressArmed(index, event),
+    );
+  }
+
+  bool _canArmLongPress(int index, Offset globalPosition) {
+    if (_dragIndex != null) {
+      return false;
+    }
+    if (widget.canStartDrag != null && !widget.canStartDrag!(index)) {
+      return false;
+    }
+    return !_isOverReorderExclude(index, globalPosition);
+  }
+
+  void _onLongPressArmed(int index, PointerDownEvent event) {
+    if (!mounted || _activePointer != event.pointer) {
+      return;
+    }
+    if (widget.canStartDrag != null && !widget.canStartDrag!(index)) {
+      return;
+    }
+    unawaited(_beginDrag(index, event.position, event.pointer));
   }
 
   /// True when [globalPosition] lies in a descendant [M3EListReorderExclude].
@@ -270,8 +279,7 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
     _dragDy.value = globalPosition.dy - start.dy;
 
     // Insert index from finger Y relative to the list stack.
-    final RenderBox? stackBox =
-        _stackKey.currentContext?.findRenderObject() as RenderBox?;
+    final stackBox = _stackKey.currentContext?.findRenderObject() as RenderBox?;
     var fingerY = globalPosition.dy;
     if (stackBox != null) {
       fingerY = stackBox.globalToLocal(globalPosition).dy;
@@ -303,24 +311,14 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
   void _updateNeighborOffsets(int dragIndex, int insertIndex) {
     final double dragH = _dragExtent;
     for (var i = 0; i < widget.itemCount; i++) {
-      if (i == dragIndex) {
-        _offsetCtrl(i).animateTo(0);
-        continue;
-      }
-      var shift = 0.0;
-      if (insertIndex <= dragIndex) {
-        // Opening a gap above the dragged slot: items in [insert, drag) move down.
-        if (i >= insertIndex && i < dragIndex) {
-          shift = dragH;
-        }
-      } else {
-        // Opening a gap below: items in (drag, insert) move up into the hole.
-        if (i > dragIndex && i < insertIndex) {
-          shift = -dragH;
-        }
-      }
-      final SingleMotionController ctrl = _offsetCtrl(i);
-      ctrl.animateTo(shift);
+      _offsetCtrl(i).animateTo(
+        _m3eReorderNeighborShift(
+          index: i,
+          dragIndex: dragIndex,
+          insertIndex: insertIndex,
+          dragExtent: dragH,
+        ),
+      );
     }
   }
 
@@ -369,7 +367,7 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
       child: built,
     );
 
-    final bool isDragSource = _dragIndex == index;
+    final isDragSource = _dragIndex == index;
 
     // Source slot: keep height, hide content (floating proxy paints instead).
     if (isDragSource) {
@@ -419,7 +417,6 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
         child: PhysicalModel(
           color: dragColor,
           elevation: rs.dragElevation,
-          shadowColor: const Color(0xFF000000),
           borderRadius: BorderRadius.circular(dragRadius),
           child: M3EListDragProxyScope(
             color: dragColor,
@@ -507,4 +504,28 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
       ),
     );
   }
+}
+
+/// Neighbor Y shift while [dragIndex] opens a gap at [insertIndex].
+double _m3eReorderNeighborShift({
+  required int index,
+  required int dragIndex,
+  required int insertIndex,
+  required double dragExtent,
+}) {
+  if (index == dragIndex) {
+    return 0;
+  }
+  if (insertIndex <= dragIndex) {
+    // Opening a gap above the dragged slot: items in [insert, drag) move down.
+    if (index >= insertIndex && index < dragIndex) {
+      return dragExtent;
+    }
+    return 0;
+  }
+  // Opening a gap below: items in (drag, insert) move up into the hole.
+  if (index > dragIndex && index < insertIndex) {
+    return -dragExtent;
+  }
+  return 0;
 }

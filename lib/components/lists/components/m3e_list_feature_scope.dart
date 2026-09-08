@@ -4,7 +4,7 @@ import '../../selection/controllers/m3e_selection_controller.dart';
 import '../styles/m3e_list_reorder_state.dart';
 import '../styles/m3e_list_selection_state.dart';
 
-/// Provides list selection/reorder config to descendants (e.g. [M3EListItem]).
+/// Provides list selection/reorder config to descendants (e.g. list items).
 class M3EListFeatureScope extends InheritedWidget {
   /// Creates a list feature scope.
   const M3EListFeatureScope({
@@ -37,7 +37,7 @@ class M3EListFeatureScope extends InheritedWidget {
   /// Total top-level items.
   final int itemCount;
 
-  /// Toggles selection for [index].
+  /// Toggles selection for the given index.
   final void Function(int index) onToggleSelection;
 
   /// Nearest scope, or null.
@@ -45,7 +45,7 @@ class M3EListFeatureScope extends InheritedWidget {
     return context.dependOnInheritedWidgetOfExactType<M3EListFeatureScope>();
   }
 
-  /// Whether [index] is selected.
+  /// Whether the given index is selected.
   bool isSelected(int index) => controller?.isSelected(index) ?? false;
 
   /// Whether leading flip is available (selection on + selectedIcon set).

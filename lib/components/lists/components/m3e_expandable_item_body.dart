@@ -155,6 +155,420 @@ extension _M3EExpandableItemBody on _M3EExpandableItemState {
   }
 }
 
+/// Header tap resolution and card assembly for [_M3EExpandableItemState].
+extension _M3EExpandableItemHeader on _M3EExpandableItemState {
+  VoidCallback? _selectionDoubleTap() {
+    final M3EListFeatureScope? features = M3EListFeatureScope.maybeOf(context);
+    if (features == null ||
+        !features.selectionEnabled ||
+        features.selectionState.trigger != M3EListSelectionTrigger.doubleTap) {
+      return null;
+    }
+    return () => features.onToggleSelection(widget.index);
+  }
+
+  bool _separateLeadingSelect(M3EListFeatureScope? features, bool selectionOn) {
+    // Leading flip owns its own InkWell — keep expand off the card surface so
+    // icon tap-to-select cannot also toggle expand/collapse.
+    return selectionOn &&
+        features!.selectionState.hasSelectedIcon &&
+        features.selectionState.trigger == M3EListSelectionTrigger.icon;
+  }
+
+  bool _canTapBody(M3EExpandableStyle d) {
+    return (widget.isExpanded && d.tapBodyToCollapse) ||
+        (!widget.isExpanded && d.tapBodyToExpand);
+  }
+
+  VoidCallback? _rawHeaderOrOuterCallback({
+    required bool selectionOn,
+    required M3EListFeatureScope? features,
+    required bool entireCardTappable,
+    required bool expandOnHeader,
+    required bool pressForSelection,
+    required bool separateLeadingSelect,
+  }) {
+    if (!(entireCardTappable ||
+        expandOnHeader ||
+        pressForSelection ||
+        separateLeadingSelect)) {
+      return null;
+    }
+    return () {
+      if (selectionOn && (features?.controller?.isSelectionMode ?? false)) {
+        features!.onToggleSelection(widget.index);
+        return;
+      }
+      if (entireCardTappable || expandOnHeader || separateLeadingSelect) {
+        widget.onToggle();
+      }
+    };
+  }
+
+  _HeaderInteraction _assembleHeaderInteraction({
+    required bool separateLeadingSelect,
+    required bool entireCardTappable,
+    required VoidCallback? rawHeaderOrOuter,
+    required M3EExpandableStyle d,
+  }) {
+    return (
+      separateLeadingSelect: separateLeadingSelect,
+      entireCardTappable: entireCardTappable,
+      rawHeaderOrOuter: rawHeaderOrOuter,
+      outerTap: entireCardTappable && !separateLeadingSelect
+          ? rawHeaderOrOuter
+          : null,
+      headerTap:
+          !entireCardTappable &&
+              !separateLeadingSelect &&
+              rawHeaderOrOuter != null
+          ? rawHeaderOrOuter
+          : null,
+      outerTooltip: entireCardTappable
+          ? (widget.isExpanded ? d.collapseTooltip : d.expandTooltip)
+          : null,
+      doubleTap: _selectionDoubleTap(),
+    );
+  }
+
+  _HeaderInteraction _resolveHeaderInteraction({
+    required M3EExpandableStyle d,
+    required bool hasList,
+  }) {
+    final M3EListFeatureScope? features = M3EListFeatureScope.maybeOf(context);
+    final selectionOn = features?.selectionEnabled ?? false;
+    final separateLeadingSelect = _separateLeadingSelect(features, selectionOn);
+    final canTapHeader = d.tapHeaderToToggle;
+    final entireCardTappable =
+        !separateLeadingSelect &&
+        !d.tapIconToToggle &&
+        canTapHeader &&
+        _canTapBody(d) &&
+        !hasList;
+    final expandOnHeader =
+        !entireCardTappable && canTapHeader && !d.tapIconToToggle;
+    final pressForSelection = selectionOn && canTapHeader;
+    final rawHeaderOrOuter = _rawHeaderOrOuterCallback(
+      selectionOn: selectionOn,
+      features: features,
+      entireCardTappable: entireCardTappable,
+      expandOnHeader: expandOnHeader,
+      pressForSelection: pressForSelection,
+      separateLeadingSelect: separateLeadingSelect,
+    );
+    return _assembleHeaderInteraction(
+      separateLeadingSelect: separateLeadingSelect,
+      entireCardTappable: entireCardTappable,
+      rawHeaderOrOuter: rawHeaderOrOuter,
+      d: d,
+    );
+  }
+
+  Widget _buildHeaderCard({
+    required M3EColorScheme scheme,
+    required M3EExpandableStyle d,
+    required bool hasList,
+    required _HeaderInteraction interaction,
+  }) {
+    return M3EListTapBinder(
+      onTap: interaction.separateLeadingSelect
+          ? interaction.rawHeaderOrOuter
+          : (interaction.outerTap ?? interaction.headerTap),
+      onDoubleTap: interaction.doubleTap,
+      builder: (BuildContext context, VoidCallback? onPressed) {
+        final Widget card = _buildAnimatedContainer(
+          scheme,
+          d,
+          interaction.separateLeadingSelect
+              ? null
+              : (interaction.entireCardTappable ? onPressed : null),
+          interaction.separateLeadingSelect
+              ? null
+              : (!interaction.entireCardTappable ? onPressed : null),
+          interaction.outerTooltip,
+          bodyInsideCard: !hasList,
+        );
+        if (!interaction.separateLeadingSelect) {
+          return card;
+        }
+        return M3EExpandableHeaderTapScope(onTap: onPressed, child: card);
+      },
+    );
+  }
+
+  Widget _buildListExpansionColumn({
+    required Widget headerCard,
+    required M3EExpandableStyle d,
+    required bool isLast,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        headerCard,
+        AnimatedBuilder(
+          animation: _expandCtrl,
+          builder: (BuildContext context, Widget? _) {
+            return M3EExpandableSublist(
+              progress: _expandCtrl.value,
+              style: d,
+              topGap: widget.expanded!.topGap,
+              child: M3EListReorderExclude(
+                // Block parent list selection/reorder from leaking into
+                // nested lists; nested FeatureHosts still override this.
+                child: M3EListFeatureScope(
+                  selectionEnabled: false,
+                  reorderEnabled: false,
+                  selectionState: M3EListSelectionState.defaults,
+                  reorderState: M3EListReorderState.defaults,
+                  controller: null,
+                  itemCount: 0,
+                  onToggleSelection: (_) {},
+                  child: M3EExpandableNestScope(
+                    closeBottom: isLast,
+                    outerRadius: d.outerRadius,
+                    child: widget.expanded!.child,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnimatedContainer(
+    M3EColorScheme scheme,
+    M3EExpandableStyle d,
+    VoidCallback? outerTap,
+    VoidCallback? headerTap,
+    String? outerTooltip, {
+    required bool bodyInsideCard,
+  }) {
+    // Card-level press matches [M3ECardList]: pointer cursor + hover state layer.
+    // List expansions are header-only cards, so header taps live on the card.
+    final VoidCallback? cardPress =
+        outerTap ?? (!bodyInsideCard ? headerTap : null);
+    final cardHandlesTap = cardPress != null;
+    final entirelyTappable = outerTap != null || cardHandlesTap;
+
+    Widget content = _buildAnimatedCardColumn(
+      d,
+      headerTap: cardHandlesTap ? null : headerTap,
+      bodyInsideCard: bodyInsideCard,
+      isEntirelyTappable: entirelyTappable,
+    );
+    content = _wrapAnimatedContainerContent(
+      d,
+      content: content,
+      cardHandlesTap: cardHandlesTap,
+      outerTap: outerTap,
+      outerTooltip: outerTooltip,
+    );
+
+    return TweenAnimationBuilder<BorderRadius?>(
+      duration: const Duration(milliseconds: 40),
+      curve: Curves.easeOut,
+      tween: BorderRadiusTween(
+        begin: _buildEffectiveRadius(),
+        end: _buildEffectiveRadius(),
+      ),
+      builder: (context, animatedRadius, child) {
+        return _buildRadiusTweenCard(
+          scheme,
+          d,
+          animatedRadius: animatedRadius,
+          cardPress: cardPress,
+          cardHandlesTap: cardHandlesTap,
+          child: child!,
+        );
+      },
+      child: content,
+    );
+  }
+
+  Widget _buildAnimatedCardColumn(
+    M3EExpandableStyle d, {
+    required VoidCallback? headerTap,
+    required bool bodyInsideCard,
+    required bool isEntirelyTappable,
+  }) {
+    return AnimatedBuilder(
+      animation: _expandCtrl,
+      builder: (context, child) {
+        final progress = _expandCtrl.value;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildHeader(
+              d,
+              progress,
+              headerTap,
+              isEntirelyTappable: isEntirelyTappable,
+            ),
+            if (bodyInsideCard)
+              _buildExpandableBody(
+                d,
+                progress,
+                isEntirelyTappable: isEntirelyTappable,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _wrapAnimatedContainerContent(
+    M3EExpandableStyle d, {
+    required Widget content,
+    required bool cardHandlesTap,
+    required VoidCallback? outerTap,
+    required String? outerTooltip,
+  }) {
+    if (!cardHandlesTap) {
+      return _buildInteractionWrapper(
+        d,
+        onTap: outerTap,
+        tooltip: outerTooltip,
+        focusNode: outerTap != null ? _toggleFocusNode : null,
+        child: content,
+      );
+    }
+    if (outerTooltip != null) {
+      return Tooltip(message: outerTooltip, child: content);
+    }
+    return content;
+  }
+
+  Widget _buildRadiusTweenCard(
+    M3EColorScheme scheme,
+    M3EExpandableStyle d, {
+    required BorderRadius? animatedRadius,
+    required VoidCallback? cardPress,
+    required bool cardHandlesTap,
+    required Widget child,
+  }) {
+    final BorderRadius radius = animatedRadius ?? _buildEffectiveRadius();
+    final fill =
+        m3eSelectionFill(context, widget.index) ??
+        d.color ??
+        scheme.surfaceContainerHighest;
+    final Widget card = M3ECard(
+      variant: M3ECardVariant.filled,
+      borderRadius: radius,
+      color: fill,
+      elevation: d.elevation,
+      border: d.border,
+      padding: EdgeInsets.zero,
+      width: double.infinity,
+      onPressed: cardPress,
+      onStateChanged: cardHandlesTap ? _handleCardStateChanged : null,
+      mouseCursor: cardHandlesTap ? SystemMouseCursors.click : null,
+      child: child,
+    );
+    if (cardHandlesTap) {
+      // [M3ECard] owns focus ring when interactive.
+      return card;
+    }
+    return M3EFocusRing(focused: _focused, radius: radius, child: card);
+  }
+
+  Widget _buildHeader(
+    M3EExpandableStyle d,
+    double progress,
+    VoidCallback? onTap, {
+    required bool isEntirelyTappable,
+  }) {
+    final expandableTheme = M3ETheme.of(context).listTheme.expandable;
+    final headerContent = Padding(
+      padding: d.headerPadding ?? expandableTheme.headerPadding,
+      child: Row(
+        crossAxisAlignment: d.headerAlignment == CrossAxisAlignment.stretch
+            ? CrossAxisAlignment.center
+            : d.headerAlignment,
+        textBaseline: d.headerAlignment == CrossAxisAlignment.baseline
+            ? TextBaseline.alphabetic
+            : null,
+        children: [
+          if (d.iconPlacement == M3EExpandableIconPlacement.left) ...[
+            _buildIcon(d, progress, widget.onToggle),
+            Expanded(
+              child: widget.headerBuilder(context, widget.index, progress),
+            ),
+          ] else ...[
+            Expanded(
+              child: widget.headerBuilder(context, widget.index, progress),
+            ),
+            _buildIcon(d, progress, widget.onToggle),
+          ],
+        ],
+      ),
+    );
+
+    final String? headerTooltip = (d.tapHeaderToToggle && !isEntirelyTappable)
+        ? (widget.isExpanded ? d.collapseTooltip : d.expandTooltip)
+        : null;
+
+    return _buildInteractionWrapper(
+      d,
+      onTap: onTap,
+      isHeader: true,
+      semanticLabel: 'Item ${widget.index + 1} of ${widget.totalCount}',
+      semanticHint: widget.isExpanded ? 'Collapse' : 'Expand',
+      isExpanded: widget.isExpanded,
+      tooltip: headerTooltip,
+      focusNode: onTap != null ? _toggleFocusNode : null,
+      child: headerContent,
+    );
+  }
+
+  Widget _buildIcon(
+    M3EExpandableStyle d,
+    double progress,
+    VoidCallback onToggle,
+  ) {
+    if (d.expandIcon == null && d.collapseIcon == null) {
+      return const SizedBox.shrink();
+    }
+
+    final isExpanded = progress >= 0.5;
+    final Widget? icon = isExpanded ? d.collapseIcon : d.expandIcon;
+
+    if (icon == null) {
+      return const SizedBox.shrink();
+    }
+
+    final angle = d.iconRotationAngle * progress;
+    final String? tooltip = d.tapIconToToggle
+        ? (isExpanded ? d.collapseTooltip : d.expandTooltip)
+        : null;
+
+    Widget iconWidget = Padding(
+      padding: d.iconPadding,
+      child: Transform.rotate(angle: angle, child: icon),
+    );
+
+    if (d.tapIconToToggle) {
+      iconWidget = _buildInteractionWrapper(
+        d,
+        onTap: onToggle,
+        isHeader: true,
+        isIcon: true,
+        semanticLabel: isExpanded ? 'Collapse button' : 'Expand button',
+        isExpanded: isExpanded,
+        tooltip: tooltip,
+        child: iconWidget,
+      );
+    } else {
+      iconWidget = ExcludeSemantics(child: iconWidget);
+    }
+
+    return iconWidget;
+  }
+}
+
 /// Interaction wrapper helpers for [_M3EExpandableItemState].
 extension _M3EExpandableItemInteraction on _M3EExpandableItemState {
   Widget _buildInteractionWrapper(

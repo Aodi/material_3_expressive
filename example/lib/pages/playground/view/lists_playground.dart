@@ -33,7 +33,7 @@ class _ListsPlaygroundState extends State<ListsPlayground> {
   bool _showSelectedIcon = true;
   String _headline = 'Wireless charging';
   String _supporting = 'On · Fast charge enabled';
-  List<String> _order = <String>['0', '1', '2'];
+  final List<String> _order = <String>['0', '1', '2'];
   Set<int> _expandableExpanded = <int>{0};
 
   M3EListSelectionState get _selectionState => M3EListSelectionState(

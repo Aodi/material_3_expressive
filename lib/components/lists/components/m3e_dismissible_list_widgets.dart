@@ -29,7 +29,10 @@ class M3EDismissibleList extends StatefulWidget {
     this.reorderState,
     this.embedded = false,
     super.key,
-  }) : assert(!reorder || onReorder != null);
+  }) : assert(
+         !reorder || onReorder != null,
+         'onReorder is required when reorder is true',
+       );
 
   /// itemCount.
 
@@ -54,10 +57,10 @@ class M3EDismissibleList extends StatefulWidget {
   final BorderRadius? Function(int index, M3ECardPosition position)?
   borderRadiusBuilder;
 
-  /// Start-to-end (LTR leading) swipe actions for [index].
+  /// Start-to-end (LTR leading) swipe actions for the given index.
   final List<M3EListSwipeAction> Function(int index)? leadingActionsBuilder;
 
-  /// End-to-start (LTR trailing) swipe actions for [index].
+  /// End-to-start (LTR trailing) swipe actions for the given index.
   final List<M3EListSwipeAction> Function(int index)? trailingActionsBuilder;
 
   /// style.
@@ -262,7 +265,10 @@ class M3EDismissibleColumn extends StatefulWidget {
     this.reorderState,
     this.embedded = false,
     super.key,
-  }) : assert(!reorder || onReorder != null);
+  }) : assert(
+         !reorder || onReorder != null,
+         'onReorder is required when reorder is true',
+       );
 
   /// itemCount.
 
@@ -287,10 +293,10 @@ class M3EDismissibleColumn extends StatefulWidget {
   final BorderRadius? Function(int index, M3ECardPosition position)?
   borderRadiusBuilder;
 
-  /// Start-to-end (LTR leading) swipe actions for [index].
+  /// Start-to-end (LTR leading) swipe actions for the given index.
   final List<M3EListSwipeAction> Function(int index)? leadingActionsBuilder;
 
-  /// End-to-start (LTR trailing) swipe actions for [index].
+  /// End-to-start (LTR trailing) swipe actions for the given index.
   final List<M3EListSwipeAction> Function(int index)? trailingActionsBuilder;
 
   /// style.

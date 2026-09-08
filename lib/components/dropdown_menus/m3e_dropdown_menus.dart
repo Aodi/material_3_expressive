@@ -244,7 +244,10 @@ class M3EDropdownMenu<T> extends StatefulWidget {
     this.splashFactory = NoSplash.splashFactory,
     this.haptic = M3EHapticFeedback.none,
   }) : future = null,
-       assert(limit == null || limit > 0);
+       assert(
+         limit == null || limit > 0,
+         'limit must be null or greater than 0',
+       );
 
   /// Creates an [M3EDropdownMenu] that loads items asynchronously.
   const M3EDropdownMenu.future({
@@ -278,7 +281,10 @@ class M3EDropdownMenu<T> extends StatefulWidget {
     this.splashFactory = NoSplash.splashFactory,
     this.haptic = M3EHapticFeedback.none,
   }) : items = const [],
-       assert(limit == null || limit > 0);
+       assert(
+         limit == null || limit > 0,
+         'limit must be null or greater than 0',
+       );
 
   @override
   State<M3EDropdownMenu<T>> createState() => _M3EDropdownMenuState<T>();

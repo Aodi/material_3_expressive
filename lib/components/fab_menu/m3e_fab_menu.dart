@@ -215,6 +215,38 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
     _revealMenuItems();
   }
 
+  void _scheduleItemReveal(int itemIndex, int delayMs) {
+    _staggerTimers.add(
+      Timer(Duration(milliseconds: delayMs), () {
+        if (!mounted || !_open) {
+          return;
+        }
+        setState(() => _itemVisible[itemIndex] = true);
+        _itemCtrls[itemIndex]
+          ..motion = _expandMotion
+          ..value = 0
+          ..animateTo(1);
+        // After the last item mounts, move focus into the menu so Tab walks
+        // items (the scope itself skips traversal in the parent route).
+        if (itemIndex == 0) {
+          _focusFirstMenuItemAfterFrame();
+        }
+      }),
+    );
+  }
+
+  void _focusFirstMenuItemAfterFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_open) {
+        return;
+      }
+      final Iterable<FocusNode> items = _menuFocusScope.traversalDescendants;
+      if (items.isNotEmpty) {
+        items.first.requestFocus();
+      }
+    });
+  }
+
   void _revealMenuItems() {
     _portal.show();
     // Cascade from the FAB upward: bottom item (nearest FAB) first.
@@ -223,32 +255,7 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
       final itemIndex = i;
       final int fromFab = count - 1 - itemIndex;
       final int delayMs = fromFab * _expandStaggerMs;
-      _staggerTimers.add(
-        Timer(Duration(milliseconds: delayMs), () {
-          if (!mounted || !_open) {
-            return;
-          }
-          setState(() => _itemVisible[itemIndex] = true);
-          _itemCtrls[itemIndex]
-            ..motion = _expandMotion
-            ..value = 0
-            ..animateTo(1);
-          // After the last item mounts, move focus into the menu so Tab walks
-          // items (the scope itself skips traversal in the parent route).
-          if (itemIndex == 0) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted || !_open) {
-                return;
-              }
-              final Iterable<FocusNode> items =
-                  _menuFocusScope.traversalDescendants;
-              if (items.isNotEmpty) {
-                items.first.requestFocus();
-              }
-            });
-          }
-        }),
-      );
+      _scheduleItemReveal(itemIndex, delayMs);
     }
   }
 

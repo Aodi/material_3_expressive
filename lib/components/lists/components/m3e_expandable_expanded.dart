@@ -1,10 +1,12 @@
 import 'package:flutter/widgets.dart';
 
+import '../styles/m3e_expandable_style.dart';
+
 /// How expanded content under an expandable row is presented.
 enum M3EExpandableExpandedType {
   /// A nested list widget rendered as sibling cards below the header.
   ///
-  /// Typically an [M3ECardList] so selection/reorder use the list's own
+  /// Typically a card-backed list so selection/reorder use the list's own
   /// implementation. A configurable top gap separates the header card from the
   /// nested list.
   list,
@@ -15,14 +17,16 @@ enum M3EExpandableExpandedType {
 
 /// Expanded content for an expandable list item.
 ///
-/// Use [M3EExpandableExpanded.list] for a nested list widget (e.g. [M3ECardList]),
-/// or [M3EExpandableExpanded.content] for freeform body content.
+/// Use [M3EExpandableExpanded.list] for a nested list widget (e.g. a
+/// card-backed list), or [M3EExpandableExpanded.content] for freeform body
+/// content.
 @immutable
 class M3EExpandableExpanded {
   /// Nested list expansion (sibling cards below the header).
   ///
-  /// Pass a list widget such as [M3ECardList] so selection and reorder come
-  /// from that list. [topGap] defaults to the expandable style gap when null.
+  /// Pass a list widget such as a card-backed list so selection and reorder
+  /// come from that list. [topGap] defaults to the expandable style gap when
+  /// null.
   const M3EExpandableExpanded.list(this.child, {this.topGap})
     : type = M3EExpandableExpandedType.list;
 
@@ -34,13 +38,14 @@ class M3EExpandableExpanded {
   /// Presentation kind.
   final M3EExpandableExpandedType type;
 
-  /// Expanded child — a list widget for [list], or freeform for [content].
+  /// Expanded child — a list widget for [M3EExpandableExpandedType.list], or
+  /// freeform for [M3EExpandableExpandedType.content].
   final Widget child;
 
   /// Gap between the parent header card and the nested list.
   ///
   /// Only used when [type] is [M3EExpandableExpandedType.list]. When null,
-  /// the expandable style's [gap] is used.
+  /// the expandable style's [M3EExpandableStyle.gap] is used.
   final double? topGap;
 
   /// Whether this is a nested-list expansion.

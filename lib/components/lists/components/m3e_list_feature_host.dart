@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../foundations/foundations.dart';
-import '../../selection/controllers/m3e_selection_controller.dart';
 import '../../selection/components/m3e_selection_scope.dart';
+import '../../selection/controllers/m3e_selection_controller.dart';
 import '../styles/m3e_list_reorder_state.dart';
 import '../styles/m3e_list_selection_state.dart';
 import '../utils/m3e_list_selection_binding.dart';
@@ -54,11 +54,11 @@ class M3EListFeatureHost extends StatefulWidget {
 class _M3EListFeatureHostState extends State<M3EListFeatureHost> {
   M3ESelectionController? _owned;
   M3ESelectionController? _listening;
-  late final VoidCallback _onControllerTick = () {
+  void _onControllerTick() {
     if (mounted) {
       setState(() {});
     }
-  };
+  }
 
   M3ESelectionController? get _active {
     if (!widget.selection) {
