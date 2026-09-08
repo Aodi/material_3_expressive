@@ -94,17 +94,17 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
 
   bool _open = false;
 
-  /// Expand: expressiveSpatialDefault with lower damping for left-end overshoot.
-  SpringMotion get _expandMotion =>
+  SpringMotion _springMotion(M3ESpring spring) =>
       const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
-        damping: 0.55,
+        stiffness: spring.stiffness,
+        damping: spring.damping,
       );
 
-  /// FAB shape morph: same spatial spring, slightly more damped.
+  SpringMotion get _expandMotion =>
+      _springMotion(M3ETheme.of(context).fabMenuTheme.expandSpring);
+
   SpringMotion get _fabShapeMotion =>
-      const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
-        damping: 0.7,
-      );
+      _springMotion(M3ETheme.of(context).fabMenuTheme.fabShapeSpring);
 
   static const int _expandStaggerMs = 30;
 
@@ -127,8 +127,9 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
     super.initState();
     _itemCtrls = _createControllers(widget.items.length);
     _itemVisible = List<bool>.filled(widget.items.length, false);
+    // Theme may be unavailable; match [M3EFabMenuTheme] defaults.
     _fabShapeCtrl = SingleMotionController(
-      motion: _fabShapeMotion,
+      motion: _springMotion(M3EFabMenuTheme.defaults.fabShapeSpring),
       vsync: this,
     );
     _menuFocusScope.traversalEdgeBehavior = TraversalEdgeBehavior.closedLoop;
@@ -169,9 +170,12 @@ class _M3EFabMenuState extends State<M3EFabMenu> with TickerProviderStateMixin {
   }
 
   List<SingleMotionController> _createControllers(int count) {
+    // Always use theme defaults here — [initState] cannot depend on inherited
+    // widgets. Open / close apply [fabMenuTheme.expandSpring] via [_expandMotion].
+    final motion = _springMotion(M3EFabMenuTheme.defaults.expandSpring);
     return List<SingleMotionController>.generate(
       count,
-      (_) => SingleMotionController(motion: _expandMotion, vsync: this),
+      (_) => SingleMotionController(motion: motion, vsync: this),
     );
   }
 

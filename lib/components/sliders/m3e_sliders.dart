@@ -479,7 +479,10 @@ class _M3ESliderState extends State<M3ESlider> with TickerProviderStateMixin {
       duration: M3EMotion.extraLong2,
     );
     _dockController = SingleMotionController(
-      motion: const MaterialSpringMotion.expressiveSpatialFast(),
+      motion: const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
+        stiffness: M3ESliderTheme.defaults.dockSpring.stiffness,
+        damping: M3ESliderTheme.defaults.dockSpring.damping,
+      ),
       vsync: this,
     )..addListener(_handleDockTick);
     if (widget.wavy) {

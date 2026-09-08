@@ -118,10 +118,11 @@ class _M3ECheckboxState extends State<M3ECheckbox>
   }
 
   void _pulse() {
+    final pulse = M3ETheme.of(context).checkboxTheme.pulseSpring;
     _scaleController.value = _pulseScale;
     _scaleController.animateWith(
       SpringSimulation(
-        M3EMotion.expressiveSpatialDefault.toDescription(),
+        pulse.toDescription(),
         _scaleController.value,
         1,
         _scaleController.velocity,

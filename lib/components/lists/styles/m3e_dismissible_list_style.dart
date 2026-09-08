@@ -82,6 +82,27 @@ class M3EDismissibleListStyle {
   /// How many cards are affected.
   final int neighbourReach;
 
+  /// Neighbour fraction spring (base; stiffness scaled by multiplier).
+  final M3ESpring neighbourSpring;
+
+  /// Roundness re-engage spring (base; stiffness scaled by multiplier).
+  final M3ESpring reEngageSpring;
+
+  /// Detach push spring (base; stiffness scaled by multiplier).
+  final M3ESpring detachPushSpring;
+
+  /// Roundness snap spring (base; stiffness scaled by multiplier).
+  final M3ESpring roundnessSnapSpring;
+
+  /// Drag spring-back spring (base; stiffness scaled by speedMul).
+  final M3ESpring springBackSpring;
+
+  /// Fly-away spring (base; stiffness scaled by speedMul).
+  final M3ESpring flySpring;
+
+  /// Damping for collapse; stiffness still uses [collapseSpeed] × speedMul.
+  final double collapseDamping;
+
   /// M3EDismissibleListStyle.
 
   const M3EDismissibleListStyle({
@@ -112,5 +133,12 @@ class M3EDismissibleListStyle {
     this.dismissHapticStream = false,
     this.neighbourPull = M3EListDismissibleTheme.defaultNeighbourPull,
     this.neighbourReach = M3EListDismissibleTheme.defaultNeighbourReach,
+    this.neighbourSpring = const M3ESpring(stiffness: 800, damping: 0.7),
+    this.reEngageSpring = const M3ESpring(stiffness: 800, damping: 0.9),
+    this.detachPushSpring = const M3ESpring(stiffness: 800, damping: 0.95),
+    this.roundnessSnapSpring = const M3ESpring(stiffness: 1000, damping: 0.4),
+    this.springBackSpring = const M3ESpring(stiffness: 380, damping: 0.6),
+    this.flySpring = const M3ESpring(stiffness: 400, damping: 0.8),
+    this.collapseDamping = 0.8,
   });
 }

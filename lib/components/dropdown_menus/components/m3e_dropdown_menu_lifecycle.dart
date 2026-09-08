@@ -3,14 +3,10 @@ part of '../m3e_dropdown_menus.dart';
 /// Lifecycle, async load, and controller sync for [_M3EDropdownMenuState].
 extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
   void _initControllers() {
-    _expandCtrl = SingleMotionController(
-      motion: widget.openMotion.toMotion(),
-      vsync: this,
-    );
-    _arrowCtrl = SingleMotionController(
-      motion: widget.openMotion.toMotion(),
-      vsync: this,
-    );
+    // Theme may be unavailable; match [M3EDropdownMenuTheme] defaults.
+    final open = widget.openMotion ?? M3EMotion.expressiveSpatialDefault;
+    _expandCtrl = SingleMotionController(motion: open.toMotion(), vsync: this);
+    _arrowCtrl = SingleMotionController(motion: open.toMotion(), vsync: this);
     _expandCtrl.addListener(_onExpandAnimationTick);
 
     if (widget.controller != null) {
@@ -151,8 +147,8 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
         widget.closeMotion == oldWidget.closeMotion) {
       return;
     }
-    _expandCtrl.motion = widget.openMotion.toMotion();
-    _arrowCtrl.motion = widget.openMotion.toMotion();
+    _expandCtrl.motion = _resolvedOpenMotion.toMotion();
+    _arrowCtrl.motion = _resolvedOpenMotion.toMotion();
   }
 
   Future<void> _loadAsync() async {

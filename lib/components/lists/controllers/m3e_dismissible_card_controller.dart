@@ -18,24 +18,6 @@ import '../utils/m3e_list_selection_fill.dart';
 part 'm3e_dismissible_card_drag_mixin.dart';
 part 'm3e_dismissible_card_build_mixin.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Spring presets (Material 3 Expressive via motor)
-// ─────────────────────────────────────────────────────────────────────────────
-
-final _kSpatialSpringBack =
-    const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
-      stiffness: 200,
-      damping: 0.8,
-    );
-
-final _kReEngageSpring = const MaterialSpringMotion.standardSpatialFast();
-
-final _kDetachPush = const MaterialSpringMotion.expressiveSpatialDefault()
-    .copyWith(stiffness: 800, damping: 0.95);
-
-final _kRoundnessSnap = const MaterialSpringMotion.expressiveSpatialDefault()
-    .copyWith(stiffness: 1000, damping: 0.4);
-
 const int _kVibrationThresholdMs = 60;
 const double _kMaxPreDetachRoundness = 0.6;
 const double _kPreThresholdRoundnessScale = 0.4;
@@ -57,6 +39,12 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
 
   /// The style.
   M3EDismissibleListStyle get style;
+
+  SpringMotion _spatialMotion(M3ESpring spring, {double? stiffness}) =>
+      const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
+        stiffness: stiffness ?? spring.stiffness,
+        damping: spring.damping,
+      );
 
   /// Callback invoked when a dismissible item is dismissed.
   Future<bool> Function(int index, DismissDirection direction)?

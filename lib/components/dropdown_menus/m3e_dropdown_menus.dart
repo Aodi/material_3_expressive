@@ -183,13 +183,13 @@ class M3EDropdownMenu<T> extends StatefulWidget {
 
   /// The spring motion for the expand animation.
   ///
-  /// Defaults to [M3EMotion.expressiveSpatialDefault].
-  final M3ESpring openMotion;
+  /// When null, uses [M3EDropdownMenuTheme.openSpring].
+  final M3ESpring? openMotion;
 
   /// The spring motion for the collapse animation.
   ///
-  /// Defaults to [M3EMotion.expressiveSpatialDefault].
-  final M3ESpring closeMotion;
+  /// When null, uses [M3EDropdownMenuTheme.closeSpring].
+  final M3ESpring? closeMotion;
 
   // ── Splash ──
 
@@ -232,8 +232,8 @@ class M3EDropdownMenu<T> extends StatefulWidget {
     this.autovalidateMode = AutovalidateMode.disabled,
     this.focusNode,
     this.closeOnBackButton = false,
-    this.openMotion = M3EMotion.expressiveSpatialDefault,
-    this.closeMotion = M3EMotion.expressiveSpatialDefault,
+    this.openMotion,
+    this.closeMotion,
     this.splashFactory = NoSplash.splashFactory,
     this.haptic = M3EHapticFeedback.none,
   }) : future = null;
@@ -264,8 +264,8 @@ class M3EDropdownMenu<T> extends StatefulWidget {
     this.autovalidateMode = AutovalidateMode.disabled,
     this.focusNode,
     this.closeOnBackButton = false,
-    this.openMotion = M3EMotion.expressiveSpatialDefault,
-    this.closeMotion = M3EMotion.expressiveSpatialDefault,
+    this.openMotion,
+    this.closeMotion,
     this.splashFactory = NoSplash.splashFactory,
     this.haptic = M3EHapticFeedback.none,
   }) : items = const [];
@@ -315,6 +315,12 @@ class _M3EDropdownMenuState<T> extends State<M3EDropdownMenu<T>>
   /// Whether the field should paint the keyboard focus ring.
   late final ValueNotifier<bool> _focusRingNotifier;
   late final Listenable _listenable;
+
+  M3ESpring get _resolvedOpenMotion =>
+      widget.openMotion ?? M3ETheme.of(context).dropdownMenuTheme.openSpring;
+
+  M3ESpring get _resolvedCloseMotion =>
+      widget.closeMotion ?? M3ETheme.of(context).dropdownMenuTheme.closeSpring;
 
   @override
   void initState() {

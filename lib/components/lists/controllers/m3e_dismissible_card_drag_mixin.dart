@@ -119,8 +119,10 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     _nbrCtrl?.dispose();
     _nbrCtrl =
         SingleMotionController(
-            motion: const MaterialSpringMotion.expressiveSpatialDefault()
-                .copyWith(stiffness: 800 * multiplier, damping: 0.7),
+            motion: _spatialMotion(
+              style.neighbourSpring,
+              stiffness: style.neighbourSpring.stiffness * multiplier,
+            ),
             vsync: this,
             initialValue: _neighbourFraction,
           )
@@ -140,7 +142,10 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     _roundnessCtrl?.dispose();
     _roundnessCtrl =
         SingleMotionController(
-            motion: _kReEngageSpring.copyWith(stiffness: 800 * multiplier),
+            motion: _spatialMotion(
+              style.reEngageSpring,
+              stiffness: style.reEngageSpring.stiffness * multiplier,
+            ),
             vsync: this,
             initialValue: _roundnessFraction,
           )
@@ -178,7 +183,10 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     _pushCtrl?.dispose();
     _pushCtrl =
         SingleMotionController(
-            motion: _kDetachPush.copyWith(stiffness: 800 * multiplier),
+            motion: _spatialMotion(
+              style.detachPushSpring,
+              stiffness: style.detachPushSpring.stiffness * multiplier,
+            ),
             vsync: this,
             initialValue: initialValue ?? 0,
           )
@@ -197,8 +205,10 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     _nbrCtrl?.dispose();
     _nbrCtrl =
         SingleMotionController(
-            motion: const MaterialSpringMotion.expressiveSpatialDefault()
-                .copyWith(stiffness: 800 * multiplier, damping: 0.7),
+            motion: _spatialMotion(
+              style.neighbourSpring,
+              stiffness: style.neighbourSpring.stiffness * multiplier,
+            ),
             vsync: this,
             initialValue: _neighbourFraction,
           )
@@ -217,7 +227,10 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     _roundnessCtrl?.dispose();
     _roundnessCtrl =
         SingleMotionController(
-            motion: _kRoundnessSnap.copyWith(stiffness: 1000 * multiplier),
+            motion: _spatialMotion(
+              style.roundnessSnapSpring,
+              stiffness: style.roundnessSnapSpring.stiffness * multiplier,
+            ),
             vsync: this,
             initialValue: _roundnessFraction,
           )
@@ -288,11 +301,11 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     _roundnessFraction = 0.0;
 
     final ref = _dragSlotRef;
+    final back = style.springBackSpring;
     _springCtrl?.dispose();
     _springCtrl =
         SingleMotionController(
-            motion: const MaterialSpringMotion.expressiveSpatialDefault()
-                .copyWith(stiffness: 380 * speedMul, damping: 0.6),
+            motion: _spatialMotion(back, stiffness: back.stiffness * speedMul),
             vsync: this,
             initialValue: _dragOffset,
           )
@@ -314,8 +327,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     _nbrCtrl?.dispose();
     _nbrCtrl =
         SingleMotionController(
-            motion: const MaterialSpringMotion.expressiveSpatialDefault()
-                .copyWith(stiffness: 380 * speedMul, damping: 0.6),
+            motion: _spatialMotion(back, stiffness: back.stiffness * speedMul),
             vsync: this,
             initialValue: _neighbourFraction,
           )
@@ -399,7 +411,11 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
     double speedMul,
   ) {
     final colCtrl = SingleMotionController(
-      motion: _kSpatialSpringBack.copyWith(
+      motion: _spatialMotion(
+        M3ESpring(
+          stiffness: style.collapseSpeed,
+          damping: style.collapseDamping,
+        ),
         stiffness: style.collapseSpeed * speedMul,
       ),
       vsync: this,
@@ -446,11 +462,9 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
         : flySign * (slot.capturedWidth + 80.0);
 
     slot.flyCtrl?.dispose();
+    final fly = style.flySpring;
     final flyCtrl = SingleMotionController(
-      motion: const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
-        stiffness: 400 * speedMul,
-        damping: 0.8,
-      ),
+      motion: _spatialMotion(fly, stiffness: fly.stiffness * speedMul),
       vsync: this,
       initialValue: flyInitial,
     );

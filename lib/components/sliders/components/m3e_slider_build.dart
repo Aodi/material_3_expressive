@@ -536,7 +536,11 @@ extension on _M3ESliderState {
       if (!mounted || isDocked != _iconDocked) {
         return;
       }
-      _dockController.animateTo(isDocked ? 1.0 : 0.0);
+      final spring = M3ETheme.of(context).sliderTheme.dockSpring;
+      _dockController
+        ..motion = const MaterialSpringMotion.expressiveSpatialDefault()
+            .copyWith(stiffness: spring.stiffness, damping: spring.damping)
+        ..animateTo(isDocked ? 1.0 : 0.0);
     });
   }
 }

@@ -5,7 +5,6 @@ import 'package:motor/motor.dart';
 
 import '../../../foundations/foundations.dart';
 import '../buttons/components/m3e_radius_and_padding_motion.dart';
-import '../buttons/styles/m3e_button_motion.dart';
 import '../buttons/utils/m3e_button_gradient_layer.dart';
 import 'enums/m3e_icon_button_enums.dart';
 import 'styles/m3e_icon_button_decoration.dart';
@@ -18,10 +17,6 @@ export 'styles/m3e_icon_button_shapes.dart';
 export 'styles/m3e_icon_button_theme.dart';
 
 part 'components/m3e_icon_button_build.dart';
-
-final SpringMotion _kIconButtonMorphMotion = M3EButtonMotion
-    .expressiveSpatialPress
-    .toMotion();
 
 /// Material 3 Expressive Icon Button
 ///

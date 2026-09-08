@@ -124,6 +124,7 @@ class M3EListCardListTheme {
     this.itemPadding = defaultItemPadding,
     this.variant = M3ECardVariant.filled,
     this.border,
+    this.radiusSpring = M3EMotion.expressiveSpatialDefault,
   });
 
   /// defaults.
@@ -149,6 +150,9 @@ class M3EListCardListTheme {
   /// Optional card outline; null keeps the variant default.
   final BorderSide? border;
 
+  /// Corner-radius morph spring for card list items.
+  final M3ESpring radiusSpring;
+
   /// backgroundColor.
 
   Color backgroundColor(M3EColorScheme scheme) =>
@@ -163,6 +167,7 @@ class M3EListCardListTheme {
     EdgeInsetsGeometry? itemPadding,
     M3ECardVariant? variant,
     BorderSide? border,
+    M3ESpring? radiusSpring,
   }) {
     return M3EListCardListTheme(
       outerRadius: outerRadius ?? this.outerRadius,
@@ -171,6 +176,7 @@ class M3EListCardListTheme {
       itemPadding: itemPadding ?? this.itemPadding,
       variant: variant ?? this.variant,
       border: border ?? this.border,
+      radiusSpring: radiusSpring ?? this.radiusSpring,
     );
   }
 }
@@ -228,6 +234,13 @@ class M3EListDismissibleTheme {
     this.backgroundBorderRadius = defaultBackgroundBorderRadius,
     this.collapseSpeed = defaultCollapseSpeed,
     this.itemPadding = defaultItemPadding,
+    this.neighbourSpring = const M3ESpring(stiffness: 800, damping: 0.7),
+    this.reEngageSpring = const M3ESpring(stiffness: 800, damping: 0.9),
+    this.detachPushSpring = const M3ESpring(stiffness: 800, damping: 0.95),
+    this.roundnessSnapSpring = const M3ESpring(stiffness: 1000, damping: 0.4),
+    this.springBackSpring = const M3ESpring(stiffness: 380, damping: 0.6),
+    this.flySpring = const M3ESpring(stiffness: 400, damping: 0.8),
+    this.collapseDamping = 0.8,
   });
 
   /// defaults.
@@ -265,6 +278,27 @@ class M3EListDismissibleTheme {
   /// itemPadding.
   final EdgeInsetsGeometry itemPadding;
 
+  /// Neighbour fraction spring (base; stiffness scaled by multiplier).
+  final M3ESpring neighbourSpring;
+
+  /// Roundness re-engage spring (base; stiffness scaled by multiplier).
+  final M3ESpring reEngageSpring;
+
+  /// Detach push spring (base; stiffness scaled by multiplier).
+  final M3ESpring detachPushSpring;
+
+  /// Roundness snap spring (base; stiffness scaled by multiplier).
+  final M3ESpring roundnessSnapSpring;
+
+  /// Drag spring-back spring (base; stiffness scaled by speedMul).
+  final M3ESpring springBackSpring;
+
+  /// Fly-away spring (base; stiffness scaled by speedMul).
+  final M3ESpring flySpring;
+
+  /// Damping for collapse; stiffness still uses [collapseSpeed] × speedMul.
+  final double collapseDamping;
+
   /// backgroundColor.
 
   Color backgroundColor(M3EColorScheme scheme) =>
@@ -283,6 +317,13 @@ class M3EListDismissibleTheme {
     double? backgroundBorderRadius,
     double? collapseSpeed,
     EdgeInsetsGeometry? itemPadding,
+    M3ESpring? neighbourSpring,
+    M3ESpring? reEngageSpring,
+    M3ESpring? detachPushSpring,
+    M3ESpring? roundnessSnapSpring,
+    M3ESpring? springBackSpring,
+    M3ESpring? flySpring,
+    double? collapseDamping,
   }) {
     return M3EListDismissibleTheme(
       outerRadius: outerRadius ?? this.outerRadius,
@@ -296,6 +337,13 @@ class M3EListDismissibleTheme {
           backgroundBorderRadius ?? this.backgroundBorderRadius,
       collapseSpeed: collapseSpeed ?? this.collapseSpeed,
       itemPadding: itemPadding ?? this.itemPadding,
+      neighbourSpring: neighbourSpring ?? this.neighbourSpring,
+      reEngageSpring: reEngageSpring ?? this.reEngageSpring,
+      detachPushSpring: detachPushSpring ?? this.detachPushSpring,
+      roundnessSnapSpring: roundnessSnapSpring ?? this.roundnessSnapSpring,
+      springBackSpring: springBackSpring ?? this.springBackSpring,
+      flySpring: flySpring ?? this.flySpring,
+      collapseDamping: collapseDamping ?? this.collapseDamping,
     );
   }
 }

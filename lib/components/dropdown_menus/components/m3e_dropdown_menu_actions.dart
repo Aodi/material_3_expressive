@@ -15,8 +15,8 @@ extension _M3EDropdownMenuActions<T> on _M3EDropdownMenuState<T> {
     }
 
     _resolveOpeningDirection();
-    _expandCtrl.motion = widget.openMotion.toMotion();
-    _arrowCtrl.motion = widget.openMotion.toMotion();
+    _expandCtrl.motion = _resolvedOpenMotion.toMotion();
+    _arrowCtrl.motion = _resolvedOpenMotion.toMotion();
     _expandCtrl.animateTo(1);
     _arrowCtrl.animateTo(math.pi);
     _portalController.show();
@@ -63,8 +63,8 @@ extension _M3EDropdownMenuActions<T> on _M3EDropdownMenuState<T> {
     if (_controller.isOpen) {
       _controller.setOpen(open: false);
     }
-    _expandCtrl.motion = widget.closeMotion.toMotion();
-    _arrowCtrl.motion = widget.closeMotion.toMotion();
+    _expandCtrl.motion = _resolvedCloseMotion.toMotion();
+    _arrowCtrl.motion = _resolvedCloseMotion.toMotion();
     _expandCtrl.animateTo(0);
     _arrowCtrl.animateTo(0);
     _searchTextController.clear();

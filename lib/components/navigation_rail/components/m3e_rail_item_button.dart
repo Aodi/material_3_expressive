@@ -186,6 +186,7 @@ class _M3ERailItemButtonState extends State<M3ERailItemButton> {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => _select(fromPointer: true),
+        mouseCursor: SystemMouseCursors.click,
         // Focus is owned by the expanded destination's detector below, and by
         // the inner icon button when collapsed.
         canRequestFocus: false,

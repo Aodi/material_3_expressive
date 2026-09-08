@@ -62,29 +62,30 @@ class _M3ESwitchState extends State<M3ESwitch> with TickerProviderStateMixin {
 
   bool get _enabled => widget.onChanged != null;
 
-  /// Position spring: expressiveSpatialDefault stiffness, lower damping so the
-  /// thumb visibly overshoots the resting side (spec-like snap).
-  SpringMotion get _positionMotion =>
+  SpringMotion _springMotion(M3ESpring spring) =>
       const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
-        damping: 0.55,
+        stiffness: spring.stiffness,
+        damping: spring.damping,
       );
 
-  /// Size spring: same token, slightly more damped so size follows the slide.
-  SpringMotion get _sizeMotion =>
-      const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
-        damping: 0.7,
-      );
+  SpringMotion _positionMotion(M3ESwitchTheme switchTheme) =>
+      _springMotion(switchTheme.positionSpring);
+
+  SpringMotion _sizeMotion(M3ESwitchTheme switchTheme) =>
+      _springMotion(switchTheme.sizeSpring);
 
   @override
   void initState() {
     super.initState();
+    // Theme may be unavailable; match [M3ESwitchTheme] defaults.
+    const defaults = M3ESwitchTheme.defaults;
     _positionCtrl = SingleMotionController(
-      motion: _positionMotion,
+      motion: _positionMotion(defaults),
       vsync: this,
       initialValue: widget.value ? 1.0 : 0.0,
     );
     _sizeCtrl = SingleMotionController(
-      motion: _sizeMotion,
+      motion: _sizeMotion(defaults),
       vsync: this,
       // Small when off, large when on — icons must not force a large thumb.
       initialValue: widget.value ? 1.0 : 0.0,
@@ -95,8 +96,9 @@ class _M3ESwitchState extends State<M3ESwitch> with TickerProviderStateMixin {
   void didUpdateWidget(covariant M3ESwitch oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value) {
-      _positionCtrl.motion = _positionMotion;
-      _sizeCtrl.motion = _sizeMotion;
+      final switchTheme = M3ETheme.of(context).switchTheme;
+      _positionCtrl.motion = _positionMotion(switchTheme);
+      _sizeCtrl.motion = _sizeMotion(switchTheme);
       _positionCtrl.animateTo(widget.value ? 1.0 : 0.0);
       _sizeCtrl.animateTo(widget.value ? 1.0 : 0.0);
     }

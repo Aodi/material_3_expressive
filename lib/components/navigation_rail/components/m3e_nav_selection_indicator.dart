@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:motor/motor.dart';
 
 import '../../../foundations/foundations.dart';
+import '../styles/m3e_navigation_rail_theme.dart';
 
 /// Liquid selection indicator: lead/trail springs elongate into a bridge
 /// between destinations, then settle to a stadium pill (spatial springs spec).
@@ -94,23 +95,34 @@ class _M3ENavSelectionIndicatorState extends State<M3ENavSelectionIndicator>
       <int, ({double main, double cross, double mainSize, double crossSize})>{};
 
   /// Lead moves with snappier shape spring; trail follows with position spring.
-  SpringMotion get _leadMotion =>
+  SpringMotion _springMotion(M3ESpring spring) =>
       const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
-        damping: 0.45,
+        stiffness: spring.stiffness,
+        damping: spring.damping,
       );
 
-  SpringMotion get _trailMotion =>
-      const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
-        damping: 0.55,
-      );
+  SpringMotion get _leadMotion => _springMotion(
+    M3ETheme.of(context).navigationRailTheme.indicatorLeadSpring,
+  );
+
+  SpringMotion get _trailMotion => _springMotion(
+    M3ETheme.of(context).navigationRailTheme.indicatorTrailSpring,
+  );
 
   bool get _animating => _lead.isAnimating || _trail.isAnimating;
 
   @override
   void initState() {
     super.initState();
-    _lead = SingleMotionController(motion: _leadMotion, vsync: this);
-    _trail = SingleMotionController(motion: _trailMotion, vsync: this);
+    const defaults = M3ENavigationRailTheme.defaults;
+    _lead = SingleMotionController(
+      motion: _springMotion(defaults.indicatorLeadSpring),
+      vsync: this,
+    );
+    _trail = SingleMotionController(
+      motion: _springMotion(defaults.indicatorTrailSpring),
+      vsync: this,
+    );
     _lead.addStatusListener(_onMotionStatus);
     _trail.addStatusListener(_onMotionStatus);
     _scheduleMeasure(forceJump: true);

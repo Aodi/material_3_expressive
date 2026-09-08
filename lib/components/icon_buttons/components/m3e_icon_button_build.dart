@@ -197,8 +197,12 @@ extension _M3EIconButtonBuild on _M3EIconButtonState {
     required Set<WidgetState> morphStates,
     required bool showFocusRing,
   }) {
+    final morphSpring = M3ETheme.of(context).iconButtonTheme.morphSpring;
     return M3ERadiusAndPaddingMotion(
-      motion: _kIconButtonMorphMotion,
+      motion: const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
+        stiffness: morphSpring.stiffness,
+        damping: morphSpring.damping,
+      ),
       internalLeft: 0,
       internalRight: 0,
       internalTop: 0,
@@ -293,6 +297,12 @@ extension _M3EIconButtonBuild on _M3EIconButtonState {
           ? WidgetStateProperty.all(Colors.transparent)
           : (dec?.overlayColor ??
                 M3EStateLayer.overlayColorHoverFocus(colors.fg)),
+      mouseCursor: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+        if (states.contains(WidgetState.disabled) || widget.onPressed == null) {
+          return SystemMouseCursors.basic;
+        }
+        return SystemMouseCursors.click;
+      }),
       animationDuration: Duration.zero,
       visualDensity: VisualDensity.standard,
     );

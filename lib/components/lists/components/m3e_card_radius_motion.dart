@@ -1,6 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:motor/motor.dart';
 
+import '../../../foundations/foundations.dart';
+import '../styles/m3e_list_theme.dart';
+
 /// Springs a card's [BorderRadius] with the expressive spatial motion.
 class M3ECardRadiusMotion extends StatefulWidget {
   /// M3ECardRadiusMotion.
@@ -8,6 +11,7 @@ class M3ECardRadiusMotion extends StatefulWidget {
     required this.radius,
     required this.builder,
     this.snap = false,
+    this.motion,
     super.key,
   });
 
@@ -16,6 +20,9 @@ class M3ECardRadiusMotion extends StatefulWidget {
 
   /// When true, the target is applied immediately (e.g. while dragging).
   final bool snap;
+
+  /// Override spring; defaults to [M3EListCardListTheme.radiusSpring].
+  final M3ESpring? motion;
 
   /// Builds the card with the animated radius.
   final Widget Function(BuildContext context, BorderRadius radius) builder;
@@ -30,8 +37,20 @@ class _M3ECardRadiusMotionState extends State<M3ECardRadiusMotion>
   late BorderRadius _from;
   late BorderRadius _to;
 
-  SpringMotion get _motion =>
-      const MaterialSpringMotion.expressiveSpatialDefault();
+  SpringMotion _toMotion(M3ESpring spring) =>
+      const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
+        stiffness: spring.stiffness,
+        damping: spring.damping,
+      );
+
+  SpringMotion get _motion {
+    final spring =
+        widget.motion ??
+        (mounted
+            ? M3ETheme.of(context).listTheme.cardList.radiusSpring
+            : M3EListCardListTheme.defaults.radiusSpring);
+    return _toMotion(spring);
+  }
 
   @override
   void initState() {
@@ -39,7 +58,9 @@ class _M3ECardRadiusMotionState extends State<M3ECardRadiusMotion>
     _from = widget.radius;
     _to = widget.radius;
     _controller = SingleMotionController(
-      motion: _motion,
+      motion: _toMotion(
+        widget.motion ?? M3EListCardListTheme.defaults.radiusSpring,
+      ),
       vsync: this,
       initialValue: 1,
     );
@@ -54,7 +75,8 @@ class _M3ECardRadiusMotionState extends State<M3ECardRadiusMotion>
       _controller.value = 1;
       return;
     }
-    if (oldWidget.radius == widget.radius) {
+    if (oldWidget.radius == widget.radius &&
+        oldWidget.motion == widget.motion) {
       return;
     }
     _from = BorderRadius.lerp(_from, _to, _controller.value) ?? _to;
