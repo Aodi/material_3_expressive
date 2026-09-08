@@ -19,12 +19,15 @@ class M3EDismissibleList extends StatefulWidget {
     this.shrinkWrap = false,
     this.clipBehavior = Clip.hardEdge,
     this.selection = false,
+    this.reorder = false,
     this.selectionController,
     this.onSelectionChanged,
+    this.onReorder,
     this.selectionState,
+    this.reorderState,
     this.embedded = false,
     super.key,
-  });
+  }) : assert(!reorder || onReorder != null);
 
   /// itemCount.
 
@@ -70,14 +73,23 @@ class M3EDismissibleList extends StatefulWidget {
   /// Enables list selection.
   final bool selection;
 
+  /// Enables long-press reorder. Requires [onReorder].
+  final bool reorder;
+
   /// Optional selection controller; ancestor scope wins.
   final M3ESelectionController? selectionController;
 
   /// Called when selection indices change.
   final ValueChanged<Set<int>>? onSelectionChanged;
 
+  /// Called after a reorder drop. Required when [reorder] is true.
+  final ReorderCallback? onReorder;
+
   /// Optional selection state override.
   final M3EListSelectionState? selectionState;
+
+  /// Optional reorder state override.
+  final M3EListReorderState? reorderState;
 
   /// When true, all cards use inner radius (no first/last outer extremities).
   final bool embedded;
@@ -112,6 +124,9 @@ class _M3EDismissibleListState extends State<M3EDismissibleList>
 
   @override
   bool get embedded => widget.embedded;
+
+  @override
+  bool get listReorderEnabled => widget.reorder;
 
   @override
   Future<bool> Function(int, DismissDirection)? get onDismissCallback =>
@@ -154,25 +169,50 @@ class _M3EDismissibleListState extends State<M3EDismissibleList>
   }
 
   Widget _buildList(BuildContext context) {
-    final visible = computeVisibleIndices();
-    Widget list = ListView.builder(
-      controller: widget.scrollController,
-      physics: widget.physics,
-      padding: widget.listPadding,
-      shrinkWrap: widget.shrinkWrap,
-      clipBehavior: widget.clipBehavior,
-      itemCount: slots.length,
-      itemBuilder: (ctx, i) => buildSlot(ctx, i, visible),
-    );
+    final List<int> visible = computeVisibleIndices();
+    Widget list;
+    if (widget.reorder) {
+      final M3EListReorderState rs =
+          widget.reorderState ?? M3ETheme.of(context).listTheme.reorder;
+      list = M3EListReorderHost(
+        itemCount: slots.length,
+        onReorder: widget.onReorder!,
+        reorderState: rs,
+        gap: 0,
+        scrollable: true,
+        controller: widget.scrollController,
+        physics: widget.physics,
+        shrinkWrap: widget.shrinkWrap,
+        padding: widget.listPadding,
+        canStartDrag: (int index) =>
+            !isInteractionLocked &&
+            index >= 0 &&
+            index < slots.length &&
+            slots[index].isVisible,
+        itemBuilder: (BuildContext context, int index) =>
+            buildSlot(context, index, visible),
+      );
+    } else {
+      list = ListView.builder(
+        controller: widget.scrollController,
+        physics: widget.physics,
+        padding: widget.listPadding,
+        shrinkWrap: widget.shrinkWrap,
+        clipBehavior: widget.clipBehavior,
+        itemCount: slots.length,
+        itemBuilder: (BuildContext ctx, int i) => buildSlot(ctx, i, visible),
+      );
+    }
 
-    if (widget.selection) {
+    if (widget.selection || widget.reorder) {
       list = M3EListFeatureHost(
         itemCount: widget.itemCount,
-        selection: true,
-        reorder: false,
+        selection: widget.selection,
+        reorder: widget.reorder,
         selectionController: widget.selectionController,
         onSelectionChanged: widget.onSelectionChanged,
         selectionState: widget.selectionState,
+        reorderState: widget.reorderState,
         child: list,
       );
     }
@@ -196,12 +236,15 @@ class M3EDismissibleColumn extends StatefulWidget {
     this.borderRadiusBuilder,
     this.style = const M3EDismissibleListStyle(),
     this.selection = false,
+    this.reorder = false,
     this.selectionController,
     this.onSelectionChanged,
+    this.onReorder,
     this.selectionState,
+    this.reorderState,
     this.embedded = false,
     super.key,
-  });
+  }) : assert(!reorder || onReorder != null);
 
   /// itemCount.
 
@@ -232,14 +275,23 @@ class M3EDismissibleColumn extends StatefulWidget {
   /// Enables list selection.
   final bool selection;
 
+  /// Enables long-press reorder. Requires [onReorder].
+  final bool reorder;
+
   /// Optional selection controller.
   final M3ESelectionController? selectionController;
 
   /// Called when selection indices change.
   final ValueChanged<Set<int>>? onSelectionChanged;
 
+  /// Called after a reorder drop. Required when [reorder] is true.
+  final ReorderCallback? onReorder;
+
   /// Optional selection state override.
   final M3EListSelectionState? selectionState;
+
+  /// Optional reorder state override.
+  final M3EListReorderState? reorderState;
 
   /// When true, all cards use inner radius (no first/last outer extremities).
   final bool embedded;
@@ -256,9 +308,12 @@ class M3EDismissibleColumn extends StatefulWidget {
     borderRadiusBuilder,
     M3EDismissibleListStyle style = const M3EDismissibleListStyle(),
     bool selection = false,
+    bool reorder = false,
     M3ESelectionController? selectionController,
     ValueChanged<Set<int>>? onSelectionChanged,
+    ReorderCallback? onReorder,
     M3EListSelectionState? selectionState,
+    M3EListReorderState? reorderState,
     bool embedded = false,
     Key? key,
   }) {
@@ -273,9 +328,12 @@ class M3EDismissibleColumn extends StatefulWidget {
       borderRadiusBuilder: borderRadiusBuilder,
       style: style,
       selection: selection,
+      reorder: reorder,
       selectionController: selectionController,
       onSelectionChanged: onSelectionChanged,
+      onReorder: onReorder,
       selectionState: selectionState,
+      reorderState: reorderState,
       embedded: embedded,
     );
   }
@@ -310,6 +368,9 @@ class _M3EDismissibleColumnState extends State<M3EDismissibleColumn>
 
   @override
   bool get embedded => widget.embedded;
+
+  @override
+  bool get listReorderEnabled => widget.reorder;
 
   @override
   Future<bool> Function(int, DismissDirection)? get onDismissCallback =>
@@ -352,23 +413,43 @@ class _M3EDismissibleColumnState extends State<M3EDismissibleColumn>
   }
 
   Widget _buildColumn(BuildContext context) {
-    final visible = computeVisibleIndices();
-    Widget column = Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (int i = 0; i < slots.length; i++) buildSlot(context, i, visible),
-      ],
-    );
+    final List<int> visible = computeVisibleIndices();
+    Widget column;
+    if (widget.reorder) {
+      final M3EListReorderState rs =
+          widget.reorderState ?? M3ETheme.of(context).listTheme.reorder;
+      column = M3EListReorderHost(
+        itemCount: slots.length,
+        onReorder: widget.onReorder!,
+        reorderState: rs,
+        gap: 0,
+        canStartDrag: (int index) =>
+            !isInteractionLocked &&
+            index >= 0 &&
+            index < slots.length &&
+            slots[index].isVisible,
+        itemBuilder: (BuildContext context, int index) =>
+            buildSlot(context, index, visible),
+      );
+    } else {
+      column = Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (int i = 0; i < slots.length; i++) buildSlot(context, i, visible),
+        ],
+      );
+    }
 
-    if (widget.selection) {
+    if (widget.selection || widget.reorder) {
       column = M3EListFeatureHost(
         itemCount: widget.itemCount,
-        selection: true,
-        reorder: false,
+        selection: widget.selection,
+        reorder: widget.reorder,
         selectionController: widget.selectionController,
         onSelectionChanged: widget.onSelectionChanged,
         selectionState: widget.selectionState,
+        reorderState: widget.reorderState,
         child: column,
       );
     }

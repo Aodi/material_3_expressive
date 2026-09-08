@@ -249,83 +249,129 @@ mixin M3EDismissibleCardBuildMixin<T extends StatefulWidget>
           isDragged ? _dragOffset + _detachPush : neighbourOffset,
           0,
         ),
-        child: GestureDetector(
-          onHorizontalDragStart: (_) => handleDragStart(slot),
-          onHorizontalDragUpdate: handleDragUpdate,
-          onHorizontalDragEnd: handleDragEnd,
-          child: Builder(
-            builder: (BuildContext context) {
-              final M3EListFeatureScope? features = M3EListFeatureScope.maybeOf(
-                context,
-              );
-              final VoidCallback? userTap = onTapCallback == null
-                  ? null
-                  : () => onTapCallback!(slotPos);
-              final VoidCallback? selectionTap = _resolveSelectionTap(
-                features: features,
-                index: slotPos,
-                userTap: userTap,
-              );
-              final VoidCallback? onDoubleTap =
-                  features != null &&
-                      features.selectionEnabled &&
-                      features.selectionState.trigger ==
-                          M3EListSelectionTrigger.doubleTap
-                  ? () => features.onToggleSelection(slotPos)
-                  : null;
-              final VoidCallback? onPressed = isInteractionLocked
-                  ? null
-                  : _bindSelectionTaps(
-                      index: slotPos,
-                      onTap: selectionTap,
-                      onDoubleTap: onDoubleTap,
-                    );
-              final BorderRadius radius =
-                  m3eSelectionRadius(
-                    context,
-                    slotPos,
-                    outerRadius: s.outerRadius,
-                  ) ??
-                  layoutRadius;
-              final bool selected = m3eSelectionFill(context, slotPos) != null;
-              return M3ECardRadiusMotion(
-                snap: _dragSlotRef != null || selected,
-                radius: radius,
-                builder: (BuildContext context, BorderRadius animatedRadius) {
-                  return M3ECard(
-                    variant: M3ECardVariant.filled,
-                    surfaceKey: _measureKey(slot),
-                    borderRadius: animatedRadius,
-                    color:
-                        colorBuilder?.call(slotPos) ??
-                        m3eSelectionFill(context, slotPos) ??
-                        s.color ??
-                        M3ETheme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHighest,
-                    border: s.border,
-                    animationDuration: Duration.zero,
-                    width: double.infinity,
-                    padding: EdgeInsets.zero,
-                    onPressed: onPressed,
-                    onLongPress:
-                        isInteractionLocked || onLongPressCallback == null
-                        ? null
-                        : () => onLongPressCallback!(slotPos),
-                    haptic: s.hapticOnTap,
-                    child: Padding(
-                      padding:
-                          s.padding ??
-                          M3EListDismissibleTheme.defaultItemPadding,
-                      child: M3EListItemScope(
-                        child: swipeItemBuilder(context, slotPos),
-                      ),
-                    ),
+        child: Builder(
+          builder: (BuildContext context) {
+            return GestureDetector(
+              onHorizontalDragStart: (_) {
+                _dismissDxAcc = 0;
+                // With reorder, wait for real horizontal travel so a long-press
+                // hold cannot lock dismiss and block reorder.
+                if (listReorderEnabled) {
+                  return;
+                }
+                if (M3EListReorderSessionScope.isActive(context) ||
+                    isInteractionLocked) {
+                  return;
+                }
+                handleDragStart(slot);
+              },
+              onHorizontalDragUpdate: (DragUpdateDetails details) {
+                if (M3EListReorderSessionScope.isActive(context)) {
+                  return;
+                }
+                if (_dragSlotRef == null) {
+                  if (!listReorderEnabled) {
+                    return;
+                  }
+                  _dismissDxAcc += details.delta.dx;
+                  if (_dismissDxAcc.abs() < kTouchSlop || isInteractionLocked) {
+                    return;
+                  }
+                  handleDragStart(slot);
+                  if (_dragSlotRef == null) {
+                    return;
+                  }
+                }
+                handleDragUpdate(details);
+              },
+              onHorizontalDragEnd: (DragEndDetails details) {
+                _dismissDxAcc = 0;
+                if (_dragSlotRef == null ||
+                    M3EListReorderSessionScope.isActive(context)) {
+                  return;
+                }
+                handleDragEnd(details);
+              },
+              child: Builder(
+                builder: (BuildContext context) {
+                  final M3EListFeatureScope? features =
+                      M3EListFeatureScope.maybeOf(context);
+                  final VoidCallback? userTap = onTapCallback == null
+                      ? null
+                      : () => onTapCallback!(slotPos);
+                  final VoidCallback? selectionTap = _resolveSelectionTap(
+                    features: features,
+                    index: slotPos,
+                    userTap: userTap,
+                  );
+                  final VoidCallback? onDoubleTap =
+                      features != null &&
+                          features.selectionEnabled &&
+                          features.selectionState.trigger ==
+                              M3EListSelectionTrigger.doubleTap
+                      ? () => features.onToggleSelection(slotPos)
+                      : null;
+                  final VoidCallback? onPressed = isInteractionLocked
+                      ? null
+                      : _bindSelectionTaps(
+                          index: slotPos,
+                          onTap: selectionTap,
+                          onDoubleTap: onDoubleTap,
+                        );
+                  final BorderRadius radius =
+                      m3eSelectionRadius(
+                        context,
+                        slotPos,
+                        outerRadius: s.outerRadius,
+                      ) ??
+                      layoutRadius;
+                  final bool selected =
+                      m3eSelectionFill(context, slotPos) != null;
+                  final bool inDragProxy =
+                      M3EListDragProxyScope.maybeOf(context) != null;
+                  return M3ECardRadiusMotion(
+                    snap: _dragSlotRef != null || selected,
+                    radius: radius,
+                    builder:
+                        (BuildContext context, BorderRadius animatedRadius) {
+                          return M3ECard(
+                            variant: M3ECardVariant.filled,
+                            surfaceKey: inDragProxy ? null : _measureKey(slot),
+                            borderRadius: animatedRadius,
+                            color:
+                                colorBuilder?.call(slotPos) ??
+                                m3eSelectionFill(context, slotPos) ??
+                                s.color ??
+                                M3ETheme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                            border: s.border,
+                            animationDuration: Duration.zero,
+                            width: double.infinity,
+                            padding: EdgeInsets.zero,
+                            onPressed: onPressed,
+                            onLongPress:
+                                isInteractionLocked ||
+                                    listReorderEnabled ||
+                                    onLongPressCallback == null
+                                ? null
+                                : () => onLongPressCallback!(slotPos),
+                            haptic: s.hapticOnTap,
+                            child: Padding(
+                              padding:
+                                  s.padding ??
+                                  M3EListDismissibleTheme.defaultItemPadding,
+                              child: M3EListItemScope(
+                                child: swipeItemBuilder(context, slotPos),
+                              ),
+                            ),
+                          );
+                        },
                   );
                 },
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

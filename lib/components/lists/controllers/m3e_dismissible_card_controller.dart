@@ -1,13 +1,16 @@
 import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
 import '../../../foundations/foundations.dart';
 import '../../cards/m3e_cards.dart';
 import '../components/m3e_card_radius_motion.dart';
+import '../components/m3e_list_drag_proxy_scope.dart';
 import '../components/m3e_list_feature_scope.dart';
 import '../components/m3e_list_item_scope.dart';
+import '../components/m3e_list_reorder_session_scope.dart';
 import '../enums/m3e_list_enums.dart';
 import '../enums/m3e_list_selection_enums.dart';
 import '../models/m3e_dismissible_slot.dart';
@@ -66,6 +69,9 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
   /// When true, all cards use [M3EDismissibleListStyle.innerRadius].
   bool get embedded => false;
 
+  /// When true, long-press is owned by the list reorder host.
+  bool get listReorderEnabled => false;
+
   final List<M3EDismissibleSlot> _slots = [];
   M3EDismissibleSlot? _dragSlotRef;
   int _dragSlotIndex = -1;
@@ -97,6 +103,9 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
 
   /// The isInteractionLocked.
   bool get isInteractionLocked => _dragSlotRef != null || _collapsingCount > 0;
+
+  /// Accumulated horizontal delta before dismiss locks (reorder-safe).
+  double _dismissDxAcc = 0;
 
   /// initSlots.
 

@@ -42,6 +42,14 @@ void main() {
     'dismissible list selection fill and double-tap',
     _dismissibleSelection,
   );
+  testWidgets(
+    'dismissible list onReorder fires after drop',
+    _dismissibleReorder,
+  );
+  testWidgets(
+    'dismissible reorder and dismiss are mutually exclusive',
+    _dismissibleReorderDismissExclusion,
+  );
 }
 
 Future<void> _pump(WidgetTester tester, Widget home) async {
@@ -561,4 +569,102 @@ Future<void> _dismissibleSelection(WidgetTester tester) async {
   await tester.tap(find.text('Double'));
   await tester.pumpAndSettle();
   expect(last, <int>{0});
+}
+
+Future<void> _dismissibleReorder(WidgetTester tester) async {
+  final List<String> items = <String>['A', 'B', 'C'];
+  await _pump(
+    tester,
+    StatefulBuilder(
+      builder: (BuildContext context, StateSetter setState) {
+        return M3EDismissibleColumn(
+          reorder: true,
+          onReorder: (int oldIndex, int newIndex) {
+            setState(() {
+              final String item = items.removeAt(oldIndex);
+              items.insert(newIndex, item);
+            });
+          },
+          itemCount: items.length,
+          onDismiss: (int index, DismissDirection direction) async => false,
+          itemBuilder: (BuildContext context, int index) => M3EListItem(
+            headline: items[index],
+            trailing: const Icon(M3EIcons.chevron_right),
+          ),
+        );
+      },
+    ),
+  );
+
+  expect(find.byIcon(M3EIcons.drag_handle), findsNWidgets(3));
+  expect(find.byIcon(M3EIcons.chevron_right), findsNothing);
+
+  final TestGesture gesture = await tester.startGesture(
+    tester.getCenter(find.text('A')),
+  );
+  await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+  await gesture.moveBy(const Offset(0, 140));
+  await tester.pump();
+  await gesture.up();
+  await tester.pumpAndSettle();
+
+  expect(items.first, isNot('A'));
+  expect(find.text('A'), findsOneWidget);
+  expect(find.text('B'), findsOneWidget);
+  expect(find.text('C'), findsOneWidget);
+}
+
+Future<void> _dismissibleReorderDismissExclusion(WidgetTester tester) async {
+  var dismissCalls = 0;
+  final List<String> items = <String>['A', 'B', 'C'];
+  await _pump(
+    tester,
+    StatefulBuilder(
+      builder: (BuildContext context, StateSetter setState) {
+        return M3EDismissibleColumn(
+          reorder: true,
+          onReorder: (int oldIndex, int newIndex) {
+            setState(() {
+              final String item = items.removeAt(oldIndex);
+              items.insert(newIndex, item);
+            });
+          },
+          itemCount: items.length,
+          onDismiss: (int index, DismissDirection direction) async {
+            dismissCalls++;
+            return false;
+          },
+          itemBuilder: (BuildContext context, int index) => M3EListItem(
+            headline: items[index],
+            trailing: const Icon(M3EIcons.chevron_right),
+          ),
+        );
+      },
+    ),
+  );
+
+  // While reordering, horizontal swipe must not dismiss.
+  final TestGesture reorder = await tester.startGesture(
+    tester.getCenter(find.text('A')),
+  );
+  await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+  await reorder.moveBy(const Offset(120, 40));
+  await tester.pump();
+  await reorder.up();
+  await tester.pumpAndSettle();
+  expect(dismissCalls, 0);
+
+  // While dismissing (including spring-back), long-press must not reorder.
+  final List<String> before = List<String>.from(items);
+  final TestGesture dismiss = await tester.startGesture(
+    tester.getCenter(find.text(items.first)),
+  );
+  await dismiss.moveBy(const Offset(80, 0));
+  await tester.pump();
+  await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+  await dismiss.moveBy(const Offset(0, 120));
+  await tester.pump();
+  await dismiss.up();
+  await tester.pumpAndSettle();
+  expect(items, before);
 }

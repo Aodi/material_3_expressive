@@ -81,7 +81,7 @@ M3ECardList(
       _ListKind.dismissible =>
         '''
 M3EDismissibleColumn(
-  itemCount: 3,$selectionFeature
+  itemCount: 3,$selectionFeature${_reorder ? '\n  reorder: true,\n  onReorder: (int a, int b) {},' : ''}
   onDismiss: (int index, DismissDirection direction) async => true,
   itemBuilder: (BuildContext context, int index) {
     return M3EListItem(
@@ -145,8 +145,10 @@ M3EExpandableList(${_selection ? '\n  selection: true,' : ''}${_reorder ? '\n  r
               headline: _headline,
               showLeading: _showLeading,
               selection: _selection,
+              reorder: _reorder,
               selectionState: _selectionState,
               order: _order,
+              onReorder: _onReorder,
             ),
             _ListKind.expandable => _ExpandablePreview(
               headline: _headline,
@@ -257,9 +259,7 @@ M3EExpandableList(${_selection ? '\n  selection: true,' : ''}${_reorder ? '\n  r
           PlayControlPanel(
             title: _kind == _ListKind.expandable
                 ? 'Sublist selection'
-                : (_kind == _ListKind.dismissible
-                      ? 'Selection'
-                      : 'Selection & reorder'),
+                : 'Selection & reorder',
             children: <Widget>[
               PlaySwitch(
                 label: 'Selection',
@@ -274,7 +274,7 @@ M3EExpandableList(${_selection ? '\n  selection: true,' : ''}${_reorder ? '\n  r
                   }
                 }),
               ),
-              if (_kind == _ListKind.cardList)
+              if (_kind == _ListKind.cardList || _kind == _ListKind.dismissible)
                 PlaySwitch(
                   label: 'Reorder',
                   value: _reorder,
@@ -388,22 +388,28 @@ class _DismissiblePreview extends StatelessWidget {
     required this.headline,
     required this.showLeading,
     required this.selection,
+    required this.reorder,
     required this.selectionState,
     required this.order,
+    required this.onReorder,
   });
 
   final String headline;
   final bool showLeading;
   final bool selection;
+  final bool reorder;
   final M3EListSelectionState selectionState;
   final List<String> order;
+  final ReorderCallback onReorder;
 
   @override
   Widget build(BuildContext context) {
     final M3EThemeData theme = M3ETheme.of(context);
     return M3EDismissibleColumn(
       selection: selection,
+      reorder: reorder,
       selectionState: selectionState,
+      onReorder: reorder ? onReorder : null,
       itemCount: order.length,
       onDismiss: (int index, DismissDirection direction) async => true,
       style: M3EDismissibleListStyle(

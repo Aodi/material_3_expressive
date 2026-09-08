@@ -9,6 +9,7 @@ import '../styles/m3e_list_reorder_state.dart';
 import '../utils/m3e_expandable_spring_motion.dart';
 import 'm3e_list_drag_proxy_scope.dart';
 import 'm3e_list_reorder_exclude.dart';
+import 'm3e_list_reorder_session_scope.dart';
 
 /// Spring-driven reorderable list.
 ///
@@ -30,6 +31,7 @@ class M3EListReorderHost extends StatefulWidget {
     this.padding,
     this.prepareDrag,
     this.onDragSettled,
+    this.canStartDrag,
     super.key,
   });
 
@@ -74,6 +76,9 @@ class M3EListReorderHost extends StatefulWidget {
   /// Invoked after [onReorder] when the index changed.
   final void Function(int from, int to)? onDragSettled;
 
+  /// When set, long-press only starts a drag if this returns true for [index].
+  final bool Function(int index)? canStartDrag;
+
   @override
   State<M3EListReorderHost> createState() => _M3EListReorderHostState();
 }
@@ -85,6 +90,7 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
   int? _activePointer;
   Offset? _pointerDownGlobal;
   Timer? _longPressTimer;
+  final ValueNotifier<bool> _sessionActive = ValueNotifier<bool>(false);
 
   /// Finger delta from long-press start; updated without setState.
   final ValueNotifier<double> _dragDy = ValueNotifier<double>(0);
@@ -112,6 +118,7 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
   @override
   void dispose() {
     _longPressTimer?.cancel();
+    _sessionActive.dispose();
     _dragDy.dispose();
     for (final SingleMotionController c in _offsets.values) {
       c.dispose();
@@ -145,6 +152,9 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
     if (_dragIndex != null) {
       return;
     }
+    if (widget.canStartDrag != null && !widget.canStartDrag!(index)) {
+      return;
+    }
     if (_isOverReorderExclude(index, event.position)) {
       return;
     }
@@ -153,6 +163,9 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
     _cancelPendingLongPress();
     _longPressTimer = Timer(kLongPressTimeout, () {
       if (!mounted || _activePointer != event.pointer) {
+        return;
+      }
+      if (widget.canStartDrag != null && !widget.canStartDrag!(index)) {
         return;
       }
       unawaited(_beginDrag(index, event.position, event.pointer));
@@ -229,6 +242,9 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
   }
 
   void _startDrag(int index, Offset globalPosition) {
+    if (widget.canStartDrag != null && !widget.canStartDrag!(index)) {
+      return;
+    }
     _dragExtent = _extent(index);
     _dragDy.value = 0;
     _pointerDownGlobal = globalPosition;
@@ -236,6 +252,7 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
       _dragIndex = index;
       _insertIndex = index;
     });
+    _sessionActive.value = true;
     for (var i = 0; i < widget.itemCount; i++) {
       _offsetCtrl(i)
         ..motion = widget.reorderState.displaceMotion.toMotion()
@@ -326,6 +343,7 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
         ..motion = widget.reorderState.settleMotion.toMotion()
         ..animateTo(0);
     }
+    _sessionActive.value = false;
     setState(() {
       _dragIndex = null;
       _insertIndex = null;
@@ -380,10 +398,21 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
     final Color dragColor = rs.resolvedDragColor(scheme);
     final double dragRadius = rs.resolvedDragRadius(listTheme);
 
+    final double proxyHeight = (_dragExtent - widget.gap).clamp(
+      0.0,
+      double.infinity,
+    );
+
     return ValueListenableBuilder<double>(
       valueListenable: _dragDy,
       builder: (BuildContext context, double dy, Widget? child) {
-        return Positioned(left: 0, right: 0, top: slotTop + dy, child: child!);
+        return Positioned(
+          left: 0,
+          right: 0,
+          top: slotTop + dy,
+          height: proxyHeight > 0 ? proxyHeight : null,
+          child: child!,
+        );
       },
       child: Transform.scale(
         scale: rs.dragScale,
@@ -464,15 +493,18 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
             ),
           );
 
-    return Stack(
-      key: _stackKey,
-      clipBehavior: Clip.none,
-      children: <Widget>[
-        // Hint behind resting rows so it cannot cut them out.
-        if (_dragIndex != null) _buildDestinationHint(context),
-        list,
-        if (_dragIndex != null) _buildProxy(context),
-      ],
+    return M3EListReorderSessionScope(
+      active: _sessionActive,
+      child: Stack(
+        key: _stackKey,
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          // Hint behind resting rows so it cannot cut them out.
+          if (_dragIndex != null) _buildDestinationHint(context),
+          list,
+          if (_dragIndex != null) _buildProxy(context),
+        ],
+      ),
     );
   }
 }

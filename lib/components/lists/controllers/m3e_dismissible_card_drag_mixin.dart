@@ -27,7 +27,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
 
   @override
   void handleDragStart(M3EDismissibleSlot slot) {
-    if (!slot.isVisible) {
+    if (!slot.isVisible || isInteractionLocked) {
       return;
     }
 
@@ -279,6 +279,7 @@ mixin M3EDismissibleCardDragMixin<T extends StatefulWidget>
       _reEngaging = false;
       _roundnessFraction = 0.0;
     });
+    _dismissDxAcc = 0;
   }
 
   void _playPullHaptics() {
