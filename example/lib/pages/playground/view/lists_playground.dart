@@ -34,6 +34,7 @@ class _ListsPlaygroundState extends State<ListsPlayground> {
   String _headline = 'Wireless charging';
   String _supporting = 'On · Fast charge enabled';
   List<String> _order = <String>['0', '1', '2'];
+  Set<int> _expandableExpanded = <int>{0};
 
   M3EListSelectionState get _selectionState => M3EListSelectionState(
     mode: _singleSelect
@@ -49,6 +50,54 @@ class _ListsPlaygroundState extends State<ListsPlayground> {
     setState(() {
       final String item = _order.removeAt(oldIndex);
       _order.insert(newIndex, item);
+      _expandableExpanded = _expandableExpanded
+          .map((int i) => _remapIndexAfterMove(i, oldIndex, newIndex))
+          .toSet();
+    });
+  }
+
+  static int _remapIndexAfterMove(int index, int from, int to) {
+    if (index == from) {
+      return to;
+    }
+    if (from < to) {
+      if (index > from && index <= to) {
+        return index - 1;
+      }
+    } else if (from > to) {
+      if (index >= to && index < from) {
+        return index + 1;
+      }
+    }
+    return index;
+  }
+
+  void _onExpandableExpansionChanged(int index, {required bool isExpanded}) {
+    setState(() {
+      if (isExpanded) {
+        // Playground expandable uses single-expand (theme default).
+        _expandableExpanded = <int>{index};
+      } else {
+        _expandableExpanded = Set<int>.from(_expandableExpanded)..remove(index);
+      }
+    });
+  }
+
+  void _setShowSelectedIcon(bool value) {
+    setState(() {
+      _showSelectedIcon = value;
+      if (value) {
+        _doubleTapTrigger = false;
+      }
+    });
+  }
+
+  void _setDoubleTapTrigger(bool value) {
+    setState(() {
+      _doubleTapTrigger = value;
+      if (value) {
+        _showSelectedIcon = false;
+      }
     });
   }
 
@@ -162,6 +211,8 @@ M3EExpandableList(${_selection ? '\n  selection: true,' : ''}${_reorder ? '\n  r
               order: _order,
               onReorder: _onReorder,
               nestedOrder: _order,
+              initiallyExpanded: _expandableExpanded,
+              onExpansionChanged: _onExpandableExpansionChanged,
             ),
           },
         ),
@@ -239,16 +290,12 @@ M3EExpandableList(${_selection ? '\n  selection: true,' : ''}${_reorder ? '\n  r
                 PlaySwitch(
                   label: 'Selected icon (leading flip)',
                   value: _showSelectedIcon,
-                  onChanged: (bool v) {
-                    setState(() => _showSelectedIcon = v);
-                  },
+                  onChanged: _setShowSelectedIcon,
                 ),
                 PlaySwitch(
                   label: 'Double-tap trigger',
                   value: _doubleTapTrigger,
-                  onChanged: (bool v) {
-                    setState(() => _doubleTapTrigger = v);
-                  },
+                  onChanged: _setDoubleTapTrigger,
                 ),
               ],
             ],
@@ -292,16 +339,12 @@ M3EExpandableList(${_selection ? '\n  selection: true,' : ''}${_reorder ? '\n  r
                 PlaySwitch(
                   label: 'Selected icon (leading flip)',
                   value: _showSelectedIcon,
-                  onChanged: (bool v) {
-                    setState(() => _showSelectedIcon = v);
-                  },
+                  onChanged: _setShowSelectedIcon,
                 ),
                 PlaySwitch(
                   label: 'Double-tap trigger',
                   value: _doubleTapTrigger,
-                  onChanged: (bool v) {
-                    setState(() => _doubleTapTrigger = v);
-                  },
+                  onChanged: _setDoubleTapTrigger,
                 ),
               ],
             ],
@@ -458,6 +501,8 @@ class _ExpandablePreview extends StatelessWidget {
     required this.order,
     required this.onReorder,
     required this.nestedOrder,
+    required this.initiallyExpanded,
+    required this.onExpansionChanged,
   });
 
   final String headline;
@@ -471,6 +516,8 @@ class _ExpandablePreview extends StatelessWidget {
   final List<String> order;
   final ReorderCallback onReorder;
   final List<String> nestedOrder;
+  final Set<int> initiallyExpanded;
+  final void Function(int index, {required bool isExpanded}) onExpansionChanged;
 
   M3EExpandableData _section(BuildContext context, String id) {
     final M3EThemeData theme = M3ETheme.of(context);
@@ -526,7 +573,8 @@ class _ExpandablePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return M3EExpandableList(
-      initiallyExpanded: const <int>{0},
+      initiallyExpanded: initiallyExpanded,
+      onExpansionChanged: onExpansionChanged,
       selection: selection,
       selectionState: selectionState,
       reorder: reorder,
