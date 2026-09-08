@@ -8,6 +8,7 @@ import 'components/m3e_expandable_builders.dart';
 import 'components/m3e_expandable_data.dart';
 import 'components/m3e_expandable_expanded.dart';
 import 'components/m3e_expandable_list_base.dart';
+import 'components/m3e_expandable_snap_collapse.dart';
 import 'components/m3e_list_feature_host.dart';
 import 'components/m3e_list_feature_scope.dart';
 import 'components/m3e_list_item_scope.dart';
@@ -584,9 +585,11 @@ class M3ECardList extends StatelessWidget {
 /// - [M3EExpandableList.sliver] / [M3EExpandableList.sliverBuilder]:
 ///   [SliverList.builder] for [CustomScrollView]
 ///
-/// Selection and reorder are not supported on the main expandable rows.
-/// Nest an [M3ECardList] (or similar) via [M3EExpandableExpanded.list] so those
-/// features use the nested list's own API.
+/// Header **reorder** and **selection** are supported on main expandable rows
+/// (`reorder` / `onReorder`, `selection` / `selectionState`, …). Nested
+/// sublists keep their own APIs via [M3EExpandableExpanded.list]. If a row is
+/// expanded when a reorder drag starts, it snap-collapses and restores after
+/// settle. Sliver layout supports selection but not reorder.
 class M3EExpandableList extends M3EExpandableListBase {
   /// M3EExpandableList.
   M3EExpandableList({
@@ -598,7 +601,15 @@ class M3EExpandableList extends M3EExpandableListBase {
     super.expandMotion,
     super.collapseMotion,
     super.onExpansionChanged,
-  }) : _layout = _M3EExpandableListLayout.column,
+    super.selection = false,
+    super.selectionController,
+    super.onSelectionChanged,
+    super.selectionState,
+    super.reorder = false,
+    super.onReorder,
+    super.reorderState,
+  }) : assert(!reorder || onReorder != null),
+       _layout = _M3EExpandableListLayout.column,
        controller = null,
        physics = null,
        shrinkWrap = false,
@@ -627,7 +638,15 @@ class M3EExpandableList extends M3EExpandableListBase {
     super.expandMotion,
     super.collapseMotion,
     super.onExpansionChanged,
-  }) : _layout = _M3EExpandableListLayout.column,
+    super.selection = false,
+    super.selectionController,
+    super.onSelectionChanged,
+    super.selectionState,
+    super.reorder = false,
+    super.onReorder,
+    super.reorderState,
+  }) : assert(!reorder || onReorder != null),
+       _layout = _M3EExpandableListLayout.column,
        controller = null,
        physics = null,
        shrinkWrap = false,
@@ -644,11 +663,19 @@ class M3EExpandableList extends M3EExpandableListBase {
     super.expandMotion,
     super.collapseMotion,
     super.onExpansionChanged,
+    super.selection = false,
+    super.selectionController,
+    super.onSelectionChanged,
+    super.selectionState,
+    super.reorder = false,
+    super.onReorder,
+    super.reorderState,
     this.controller,
     this.physics,
     this.shrinkWrap = false,
     this.padding,
-  }) : _layout = _M3EExpandableListLayout.scrollable,
+  }) : assert(!reorder || onReorder != null),
+       _layout = _M3EExpandableListLayout.scrollable,
        super(
          itemCount: data.length,
          headerBuilder: m3eSimpleHeaderBuilder(data),
@@ -673,14 +700,23 @@ class M3EExpandableList extends M3EExpandableListBase {
     super.expandMotion,
     super.collapseMotion,
     super.onExpansionChanged,
+    super.selection = false,
+    super.selectionController,
+    super.onSelectionChanged,
+    super.selectionState,
+    super.reorder = false,
+    super.onReorder,
+    super.reorderState,
     this.controller,
     this.physics,
     this.shrinkWrap = false,
     this.padding,
-  }) : _layout = _M3EExpandableListLayout.scrollable;
+  }) : assert(!reorder || onReorder != null),
+       _layout = _M3EExpandableListLayout.scrollable;
 
   /// sliver.
-
+  ///
+  /// Header reorder is not supported for the sliver layout.
   M3EExpandableList.sliver({
     super.key,
     required List<M3EExpandableData> data,
@@ -690,6 +726,10 @@ class M3EExpandableList extends M3EExpandableListBase {
     super.expandMotion,
     super.collapseMotion,
     super.onExpansionChanged,
+    super.selection = false,
+    super.selectionController,
+    super.onSelectionChanged,
+    super.selectionState,
   }) : _layout = _M3EExpandableListLayout.sliver,
        controller = null,
        physics = null,
@@ -719,6 +759,10 @@ class M3EExpandableList extends M3EExpandableListBase {
     super.expandMotion,
     super.collapseMotion,
     super.onExpansionChanged,
+    super.selection = false,
+    super.selectionController,
+    super.onSelectionChanged,
+    super.selectionState,
   }) : _layout = _M3EExpandableListLayout.sliver,
        controller = null,
        physics = null,
@@ -747,32 +791,80 @@ class _M3EExpandableListState extends State<M3EExpandableList>
     with M3EExpandableStateMixin<M3EExpandableList> {
   @override
   Widget build(BuildContext context) {
+    assert(
+      widget._layout != _M3EExpandableListLayout.sliver || !widget.reorder,
+      'M3EExpandableList.sliver does not support reorder.',
+    );
     return M3EComponentTheme(
-      builder: (context) {
+      builder: (BuildContext context) {
+        Widget list;
         switch (widget._layout) {
           case _M3EExpandableListLayout.column:
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(
-                widget.itemCount,
-                (index) => buildItem(context, index),
-              ),
-            );
           case _M3EExpandableListLayout.scrollable:
-            return ListView.builder(
-              controller: widget.controller,
-              physics: widget.physics,
-              shrinkWrap: widget.shrinkWrap,
-              padding: widget.padding,
-              itemCount: widget.itemCount,
-              itemBuilder: (context, index) => buildItem(context, index),
-            );
+            if (widget.reorder) {
+              final M3EListReorderState rs =
+                  widget.reorderState ?? M3ETheme.of(context).listTheme.reorder;
+              list = M3EListReorderHost(
+                itemCount: widget.itemCount,
+                onReorder: widget.onReorder!,
+                reorderState: rs,
+                // Items already apply [M3EExpandableStyle.gap].
+                gap: 0,
+                scrollable:
+                    widget._layout == _M3EExpandableListLayout.scrollable,
+                controller: widget.controller,
+                physics: widget.physics,
+                shrinkWrap: widget.shrinkWrap,
+                padding: widget.padding,
+                prepareDrag: prepareReorderDrag,
+                onDragSettled: settleReorderDrag,
+                itemBuilder: (BuildContext context, int index) =>
+                    buildItem(context, index),
+              );
+            } else if (widget._layout == _M3EExpandableListLayout.scrollable) {
+              list = ListView.builder(
+                controller: widget.controller,
+                physics: widget.physics,
+                shrinkWrap: widget.shrinkWrap,
+                padding: widget.padding,
+                itemCount: widget.itemCount,
+                itemBuilder: (BuildContext context, int index) =>
+                    buildItem(context, index),
+              );
+            } else {
+              list = Column(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(
+                  widget.itemCount,
+                  (int index) => buildItem(context, index),
+                ),
+              );
+            }
           case _M3EExpandableListLayout.sliver:
-            return SliverList.builder(
+            list = SliverList.builder(
               itemCount: widget.itemCount,
-              itemBuilder: (context, index) => buildItem(context, index),
+              itemBuilder: (BuildContext context, int index) =>
+                  buildItem(context, index),
             );
         }
+
+        if (widget.selection || widget.reorder) {
+          list = M3EListFeatureHost(
+            itemCount: widget.itemCount,
+            selection: widget.selection,
+            reorder: widget.reorder,
+            selectionController: widget.selectionController,
+            onSelectionChanged: widget.onSelectionChanged,
+            selectionState: widget.selectionState,
+            reorderState: widget.reorderState,
+            child: list,
+          );
+        }
+
+        return M3EExpandableSnapCollapse(
+          snap: snapCollapseForReorder,
+          child: list,
+        );
       },
     );
   }

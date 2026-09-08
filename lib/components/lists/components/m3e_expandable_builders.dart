@@ -4,6 +4,7 @@ import '../styles/m3e_expandable_style.dart';
 import '../utils/m3e_list_row_features.dart';
 import 'm3e_expandable_data.dart';
 import 'm3e_expandable_expanded.dart';
+import 'm3e_expandable_header_tap_scope.dart';
 import 'm3e_expandable_item.dart';
 import 'm3e_list_feature_scope.dart';
 
@@ -28,21 +29,23 @@ Widget buildM3ESimpleHeader(
   );
 
   final String? subtitle = data.subtitle;
-  final Widget textColumn = Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: <Widget>[
-      Text(data.title, style: titleStyle),
-      if (subtitle != null && subtitle.isNotEmpty) ...<Widget>[
-        SizedBox(height: expandable.titleSubtitleGap),
-        Text(
-          subtitle,
-          maxLines: data.subtitleMaxLines ?? 2,
-          overflow: TextOverflow.ellipsis,
-          style: _resolveSubtitleStyle(theme, data),
-        ),
+  final Widget textColumn = M3EExpandableHeaderTapTarget(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(data.title, style: titleStyle),
+        if (subtitle != null && subtitle.isNotEmpty) ...<Widget>[
+          SizedBox(height: expandable.titleSubtitleGap),
+          Text(
+            subtitle,
+            maxLines: data.subtitleMaxLines ?? 2,
+            overflow: TextOverflow.ellipsis,
+            style: _resolveSubtitleStyle(theme, data),
+          ),
+        ],
       ],
-    ],
+    ),
   );
 
   return Row(

@@ -7,12 +7,22 @@ import 'package:motor/motor.dart';
 import '../../../foundations/foundations.dart';
 import '../../cards/m3e_cards.dart';
 import '../enums/m3e_expandable_enums.dart';
+import '../enums/m3e_list_selection_enums.dart';
 import '../styles/m3e_expandable_style.dart';
+import '../styles/m3e_list_reorder_state.dart';
+import '../styles/m3e_list_selection_state.dart';
 import '../utils/m3e_expandable_spring_motion.dart';
+import '../utils/m3e_list_immediate_tap.dart';
+import '../utils/m3e_list_selection_fill.dart';
 import '../utils/m3e_measure_size.dart';
 import 'm3e_card_list_item.dart';
 import 'm3e_expandable_expanded.dart';
+import 'm3e_expandable_header_tap_scope.dart';
+import 'm3e_expandable_nest_scope.dart';
+import 'm3e_expandable_snap_collapse.dart';
 import 'm3e_expandable_sublist.dart';
+import 'm3e_list_feature_scope.dart';
+import 'm3e_list_reorder_exclude.dart';
 
 part 'm3e_expandable_item_body.dart';
 
@@ -114,12 +124,16 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.isExpanded != widget.isExpanded) {
-      final motion = widget.isExpanded
-          ? widget.expandMotion.toMotion()
-          : widget.collapseMotion.toMotion();
-
-      _expandCtrl.motion = motion;
-      _expandCtrl.animateTo(widget.isExpanded ? 1.0 : 0.0);
+      final bool snap = M3EExpandableSnapCollapse.of(context);
+      if (snap) {
+        _expandCtrl.value = widget.isExpanded ? 1.0 : 0.0;
+      } else {
+        final motion = widget.isExpanded
+            ? widget.expandMotion.toMotion()
+            : widget.collapseMotion.toMotion();
+        _expandCtrl.motion = motion;
+        _expandCtrl.animateTo(widget.isExpanded ? 1.0 : 0.0);
+      }
     }
   }
 
@@ -164,6 +178,14 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
 
   BorderRadius _buildEffectiveRadius() {
     final d = widget.decoration;
+    final BorderRadius? selectedRadius = m3eSelectionRadius(
+      context,
+      widget.index,
+      outerRadius: d.outerRadius,
+    );
+    if (selectedRadius != null) {
+      return selectedRadius;
+    }
 
     if (_hasListExpansion) {
       return m3eExpandableParentRadius(
@@ -204,6 +226,16 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
     return BorderRadius.circular(effectiveInnerRadius);
   }
 
+  VoidCallback? _selectionDoubleTap() {
+    final M3EListFeatureScope? features = M3EListFeatureScope.maybeOf(context);
+    if (features == null ||
+        !features.selectionEnabled ||
+        features.selectionState.trigger != M3EListSelectionTrigger.doubleTap) {
+      return null;
+    }
+    return () => features.onToggleSelection(widget.index);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = M3ETheme.of(context);
@@ -211,31 +243,83 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
     final d = widget.decoration;
     final isLast = widget.index == widget.totalCount - 1;
     final bool hasList = _hasListExpansion;
+    final M3EListFeatureScope? features = M3EListFeatureScope.maybeOf(context);
+    final bool selectionOn = features?.selectionEnabled ?? false;
+    // Leading flip owns its own InkWell — keep expand off the card surface so
+    // icon tap-to-select cannot also toggle expand/collapse.
+    final bool separateLeadingSelect =
+        selectionOn &&
+        features!.selectionState.hasSelectedIcon &&
+        features.selectionState.trigger == M3EListSelectionTrigger.icon;
 
     final canTapHeader = d.tapHeaderToToggle;
     final canTapBody =
         (widget.isExpanded && d.tapBodyToCollapse) ||
         (!widget.isExpanded && d.tapBodyToExpand);
     final entireCardTappable =
-        !d.tapIconToToggle && canTapHeader && canTapBody && !hasList;
+        !separateLeadingSelect &&
+        !d.tapIconToToggle &&
+        canTapHeader &&
+        canTapBody &&
+        !hasList;
 
-    final outerTap = entireCardTappable ? widget.onToggle : null;
-    final headerTap =
-        (!entireCardTappable && canTapHeader && !d.tapIconToToggle)
-        ? widget.onToggle
+    final bool expandOnHeader =
+        !entireCardTappable && canTapHeader && !d.tapIconToToggle;
+    final bool pressForSelection = selectionOn && canTapHeader;
+
+    VoidCallback? rawHeaderOrOuter;
+    if (entireCardTappable ||
+        expandOnHeader ||
+        pressForSelection ||
+        separateLeadingSelect) {
+      rawHeaderOrOuter = () {
+        if (selectionOn && (features?.controller?.isSelectionMode ?? false)) {
+          features!.onToggleSelection(widget.index);
+          return;
+        }
+        if (entireCardTappable || expandOnHeader || separateLeadingSelect) {
+          widget.onToggle();
+        }
+      };
+    }
+
+    final VoidCallback? outerTap = entireCardTappable && !separateLeadingSelect
+        ? rawHeaderOrOuter
+        : null;
+    final VoidCallback? headerTap =
+        !entireCardTappable &&
+            !separateLeadingSelect &&
+            rawHeaderOrOuter != null
+        ? rawHeaderOrOuter
         : null;
 
     final String? outerTooltip = entireCardTappable
         ? (widget.isExpanded ? d.collapseTooltip : d.expandTooltip)
         : null;
 
-    final Widget headerCard = _buildAnimatedContainer(
-      scheme,
-      d,
-      outerTap,
-      headerTap,
-      outerTooltip,
-      bodyInsideCard: !hasList,
+    final VoidCallback? doubleTap = _selectionDoubleTap();
+
+    Widget headerCard = M3EListTapBinder(
+      onTap: separateLeadingSelect ? rawHeaderOrOuter : (outerTap ?? headerTap),
+      onDoubleTap: doubleTap,
+      builder: (BuildContext context, VoidCallback? onPressed) {
+        final Widget card = _buildAnimatedContainer(
+          scheme,
+          d,
+          separateLeadingSelect
+              ? null
+              : (entireCardTappable ? onPressed : null),
+          separateLeadingSelect
+              ? null
+              : (!entireCardTappable ? onPressed : null),
+          outerTooltip,
+          bodyInsideCard: !hasList,
+        );
+        if (!separateLeadingSelect) {
+          return card;
+        }
+        return M3EExpandableHeaderTapScope(onTap: onPressed, child: card);
+      },
     );
 
     Widget content = headerCard;
@@ -252,7 +336,24 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
                 progress: _expandCtrl.value,
                 style: d,
                 topGap: widget.expanded!.topGap,
-                child: widget.expanded!.child,
+                child: M3EListReorderExclude(
+                  // Block parent list selection/reorder from leaking into
+                  // nested lists; nested FeatureHosts still override this.
+                  child: M3EListFeatureScope(
+                    selectionEnabled: false,
+                    reorderEnabled: false,
+                    selectionState: M3EListSelectionState.defaults,
+                    reorderState: M3EListReorderState.defaults,
+                    controller: null,
+                    itemCount: 0,
+                    onToggleSelection: (_) {},
+                    child: M3EExpandableNestScope(
+                      closeBottom: isLast,
+                      outerRadius: d.outerRadius,
+                      child: widget.expanded!.child,
+                    ),
+                  ),
+                ),
               );
             },
           ),
@@ -331,10 +432,14 @@ class _M3EExpandableItemState extends State<M3EExpandableItem>
       ),
       builder: (context, animatedRadius, child) {
         final BorderRadius radius = animatedRadius ?? _buildEffectiveRadius();
+        final Color? fill =
+            m3eSelectionFill(context, widget.index) ??
+            d.color ??
+            scheme.surfaceContainerHighest;
         final Widget card = M3ECard(
           variant: M3ECardVariant.filled,
           borderRadius: radius,
-          color: d.color ?? scheme.surfaceContainerHighest,
+          color: fill,
           elevation: d.elevation,
           border: d.border,
           padding: EdgeInsets.zero,

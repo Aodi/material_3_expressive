@@ -8,6 +8,7 @@ import '../../../foundations/foundations.dart';
 import '../styles/m3e_list_reorder_state.dart';
 import '../utils/m3e_expandable_spring_motion.dart';
 import 'm3e_list_drag_proxy_scope.dart';
+import 'm3e_list_reorder_exclude.dart';
 
 /// Spring-driven reorderable list.
 ///
@@ -27,6 +28,8 @@ class M3EListReorderHost extends StatefulWidget {
     this.physics,
     this.shrinkWrap = false,
     this.padding,
+    this.prepareDrag,
+    this.onDragSettled,
     super.key,
   });
 
@@ -59,6 +62,17 @@ class M3EListReorderHost extends StatefulWidget {
 
   /// List padding when [scrollable].
   final EdgeInsetsGeometry? padding;
+
+  /// Called when a long-press drag is about to begin (before measuring).
+  ///
+  /// Awaited so callers can collapse expanded content before the drag extent
+  /// is cached.
+  final Future<void> Function(int index)? prepareDrag;
+
+  /// Called after drag ends with the from/to indices (to == from if no move).
+  ///
+  /// Invoked after [onReorder] when the index changed.
+  final void Function(int from, int to)? onDragSettled;
 
   @override
   State<M3EListReorderHost> createState() => _M3EListReorderHostState();
@@ -131,6 +145,9 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
     if (_dragIndex != null) {
       return;
     }
+    if (_isOverReorderExclude(index, event.position)) {
+      return;
+    }
     _activePointer = event.pointer;
     _pointerDownGlobal = event.position;
     _cancelPendingLongPress();
@@ -138,8 +155,51 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
       if (!mounted || _activePointer != event.pointer) {
         return;
       }
-      _startDrag(index, event.position);
+      unawaited(_beginDrag(index, event.position, event.pointer));
     });
+  }
+
+  /// True when [globalPosition] lies in a descendant [M3EListReorderExclude].
+  bool _isOverReorderExclude(int index, Offset globalPosition) {
+    final BuildContext? slotContext = _keyFor(index).currentContext;
+    if (slotContext is! Element) {
+      return false;
+    }
+    var hit = false;
+    void visit(Element element) {
+      if (hit) {
+        return;
+      }
+      if (element.widget is M3EListReorderExclude) {
+        final RenderObject? renderObject = element.renderObject;
+        if (renderObject is RenderBox &&
+            renderObject.hasSize &&
+            renderObject.attached) {
+          final Offset local = renderObject.globalToLocal(globalPosition);
+          if ((Offset.zero & renderObject.size).contains(local)) {
+            hit = true;
+            return;
+          }
+        }
+      }
+      element.visitChildren(visit);
+    }
+
+    slotContext.visitChildren(visit);
+    return hit;
+  }
+
+  Future<void> _beginDrag(int index, Offset globalPosition, int pointer) async {
+    final Future<void> Function(int index)? prepare = widget.prepareDrag;
+    if (prepare != null) {
+      await prepare(index);
+      if (!mounted || _activePointer != pointer || _dragIndex != null) {
+        // Restore any snap-collapse if the drag never started.
+        widget.onDragSettled?.call(index, index);
+        return;
+      }
+    }
+    _startDrag(index, globalPosition);
   }
 
   void _onPointerMove(PointerMoveEvent event) {
@@ -250,11 +310,13 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
   void _endDrag() {
     final int? from = _dragIndex;
     final int? to = _insertIndex;
+    var settledTo = from;
     if (from != null && to != null) {
       var newIndex = to;
       if (newIndex > from) {
         newIndex -= 1;
       }
+      settledTo = newIndex;
       if (newIndex != from) {
         widget.onReorder(from, newIndex);
       }
@@ -269,6 +331,9 @@ class _M3EListReorderHostState extends State<M3EListReorderHost>
       _insertIndex = null;
     });
     _dragDy.value = 0;
+    if (from != null && settledTo != null) {
+      widget.onDragSettled?.call(from, settledTo);
+    }
   }
 
   Widget _buildSlot(BuildContext context, int index) {

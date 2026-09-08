@@ -4,6 +4,7 @@ import '../../../foundations/foundations.dart';
 import '../../cards/m3e_cards.dart';
 import '../enums/m3e_list_enums.dart';
 import 'm3e_card_radius_motion.dart';
+import 'm3e_expandable_nest_scope.dart';
 import 'm3e_list_drag_proxy_scope.dart';
 import 'm3e_list_item_scope.dart';
 
@@ -18,15 +19,26 @@ M3ECardPosition calculateCardPosition(int index, int total) => total == 1
 
 /// Internal helper to calculate [BorderRadius] based on [M3ECardPosition].
 ///
-/// When [embedded] is true, every position uses [innerRadius] (no outer
-/// first/last/single extremities) so the list can sit under another card row.
+/// When [embedded] is true, items use [innerRadius] by default so the list can
+/// sit under another card row. Set [closeBottom] when the parent expandable is
+/// last/single so the nested last (or single) row uses [outerRadius] on the
+/// bottom corners.
 BorderRadius calculateCardRadius({
   required M3ECardPosition position,
   required double outerRadius,
   required double innerRadius,
   bool embedded = false,
+  bool closeBottom = false,
 }) {
   if (embedded) {
+    final bool isTail =
+        position == M3ECardPosition.last || position == M3ECardPosition.single;
+    if (closeBottom && isTail) {
+      return BorderRadius.vertical(
+        top: Radius.circular(innerRadius),
+        bottom: Radius.circular(outerRadius),
+      );
+    }
     return BorderRadius.circular(innerRadius);
   }
   switch (position) {
@@ -91,7 +103,8 @@ class M3ECardListItem extends StatelessWidget {
   /// gap.
   final double gap;
 
-  /// When true, first/last/single use [innerRadius] like middle items.
+  /// When true, first/last/single use [innerRadius] like middle items, unless
+  /// an ancestor [M3EExpandableNestScope] requests closing the bottom.
   final bool embedded;
 
   /// color.
@@ -136,14 +149,21 @@ class M3ECardListItem extends StatelessWidget {
       context,
     );
 
+    final M3EExpandableNestScope? nest = M3EExpandableNestScope.maybeOf(
+      context,
+    );
+    final bool closeBottom = nest?.closeBottom ?? false;
+    final double effectiveOuter = nest?.outerRadius ?? outerRadius;
+
     final BorderRadius borderRadius = dragProxy != null
         ? BorderRadius.circular(dragProxy.radius)
         : (resolvedBorderRadius ??
               calculateCardRadius(
                 position: position,
-                outerRadius: outerRadius,
+                outerRadius: effectiveOuter,
                 innerRadius: innerRadius,
                 embedded: embedded,
+                closeBottom: closeBottom,
               ));
 
     final M3ECardVariant effectiveVariant = dragProxy != null

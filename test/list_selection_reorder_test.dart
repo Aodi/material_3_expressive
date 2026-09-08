@@ -15,6 +15,26 @@ void main() {
   testWidgets('card list onReorder fires after drop', _cardListReorder);
   testWidgets('expandable sublist appears when expanded', _expandableSublist);
   testWidgets(
+    'expandable main selection fill and leading flip',
+    _expandableMainSelection,
+  );
+  testWidgets(
+    'expandable leading icon select does not expand',
+    _expandableLeadingSelectDoesNotExpand,
+  );
+  testWidgets(
+    'expandable nested last row closes bottom radii',
+    _expandableNestedLastClosesBottom,
+  );
+  testWidgets(
+    'expandable parent reorder ignores nested sublist long-press',
+    _expandableParentReorderIgnoresNested,
+  );
+  testWidgets(
+    'expandable reorder collapses then restores expansion',
+    _expandableReorderRestores,
+  );
+  testWidgets(
     'single tap is not delayed by double-tap trigger',
     _tapNotDelayed,
   );
@@ -176,6 +196,279 @@ Future<void> _expandableSublist(WidgetTester tester) async {
   await tester.pumpAndSettle();
   expect(find.text('Child 1'), findsOneWidget);
   expect(find.text('Child 2'), findsOneWidget);
+}
+
+Future<void> _expandableMainSelection(WidgetTester tester) async {
+  Set<int>? last;
+  await _pump(
+    tester,
+    M3EExpandableList(
+      selection: true,
+      selectionState: const M3EListSelectionState(
+        mode: M3EListSelectionMode.single,
+        selectedIcon: Icon(M3EIcons.check_circle),
+      ),
+      onSelectionChanged: (Set<int> s) => last = s,
+      data: <M3EExpandableData>[
+        M3EExpandableData(
+          title: 'Section 0',
+          leading: const Icon(M3EIcons.inbox),
+          expanded: M3EExpandableExpanded.list(
+            M3ECardList(
+              embedded: true,
+              itemCount: 1,
+              itemBuilder: (BuildContext context, int index) {
+                return const M3EListItem(
+                  headline: 'Nested only',
+                  leading: Icon(M3EIcons.folder),
+                );
+              },
+            ),
+          ),
+        ),
+        const M3EExpandableData(
+          title: 'Section 1',
+          leading: Icon(M3EIcons.inbox),
+          expanded: M3EExpandableExpanded.content(Text('Body 1')),
+        ),
+      ],
+    ),
+  );
+
+  // Main-row flips only (nested list blocked from parent selection scope).
+  expect(find.byType(M3ESelectionFlip), findsNWidgets(2));
+
+  await tester.tap(find.text('Section 0'));
+  await tester.pumpAndSettle();
+  expect(find.text('Nested only'), findsOneWidget);
+  // Nested leading must not pick up parent selection flips.
+  expect(find.byType(M3ESelectionFlip), findsNWidgets(2));
+
+  await tester.tap(find.byType(M3ESelectionFlip).at(1));
+  await tester.pumpAndSettle();
+  expect(last, <int>{1});
+
+  final M3EColorScheme scheme = M3EThemeData.light(
+    seedColor: const Color(0xFF6750A4),
+  ).colorScheme;
+  expect(_rowColor(tester, 'Section 1'), scheme.secondaryContainer);
+
+  // In selection mode, header tap toggles selection (does not collapse).
+  await tester.tap(find.text('Section 0'));
+  await tester.pumpAndSettle();
+  expect(last, <int>{0});
+  expect(find.text('Nested only'), findsOneWidget);
+}
+
+Future<void> _expandableLeadingSelectDoesNotExpand(WidgetTester tester) async {
+  Set<int>? last;
+  await _pump(
+    tester,
+    M3EExpandableList(
+      selection: true,
+      onSelectionChanged: (Set<int> s) => last = s,
+      selectionState: const M3EListSelectionState(
+        selectedIcon: Icon(M3EIcons.check_circle),
+      ),
+      data: <M3EExpandableData>[
+        M3EExpandableData(
+          title: 'Section',
+          leading: const Icon(M3EIcons.inbox),
+          expanded: M3EExpandableExpanded.content(const Text('BODY')),
+        ),
+      ],
+    ),
+  );
+
+  expect(find.text('BODY'), findsNothing);
+  await tester.tap(find.byType(M3ESelectionFlip));
+  await tester.pumpAndSettle();
+  expect(last, <int>{0});
+  expect(find.text('BODY'), findsNothing);
+
+  await tester.tap(find.text('Section'));
+  await tester.pumpAndSettle();
+  // In selection mode, title tap toggles selection (does not expand).
+  expect(last, <int>{});
+  expect(find.text('BODY'), findsNothing);
+}
+
+Future<void> _expandableNestedLastClosesBottom(WidgetTester tester) async {
+  const double outer = 16;
+  const double inner = 4;
+
+  await _pump(
+    tester,
+    M3EExpandableList(
+      style: const M3EExpandableStyle(outerRadius: outer, innerRadius: inner),
+      initiallyExpanded: const <int>{1},
+      data: <M3EExpandableData>[
+        M3EExpandableData(
+          title: 'First',
+          expanded: M3EExpandableExpanded.content(const Text('First body')),
+        ),
+        M3EExpandableData(
+          title: 'Last parent',
+          expanded: M3EExpandableExpanded.list(
+            M3ECardList(
+              embedded: true,
+              outerRadius: outer,
+              innerRadius: inner,
+              itemCount: 2,
+              itemBuilder: (BuildContext context, int index) {
+                return M3EListItem(headline: 'Nest $index');
+              },
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  final Finder nest0 = find.ancestor(
+    of: find.text('Nest 0'),
+    matching: find.byType(M3ECard),
+  );
+  final Finder nest1 = find.ancestor(
+    of: find.text('Nest 1'),
+    matching: find.byType(M3ECard),
+  );
+
+  expect(
+    tester.widget<M3ECard>(nest0).borderRadius,
+    BorderRadius.circular(inner),
+  );
+  expect(
+    tester.widget<M3ECard>(nest1).borderRadius,
+    const BorderRadius.vertical(
+      top: Radius.circular(inner),
+      bottom: Radius.circular(outer),
+    ),
+  );
+}
+
+Future<void> _expandableParentReorderIgnoresNested(WidgetTester tester) async {
+  final List<String> parents = <String>['Parent A', 'Parent B'];
+  final List<String> nested = <String>['Nest 0', 'Nest 1', 'Nest 2'];
+  var parentReorderCount = 0;
+
+  await _pump(
+    tester,
+    StatefulBuilder(
+      builder: (BuildContext context, StateSetter setState) {
+        return M3EExpandableList(
+          reorder: true,
+          initiallyExpanded: const <int>{0},
+          onReorder: (int oldIndex, int newIndex) {
+            parentReorderCount++;
+            setState(() {
+              final String item = parents.removeAt(oldIndex);
+              parents.insert(newIndex, item);
+            });
+          },
+          data: <M3EExpandableData>[
+            for (int i = 0; i < parents.length; i++)
+              M3EExpandableData(
+                title: parents[i],
+                expanded: i == 0
+                    ? M3EExpandableExpanded.list(
+                        M3ECardList(
+                          embedded: true,
+                          reorder: true,
+                          onReorder: (int oldIndex, int newIndex) {
+                            setState(() {
+                              final String item = nested.removeAt(oldIndex);
+                              nested.insert(newIndex, item);
+                            });
+                          },
+                          itemCount: nested.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            return M3EListItem(headline: nested[index]);
+                          },
+                        ),
+                      )
+                    : M3EExpandableExpanded.content(const Text('Other body')),
+              ),
+          ],
+        );
+      },
+    ),
+  );
+
+  expect(find.text('Nest 0'), findsOneWidget);
+
+  final TestGesture gesture = await tester.startGesture(
+    tester.getCenter(find.text('Nest 0').first),
+  );
+  await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+  await tester.pump();
+  // Parent must stay expanded — no snap-collapse from parent reorder.
+  expect(find.text('Nest 1'), findsOneWidget);
+  expect(find.text('Nest 2'), findsOneWidget);
+
+  await gesture.moveBy(const Offset(0, 120));
+  await tester.pump();
+  await gesture.up();
+  await tester.pumpAndSettle();
+
+  expect(parentReorderCount, 0);
+  expect(parents, <String>['Parent A', 'Parent B']);
+  expect(nested.first, isNot('Nest 0'));
+  expect(find.text('Nest 0'), findsOneWidget);
+}
+
+Future<void> _expandableReorderRestores(WidgetTester tester) async {
+  final List<String> titles = <String>['Alpha', 'Beta', 'Gamma'];
+  final List<String> bodies = <String>['Alpha body', 'Beta body', 'Gamma body'];
+
+  await _pump(
+    tester,
+    StatefulBuilder(
+      builder: (BuildContext context, StateSetter setState) {
+        return M3EExpandableList(
+          reorder: true,
+          initiallyExpanded: const <int>{0},
+          onReorder: (int oldIndex, int newIndex) {
+            setState(() {
+              final String title = titles.removeAt(oldIndex);
+              titles.insert(newIndex, title);
+              final String body = bodies.removeAt(oldIndex);
+              bodies.insert(newIndex, body);
+            });
+          },
+          data: <M3EExpandableData>[
+            for (int i = 0; i < titles.length; i++)
+              M3EExpandableData(
+                title: titles[i],
+                subtitle: 'Section',
+                expanded: M3EExpandableExpanded.content(Text(bodies[i])),
+              ),
+          ],
+        );
+      },
+    ),
+  );
+
+  expect(find.text('Alpha body'), findsOneWidget);
+
+  final TestGesture gesture = await tester.startGesture(
+    tester.getCenter(find.text('Alpha')),
+  );
+  await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+  // Collapse for measure should hide body before/during drag.
+  await tester.pump();
+  expect(find.text('Alpha body'), findsNothing);
+
+  await gesture.moveBy(const Offset(0, 160));
+  await tester.pump();
+  await gesture.up();
+  await tester.pumpAndSettle();
+
+  expect(titles.first, isNot('Alpha'));
+  final int alphaAt = titles.indexOf('Alpha');
+  expect(alphaAt, greaterThan(0));
+  expect(find.text('Alpha body'), findsOneWidget);
+  expect(bodies[alphaAt], 'Alpha body');
 }
 
 Future<void> _tapNotDelayed(WidgetTester tester) async {

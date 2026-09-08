@@ -25,6 +25,7 @@ class _ListsPlaygroundState extends State<ListsPlayground> {
   bool _showLeading = true;
   bool _showTrailing = true;
   bool _selection = false;
+  bool _nestedSelection = false;
   bool _reorder = false;
   bool _singleSelect = false;
   bool _doubleTapTrigger = false;
@@ -90,7 +91,7 @@ M3EDismissibleColumn(
 );''',
       _ListKind.expandable =>
         '''
-M3EExpandableList(
+M3EExpandableList(${_selection ? '\n  selection: true,' : ''}${_reorder ? '\n  reorder: true,\n  onReorder: (int a, int b) {},' : ''}
   data: <M3EExpandableData>[
     M3EExpandableData(
       title: $headline,
@@ -98,7 +99,7 @@ M3EExpandableList(
       expanded: ${_useSublist ? '''M3EExpandableExpanded.list(
         M3ECardList(
           embedded: true,
-          itemCount: 2,${_selection ? '\n          selection: true,' : ''}${_reorder ? '\n          reorder: true,\n          onReorder: (int a, int b) {},' : ''}
+          itemCount: 2,${_nestedSelection ? '\n          selection: true,' : ''}
           itemBuilder: (BuildContext context, int index) {
             return M3EListItem(headline: 'Child \${index + 1}');
           },
@@ -153,10 +154,12 @@ M3EExpandableList(
               showLeading: _showLeading,
               useSublist: _useSublist,
               selection: _selection,
+              nestedSelection: _nestedSelection,
               reorder: _reorder,
               selectionState: _selectionState,
+              order: _order,
+              onReorder: _onReorder,
               nestedOrder: _order,
-              onNestedReorder: _onReorder,
             ),
           },
         ),
@@ -211,28 +214,76 @@ M3EExpandableList(
               ),
           ],
         ),
-        if (_kind == _ListKind.cardList ||
-            _kind == _ListKind.dismissible ||
-            (_kind == _ListKind.expandable && _useSublist))
+        if (_kind == _ListKind.expandable)
           PlayControlPanel(
-            title: _kind == _ListKind.expandable
-                ? 'Sublist selection & reorder'
-                : (_kind == _ListKind.dismissible
-                      ? 'Selection'
-                      : 'Selection & reorder'),
+            title: 'Header selection & reorder',
             children: <Widget>[
               PlaySwitch(
                 label: 'Selection',
                 value: _selection,
                 onChanged: (bool v) => setState(() => _selection = v),
               ),
-              if (_kind != _ListKind.dismissible)
+              PlaySwitch(
+                label: 'Reorder',
+                value: _reorder,
+                onChanged: (bool v) => setState(() => _reorder = v),
+              ),
+              if (_selection) ...<Widget>[
+                PlaySwitch(
+                  label: 'Single select',
+                  value: _singleSelect,
+                  onChanged: (bool v) => setState(() => _singleSelect = v),
+                ),
+                PlaySwitch(
+                  label: 'Selected icon (leading flip)',
+                  value: _showSelectedIcon,
+                  onChanged: (bool v) {
+                    setState(() => _showSelectedIcon = v);
+                  },
+                ),
+                PlaySwitch(
+                  label: 'Double-tap trigger',
+                  value: _doubleTapTrigger,
+                  onChanged: (bool v) {
+                    setState(() => _doubleTapTrigger = v);
+                  },
+                ),
+              ],
+            ],
+          ),
+        if (_kind == _ListKind.cardList ||
+            _kind == _ListKind.dismissible ||
+            (_kind == _ListKind.expandable && _useSublist))
+          PlayControlPanel(
+            title: _kind == _ListKind.expandable
+                ? 'Sublist selection'
+                : (_kind == _ListKind.dismissible
+                      ? 'Selection'
+                      : 'Selection & reorder'),
+            children: <Widget>[
+              PlaySwitch(
+                label: 'Selection',
+                value: _kind == _ListKind.expandable
+                    ? _nestedSelection
+                    : _selection,
+                onChanged: (bool v) => setState(() {
+                  if (_kind == _ListKind.expandable) {
+                    _nestedSelection = v;
+                  } else {
+                    _selection = v;
+                  }
+                }),
+              ),
+              if (_kind == _ListKind.cardList)
                 PlaySwitch(
                   label: 'Reorder',
                   value: _reorder,
                   onChanged: (bool v) => setState(() => _reorder = v),
                 ),
-              if (_selection) ...<Widget>[
+              if ((_kind == _ListKind.expandable
+                      ? _nestedSelection
+                      : _selection) &&
+                  _kind != _ListKind.expandable) ...<Widget>[
                 PlaySwitch(
                   label: 'Single select',
                   value: _singleSelect,
@@ -395,10 +446,12 @@ class _ExpandablePreview extends StatelessWidget {
     required this.showLeading,
     required this.useSublist,
     required this.selection,
+    required this.nestedSelection,
     required this.reorder,
     required this.selectionState,
+    required this.order,
+    required this.onReorder,
     required this.nestedOrder,
-    required this.onNestedReorder,
   });
 
   final String headline;
@@ -406,69 +459,74 @@ class _ExpandablePreview extends StatelessWidget {
   final bool showLeading;
   final bool useSublist;
   final bool selection;
+  final bool nestedSelection;
   final bool reorder;
   final M3EListSelectionState selectionState;
+  final List<String> order;
+  final ReorderCallback onReorder;
   final List<String> nestedOrder;
-  final ReorderCallback onNestedReorder;
+
+  M3EExpandableData _section(BuildContext context, String id) {
+    final M3EThemeData theme = M3ETheme.of(context);
+    final bool isPrimary = id == '0';
+    return M3EExpandableData(
+      title: isPrimary ? headline : 'System update $id',
+      subtitle: isPrimary ? supporting : 'Version 2.4.0 is ready',
+      leading: showLeading
+          ? Icon(isPrimary ? M3EIcons.battery_alert : M3EIcons.system_update)
+          : null,
+      expanded: useSublist && isPrimary
+          ? M3EExpandableExpanded.list(
+              M3ECardList(
+                embedded: true,
+                selection: nestedSelection,
+                selectionState: selectionState,
+                itemCount: nestedOrder.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final String nestedId = nestedOrder[index];
+                  return M3EListItem(
+                    headline: 'Nested $nestedId',
+                    supportingText: 'Sublist row',
+                    leading: const Icon(M3EIcons.folder),
+                  );
+                },
+              ),
+            )
+          : M3EExpandableExpanded.content(
+              isPrimary
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Expanded body content for the list item.',
+                          style: theme.typeScale.bodyMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        M3EButton(
+                          style: M3EButtonStyle.tonal,
+                          onPressed: () {},
+                          child: const Text('Action'),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      'Security fixes and performance improvements.',
+                      style: theme.typeScale.bodyMedium,
+                    ),
+            ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final M3EThemeData theme = M3ETheme.of(context);
     return M3EExpandableList(
       initiallyExpanded: const <int>{0},
+      selection: selection,
+      selectionState: selectionState,
+      reorder: reorder,
+      onReorder: reorder ? onReorder : null,
       data: <M3EExpandableData>[
-        M3EExpandableData(
-          title: headline,
-          subtitle: supporting,
-          leading: showLeading ? const Icon(M3EIcons.battery_alert) : null,
-          expanded: useSublist
-              ? M3EExpandableExpanded.list(
-                  M3ECardList(
-                    embedded: true,
-                    selection: selection,
-                    reorder: reorder,
-                    selectionState: selectionState,
-                    onReorder: reorder ? onNestedReorder : null,
-                    itemCount: nestedOrder.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final String id = nestedOrder[index];
-                      return M3EListItem(
-                        headline: 'Nested $id',
-                        supportingText: 'Sublist row',
-                        leading: const Icon(M3EIcons.folder),
-                      );
-                    },
-                  ),
-                )
-              : M3EExpandableExpanded.content(
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'Expanded body content for the list item.',
-                        style: theme.typeScale.bodyMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      M3EButton(
-                        style: M3EButtonStyle.tonal,
-                        onPressed: () {},
-                        child: const Text('Action'),
-                      ),
-                    ],
-                  ),
-                ),
-        ),
-        M3EExpandableData(
-          title: 'System update',
-          subtitle: 'Version 2.4.0 is ready',
-          leading: showLeading ? const Icon(M3EIcons.system_update) : null,
-          expanded: M3EExpandableExpanded.content(
-            Text(
-              'Security fixes and performance improvements.',
-              style: theme.typeScale.bodyMedium,
-            ),
-          ),
-        ),
+        for (final String id in order) _section(context, id),
       ],
     );
   }

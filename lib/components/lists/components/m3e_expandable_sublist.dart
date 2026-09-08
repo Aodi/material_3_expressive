@@ -37,7 +37,8 @@ BorderRadius m3eExpandableParentRadius({
 /// Animates a nested list expansion under an expandable parent header.
 ///
 /// Does not wrap rows in cards — pass an [M3ECardList] (or similar) as [child]
-/// so gaps, selection, and reorder stay with that list.
+/// so gaps, selection, and reorder stay with that list. The expandable parent
+/// supplies nest-scope hints so a last parent can close nested bottom radii.
 class M3EExpandableSublist extends StatelessWidget {
   /// Creates a nested-list expansion wrapper.
   const M3EExpandableSublist({
