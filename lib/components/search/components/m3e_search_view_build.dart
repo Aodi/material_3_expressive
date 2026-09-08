@@ -163,7 +163,7 @@ extension _M3ESearchViewContentBuild on _M3ESearchViewContentState {
   }) {
     if (widget.showFullScreenView) {
       return M3ESearchBar(
-        autoFocus: true,
+        focusNode: _viewFocusNode,
         expandOnFocus: false,
         leading: widget.viewLeading ?? defaultLeading,
         trailing: widget.viewTrailing ?? defaultTrailing,
@@ -183,7 +183,7 @@ extension _M3ESearchViewContentBuild on _M3ESearchViewContentState {
       );
     }
     return M3ESearchBar(
-      autoFocus: true,
+      focusNode: _viewFocusNode,
       expandOnFocus: false,
       constraints: styles.headerConstraints,
       padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(styles.barPadding),

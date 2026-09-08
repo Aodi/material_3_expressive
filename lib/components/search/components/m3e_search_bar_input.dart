@@ -235,29 +235,34 @@ class _M3ESearchBarInputState extends State<M3ESearchBarInput> {
                     }
                   },
                 },
-                child: EditableText(
-                  controller: widget.controller,
-                  focusNode: widget.focusNode,
-                  readOnly: widget.readOnly || !widget.enabled,
-                  autofocus: widget.autoFocus,
-                  onTapOutside:
-                      widget.onTapOutside ??
-                      M3EFocus.tapOutsideHandler(widget.focusNode),
-                  onChanged: widget.onChanged,
-                  onSubmitted: widget.onSubmitted,
-                  style: widget.textStyle,
-                  cursorColor: widget.cursorColor,
-                  backgroundCursorColor: widget.cursorColor.withValues(
-                    alpha: 0.4,
+                // Read-only anchors must not take the text-input client on tap
+                // (soft keyboard flash when SearchAnchor opens the view).
+                child: AbsorbPointer(
+                  absorbing: widget.readOnly || !widget.enabled,
+                  child: EditableText(
+                    controller: widget.controller,
+                    focusNode: widget.focusNode,
+                    readOnly: widget.readOnly || !widget.enabled,
+                    autofocus: widget.autoFocus,
+                    onTapOutside:
+                        widget.onTapOutside ??
+                        M3EFocus.tapOutsideHandler(widget.focusNode),
+                    onChanged: widget.onChanged,
+                    onSubmitted: widget.onSubmitted,
+                    style: widget.textStyle,
+                    cursorColor: widget.cursorColor,
+                    backgroundCursorColor: widget.cursorColor.withValues(
+                      alpha: 0.4,
+                    ),
+                    selectionColor: widget.selectionColor,
+                    textCapitalization: widget.textCapitalization,
+                    textInputAction: widget.textInputAction,
+                    keyboardType: widget.keyboardType,
+                    scrollPadding: widget.scrollPadding,
+                    contextMenuBuilder: widget.contextMenuBuilder,
+                    smartDashesType: widget.smartDashesType,
+                    smartQuotesType: widget.smartQuotesType,
                   ),
-                  selectionColor: widget.selectionColor,
-                  textCapitalization: widget.textCapitalization,
-                  textInputAction: widget.textInputAction,
-                  keyboardType: widget.keyboardType,
-                  scrollPadding: widget.scrollPadding,
-                  contextMenuBuilder: widget.contextMenuBuilder,
-                  smartDashesType: widget.smartDashesType,
-                  smartQuotesType: widget.smartQuotesType,
                 ),
               ),
             ),

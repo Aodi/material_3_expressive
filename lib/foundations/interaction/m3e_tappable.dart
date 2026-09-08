@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'm3e_focus_interaction.dart';
@@ -283,7 +284,7 @@ class _M3ETappableState extends State<M3ETappable>
       onTap,
       onLongPress,
     );
-    return _wrapSemantics(_wrapFocus(pointer, interactive, onTap));
+    return _wrapSemantics(_wrapFocus(pointer, interactive));
   }
 
   Widget _wrapScale(Widget child) {
@@ -336,13 +337,18 @@ class _M3ETappableState extends State<M3ETappable>
     );
   }
 
-  Widget _wrapFocus(Widget child, bool interactive, VoidCallback? onTap) {
+  Widget _wrapFocus(Widget child, bool interactive) {
+    // Keyboard activation mirrors a short pointer press so scale / state-layer
+    // animations run (Material buttons set WidgetState.pressed the same way).
     Object? activate(Intent intent) {
-      onTap?.call();
+      if (!interactive || widget.onTap == null) {
+        return null;
+      }
+      _activateFromKeyboard();
       return null;
     }
 
-    return FocusableActionDetector(
+    Widget focused = FocusableActionDetector(
       enabled: interactive,
       focusNode: _effectiveFocusNode,
       autofocus: widget.autofocus,
@@ -356,6 +362,38 @@ class _M3ETappableState extends State<M3ETappable>
       },
       child: child,
     );
+
+    // Local shortcuts so FABs and other tappables activate on Enter even when
+    // an ancestor remaps keys (or omits ActivateIntent).
+    if (!interactive) {
+      return focused;
+    }
+    return Shortcuts(
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+      },
+      child: focused,
+    );
+  }
+
+  void _activateFromKeyboard() {
+    final VoidCallback? onTap = widget.onTap;
+    if (onTap == null) {
+      return;
+    }
+    _update(_state.copyWith(pressed: true));
+    _animateScale(widget.pressedScale);
+    _fireHaptic();
+    onTap();
+    // Hold the pressed visual briefly so the spring is visible, then release.
+    Future<void>.delayed(const Duration(milliseconds: 100), () {
+      if (!mounted) {
+        return;
+      }
+      _releasePress();
+    });
   }
 
   Widget _wrapSemantics(Widget child) {

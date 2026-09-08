@@ -6,8 +6,12 @@ import 'm3e_focus_ring_theme.dart';
 
 /// Draws the Material 3 Expressive keyboard focus ring around [child].
 ///
-/// When [focused] is false, returns [child] unchanged. Geometry and color come
-/// from [M3EThemeData.focusRingTheme] unless local overrides are provided.
+/// When [focused] is true, the ring is outset around [child]. A transparent
+/// [PhysicalModel] with elevation lifts the ring above opaque siblings (e.g.
+/// dropdown / list rows) without changing layout spacing between items.
+///
+/// Always uses a stable [Stack] so toggling [focused] does not remount
+/// [child] (important for [EditableText] text-input clients).
 class M3EFocusRing extends StatelessWidget {
   /// Creates a focus ring decorator.
   const M3EFocusRing({
@@ -64,6 +68,10 @@ class M3EFocusRing extends StatelessWidget {
         FocusHighlightMode.traditional;
   }
 
+  /// Elevation used while focused so the outset ring composites above
+  /// neighboring opaque surfaces without adding layout gaps.
+  static const double _focusedElevation = 6;
+
   @override
   Widget build(BuildContext context) {
     final theme = M3ETheme.of(context);
@@ -80,11 +88,10 @@ class M3EFocusRing extends StatelessWidget {
       bottomRight: Radius.circular(radius.bottomRight.x + outset),
     );
 
-    // Always use the same [Stack] structure. Switching between a bare child and
-    // a [Stack] when [focused] flips remounts descendants — that drops an
-    // [EditableText] text-input client while the [FocusNode] stays focused
-    // (ring visible, typing dead) and can yank Tab off search fields.
-    return RepaintBoundary(
+    return PhysicalModel(
+      elevation: focused ? _focusedElevation : 0,
+      color: const Color(0x00000000),
+      shadowColor: const Color(0x00000000),
       child: Stack(
         fit: StackFit.passthrough,
         clipBehavior: Clip.none,

@@ -497,6 +497,9 @@ class _M3ESearchAnchorState extends State<M3ESearchAnchor>
     if (viewIsOpen) {
       return;
     }
+    // Drop any anchor field focus before the view mounts so the soft keyboard
+    // does not flash on the read-only bar then hide when the route takes over.
+    FocusManager.instance.primaryFocus?.unfocus();
     final NavigatorState navigator = Navigator.of(context);
     _route = M3ESearchViewRoute(
       anchorKey: _anchorKey,
@@ -574,12 +577,17 @@ class _M3ESearchAnchorState extends State<M3ESearchAnchor>
       key: _anchorKey,
       opacity: _opacity(),
       duration: M3ESearchConstants.anchorFadeDuration,
-      child: IgnorePointer(
-        ignoring: !widget.enabled,
-        child: GestureDetector(
-          onTap: openView,
-          behavior: HitTestBehavior.translucent,
-          child: widget.builder(context, _searchController),
+      // Hidden anchors must not keep an EditableText text-input client or Tab
+      // stop while the search view owns the same controller.
+      child: ExcludeFocus(
+        excluding: !_anchorIsVisible,
+        child: IgnorePointer(
+          ignoring: !widget.enabled || !_anchorIsVisible,
+          child: GestureDetector(
+            onTap: openView,
+            behavior: HitTestBehavior.translucent,
+            child: widget.builder(context, _searchController),
+          ),
         ),
       ),
     );

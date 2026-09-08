@@ -595,4 +595,162 @@ void main() {
 
     expect(pressed, 1);
   });
+
+  testWidgets('FAB Enter activates when focused', (WidgetTester tester) async {
+    var pressed = 0;
+    final focusNode = FocusNode(debugLabel: 'fab');
+    addTearDown(focusNode.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: M3ETheme(
+          data: M3EThemeData.light(),
+          child: Scaffold(
+            floatingActionButton: M3EFab(
+              focusNode: focusNode,
+              icon: const Icon(Icons.add),
+              onPressed: () => pressed++,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    M3EFocusInteraction.instance.noteKeyboardHighlight();
+    focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    expect(focusNode.hasPrimaryFocus, isTrue);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 48));
+
+    // Press scale should be running (same path as pointer press).
+    final transforms = tester.widgetList<Transform>(
+      find.descendant(
+        of: find.byType(M3EFab),
+        matching: find.byType(Transform),
+      ),
+    );
+    final bool scaled = transforms.any((Transform t) {
+      final double scale = t.transform.storage[0];
+      return (scale - 1.0).abs() > 0.001;
+    });
+    expect(scaled, isTrue, reason: 'Enter should play FAB press scale');
+
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(pressed, 1);
+  });
+
+  testWidgets('selection dialog Enter selects focused radio', (
+    WidgetTester tester,
+  ) async {
+    List<String>? result;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: M3ETheme(
+          data: M3EThemeData.light(),
+          child: Builder(
+            builder: (BuildContext context) {
+              return Scaffold(
+                body: M3EButton.filled(
+                  onPressed: () async {
+                    result = await M3EDialog.showSelectionScreen(
+                      context,
+                      title: 'Plan',
+                      options: const <String>['A', 'B', 'C'],
+                    );
+                  },
+                  child: const Text('Open'),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    // Tab stops are the radios (enabled), not a disabled-looking shell.
+    final Finder radioB = find.ancestor(
+      of: find.text('B'),
+      matching: find.byType(M3ERadio<String>),
+    );
+    expect(radioB, findsOneWidget);
+
+    final Finder optionFocus = find.descendant(
+      of: radioB,
+      matching: find.byType(FocusableActionDetector),
+    );
+    final FocusableActionDetector detector = tester.widget(optionFocus);
+    expect(detector.enabled, isTrue);
+    final FocusNode? node = detector.focusNode;
+    expect(node, isNotNull);
+
+    M3EFocusInteraction.instance.noteKeyboardHighlight();
+    node!.requestFocus();
+    await tester.pumpAndSettle();
+    expect(node.hasPrimaryFocus, isTrue);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(result, <String>['B']);
+  });
+
+  testWidgets('focus ring paints above opaque sibling without extra gap', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: M3ETheme(
+          data: M3EThemeData.light(),
+          child: const Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 120,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    M3EFocusRing(
+                      focused: true,
+                      radius: BorderRadius.all(Radius.circular(12)),
+                      child: ColoredBox(
+                        color: Color(0xFF2196F3),
+                        child: SizedBox(width: 120, height: 40),
+                      ),
+                    ),
+                    // 3dp gap — less than default ring outset (gap+width = 4).
+                    SizedBox(height: 3),
+                    ColoredBox(
+                      color: Color(0xFFFF9800),
+                      child: SizedBox(width: 120, height: 40),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final PhysicalModel model = tester.widget(
+      find.descendant(
+        of: find.byType(M3EFocusRing),
+        matching: find.byType(PhysicalModel),
+      ),
+    );
+    expect(model.elevation, greaterThan(0));
+    expect(tester.takeException(), isNull);
+  });
 }

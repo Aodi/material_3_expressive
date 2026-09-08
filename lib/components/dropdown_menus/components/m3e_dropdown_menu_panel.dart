@@ -185,7 +185,7 @@ extension _M3EDropdownMenuPanel<T> on _M3EDropdownMenuState<T> {
         itemCount: filtered.length,
         separatorBuilder: (_, _) =>
             widget.itemSeparator ??
-            SizedBox(height: widget.itemStyle.itemGap ?? 3.0),
+            SizedBox(height: widget.itemStyle.itemGap ?? 5.0),
         itemBuilder: (context, index) =>
             _buildPanelItem(filtered[index], index, filtered.length),
       ),
