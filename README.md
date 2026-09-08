@@ -109,11 +109,14 @@ Summary of public API and behavior updates since 1.1.1 (details in
 - **Keyboard focus rings** — actionable controls show an outset ring for
   keyboard focus. Configure via `M3EThemeData.focusRingTheme` /
   `keyboardFocusIndicators` (see [Quick start](#quick-start)).
-- **List selection & reorder** — `M3ECardList` / dismissible lists accept
-  `selection`, `reorder`, `selectionController`, `selectionState`,
-  `reorderState`, and `onReorder`. Theme tokens:
-  `M3EListSelectionState`, `M3EListReorderState`,
+- **List selection & reorder** — `M3ECardList`, dismissible lists, and
+  expandable header rows accept `selection` / `reorder` (and related
+  callbacks / state). Nested expandable sublists keep their own list APIs.
+  Theme tokens: `M3EListSelectionState`, `M3EListReorderState`,
   `M3EListSelectionMode` / `M3EListSelectionTrigger`.
+- **Dismissible swipe actions** — optional `leadingActionsBuilder` /
+  `trailingActionsBuilder` reveal icon actions (`M3EListSwipeAction`) with
+  preview snap; full swipe still dismisses when a side has no actions.
 - **Expandable nested lists** — `M3EExpandableData.expanded` uses
   `M3EExpandableExpanded.list(child)` or `.content(child)` (replaces a plain
   `body` widget). Nested card lists can set `embedded: true` for inner radii.
@@ -121,8 +124,8 @@ Summary of public API and behavior updates since 1.1.1 (details in
   fields (switch, FAB menu, nav rail, checkbox, slider, icon button, toolbar,
   list card radius / dismissible, refresh settle, …). Defaults match prior
   hard-coded motion.
-- **Dropdown open/close motion** — `M3EDropdownMenu.openMotion` /
-  `closeMotion` are optional; when null they resolve from
+- **Dropdown** — optional `limit` caps multi-select count (`null` = unlimited).
+  `openMotion` / `closeMotion` are optional; when null they resolve from
   `M3EDropdownMenuTheme.openSpring` / `closeSpring`.
 - **Toolbar FAB** — `fabExpandsToolbar: false` keeps a fixed baseline FAB
   that only runs `onFabPressed` (pill stays open).
@@ -701,7 +704,8 @@ M3EChip(
 
 Static list, multi-select, search, and async loading. When search is enabled,
 the in-panel field defaults to `surface` fill and the panel container radius.
-Optional `openMotion` / `closeMotion` override theme
+Optional `limit` caps how many items can be selected in multi-select (`null` =
+unlimited). Optional `openMotion` / `closeMotion` override theme
 `M3EDropdownMenuTheme.openSpring` / `closeSpring` (null → theme).
 
 ```dart
@@ -716,9 +720,10 @@ M3EDropdownMenu<String>(
   onSelectionChanged: (items) {},
 );
 
-// Multi select with search
+// Multi select with search (and optional selection cap)
 M3EDropdownMenu<String>(
   searchEnabled: true,
+  limit: 2,
   items: const [
     M3EDropdownItem(label: 'Layout', value: 'layout'),
     M3EDropdownItem(label: 'Theming', value: 'theming'),
@@ -1022,13 +1027,28 @@ An explicit `colorBuilder` still wins over the selection highlight.
 #### M3EDismissibleColumn
 
 Vertically swipeable card list with expressive physics. Supports list-owned
-`selection` (same tokens as card list; reorder is not available on dismissible).
+`selection` and `reorder` (same tokens as card list). Optional
+`leadingActionsBuilder` / `trailingActionsBuilder` reveal icon actions
+(`M3EListSwipeAction`) with preview snap; a side with no actions still
+full-dismisses.
 
 ```dart
 M3EDismissibleColumn(
   itemCount: 3,
   selection: true,
+  reorder: true,
+  onReorder: (oldIndex, newIndex) {},
   onDismiss: (index, direction) async => true,
+  trailingActionsBuilder: (index) => [
+    M3EListSwipeAction(
+      icon: const Icon(M3EIcons.archive),
+      onPressed: () {},
+    ),
+    const M3EListSwipeAction(
+      icon: Icon(M3EIcons.delete),
+      isPrimary: true,
+    ),
+  ],
   onTap: (index) {},
   itemBuilder: (context, index) => M3EListItem(
     headline: 'Swipe to dismiss',
@@ -1058,11 +1078,16 @@ SizedBox(
 
 Expandable cards with expressive open/close motion. Use
 `M3EExpandableExpanded.list` for a nested list (e.g. `M3ECardList` with
-`embedded: true`) or `.content` for freeform body content. Optional
-`expandMotion` / `collapseMotion` override theme springs.
+`embedded: true`) or `.content` for freeform body content. Header rows support
+list-owned `selection` / `reorder` (nested lists keep their own APIs; expanded
+rows snap-collapse for reorder). Optional `expandMotion` / `collapseMotion`
+override theme springs.
 
 ```dart
 M3EExpandableList(
+  selection: true,
+  reorder: true,
+  onReorder: (oldIndex, newIndex) {},
   data: [
     M3EExpandableData(
       title: 'Battery level low',

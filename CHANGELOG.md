@@ -16,13 +16,22 @@
 * Example **Focus rings** playground (View tab).
 * List-owned **selection** and **reorder** on `M3ECardList` /
   `M3ECardList.builder` (`selection`, `reorder`, `selectionController`,
-  `onSelectionChanged`, `onReorder`, `selectionState`, `reorderState`) and
-  **selection** on dismissible lists. Theme tokens:
+  `onSelectionChanged`, `onReorder`, `selectionState`, `reorderState`),
+  **selection** and **reorder** on dismissible lists, and **selection** /
+  **reorder** on expandable header rows (nested sublists keep their own list
+  APIs; expanded rows snap-collapse for reorder). Theme tokens:
   `M3EListSelectionState`, `M3EListReorderState`, enums
   `M3EListSelectionMode` / `M3EListSelectionTrigger`.
+* Dismissible **swipe actions** via `leadingActionsBuilder` /
+  `trailingActionsBuilder` and `M3EListSwipeAction` (icon pills, preview snap,
+  primary auto-execute). Style tokens on `M3EDismissibleListStyle` /
+  `M3EListDismissibleTheme` (spacing, edge padding, preview threshold,
+  overdrag, min sizes).
 * Expandable nested expansions via `M3EExpandableExpanded.list` /
   `.content` on `M3EExpandableData.expanded`; `embedded` on card /
   dismissible lists for inner corner radii when nested.
+* `M3EDropdownMenu.limit` (`int?`, default `null` = unlimited) to cap
+  multi-select count (`limit` takes precedence over `maxSelections` when set).
 * Configurable spatial springs on component themes (defaults match prior
   hard-coded motion), including switch position/size, FAB menu expand/shape,
   nav rail indicator/icon scale, checkbox pulse, slider dock, icon button
@@ -37,6 +46,8 @@
 * Bump `material_ui` to `^1.1.1`.
 * `M3EDropdownMenu.openMotion` / `closeMotion` are nullable; when null they
   resolve from `M3EDropdownMenuTheme.openSpring` / `closeSpring`.
+* Dropdown field selected-value text defaults to `bodyMedium` (was
+  `bodyLarge`); chip delete icon size follows the chip label font size.
 * Prefer `M3EThemeData.focusRingTheme` for package-wide focus ring overrides;
   legacy `M3EButtonTheme.focusRingWidth` / `focusRingGap` / `focusRingColor`
   remain for compatibility.
@@ -51,6 +62,8 @@
   resume on keyboard; pointer down requests focus so Tab continues from the
   last clicked control; menus/dropdowns trap Tab; Escape closes overlays /
   unfocuses fields; keyboard focus scrolls into view when rings are allowed.
+* Expandable list: Tab traverses expanded sublist rows after the header;
+  collapsed / mid-animation bodies stay out of the focus order.
 * `M3EFocusRing` keeps a stable tree when toggling `focused` so `EditableText`
   is not remounted (Tab-focus text fields stay editable).
 * Search bar keeps the editing row mounted under idle chrome; `M3ESearchAnchor.bar`
