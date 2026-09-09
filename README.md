@@ -1638,10 +1638,12 @@ SizedBox(
 #### M3ELoadingIndicator
 
 Expressive loading spinner. Shape morph settle uses
-`M3EMotion.expressiveSpatialDefault`. Optional `elevation` (theme default `0`),
-`color` / `containerColor`, and `rotationTurns` (when set, disables auto spin
-and morph pulse so a host can drive rotation). Contained uses rounded-shell
-elevation; the default (uncontained) morph casts a path shadow.
+`M3EMotion.expressiveSpatialDefault`. Supports `indicatorSize`, `containerWidth`,
+`containerHeight`, `containerShape`, and `indicatorColors` in addition to
+`elevation`, `color` / `containerColor`, and `rotationTurns`. `indicatorColors` cycles
+and interpolates colors during morphing; use it instead of `color`. Contained
+uses the configured container shape and rounded-shell elevation; the default
+(uncontained) morph casts a path shadow.
 
 ```dart
 const M3ELoadingIndicator();

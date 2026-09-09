@@ -12,6 +12,7 @@ class M3ELoadingIndicatorTheme
     this.containerWidth = 48,
     this.containerHeight = 48,
     this.activeIndicatorSize = 38,
+    this.containerShape = const StadiumBorder(),
     this.elevation = 0,
     this.globalRotationDuration = const Duration(milliseconds: 1600),
     this.morphInterval = const Duration(milliseconds: 1000),
@@ -21,7 +22,12 @@ class M3ELoadingIndicatorTheme
     this.pulseStartScale = 0.99,
     this.pulseSpring = M3EMotion.expressiveSpatialSlow,
     this.pulseSpringVelocity = 5,
-  });
+  }) : assert(containerWidth > 0, 'containerWidth must be greater than zero'),
+       assert(containerHeight > 0, 'containerHeight must be greater than zero'),
+       assert(
+         activeIndicatorSize > 0,
+         'activeIndicatorSize must be greater than zero',
+       );
 
   /// defaults.
 
@@ -36,6 +42,9 @@ class M3ELoadingIndicatorTheme
 
   /// activeIndicatorSize.
   final double activeIndicatorSize;
+
+  /// Shape of the loading indicator container.
+  final ShapeBorder containerShape;
 
   /// Default surface elevation for both variants (`0` = flat).
   final double elevation;
@@ -68,8 +77,9 @@ class M3ELoadingIndicatorTheme
   /// Initial velocity for the pulse spring (0 = smooth settle).
   final double pulseSpringVelocity;
 
-  /// The containerRadius.
-
+  /// Legacy rounded container radius accessor.
+  ///
+  /// Prefer [containerShape] for new code.
   BorderRadius get containerRadius => BorderRadius.circular(999);
 
   /// activeColor.
@@ -119,6 +129,7 @@ class M3ELoadingIndicatorTheme
     double? containerWidth,
     double? containerHeight,
     double? activeIndicatorSize,
+    ShapeBorder? containerShape,
     double? elevation,
     Duration? globalRotationDuration,
     Duration? morphInterval,
@@ -133,6 +144,7 @@ class M3ELoadingIndicatorTheme
       containerWidth: containerWidth ?? this.containerWidth,
       containerHeight: containerHeight ?? this.containerHeight,
       activeIndicatorSize: activeIndicatorSize ?? this.activeIndicatorSize,
+      containerShape: containerShape ?? this.containerShape,
       elevation: elevation ?? this.elevation,
       globalRotationDuration:
           globalRotationDuration ?? this.globalRotationDuration,
@@ -157,6 +169,11 @@ class M3ELoadingIndicatorTheme
       activeIndicatorSize: _lerpDouble(
         activeIndicatorSize,
         other.activeIndicatorSize,
+        t,
+      )!,
+      containerShape: ShapeBorder.lerp(
+        containerShape,
+        other.containerShape,
         t,
       )!,
       elevation: _lerpDouble(elevation, other.elevation, t)!,
