@@ -65,33 +65,35 @@ class M3EExpandableSublist extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (progress <= 0) {
-      return const SizedBox.shrink();
-    }
-
+    // Keep [child] mounted at heightFactor 0 so nested selection / reorder
+    // state survives collapse until the user resets it.
     final double t = progress.clamp(0.0, 1.2);
-    final double heightFactor = t.clamp(0.0, 1.0);
+    final double heightFactor = progress <= 0 ? 0.0 : t.clamp(0.0, 1.0);
     final double gap = topGap ?? style.gap;
     // Match dropdown panel items: only fully revealed rows are Tab stops.
     final bool excludeFocus = heightFactor < 1.0;
+    final bool collapsed = heightFactor <= 0;
 
     return ExcludeFocus(
       excluding: excludeFocus,
-      child: ClipRect(
-        child: Align(
-          alignment: Alignment.topCenter,
-          heightFactor: heightFactor,
-          child: Opacity(
-            opacity: heightFactor,
-            child: Transform.translate(
-              offset: Offset(0, (1.0 - t) * 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  if (gap > 0) SizedBox(height: gap),
-                  child,
-                ],
+      child: TickerMode(
+        enabled: !collapsed,
+        child: ClipRect(
+          child: Align(
+            alignment: Alignment.topCenter,
+            heightFactor: heightFactor,
+            child: Opacity(
+              opacity: heightFactor,
+              child: Transform.translate(
+                offset: Offset(0, collapsed ? 0 : (1.0 - t) * 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    if (gap > 0) SizedBox(height: gap),
+                    child,
+                  ],
+                ),
               ),
             ),
           ),

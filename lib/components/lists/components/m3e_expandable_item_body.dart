@@ -12,10 +12,7 @@ extension _M3EExpandableItemBody on _M3EExpandableItemState {
     final resolvedPadding = effectivePadding.resolve(
       Directionality.of(context),
     );
-    final contentShift = math.min<double>(
-      12,
-      resolvedPadding.bottom * 0.6 + 4.0,
-    );
+    final contentShift = math.min<double>(12, resolvedPadding.bottom * 0.6 + 4);
     final bodyHeight = _computeBodyHeight(effectivePadding, progress);
     final translationY = -(1.0 - progress.clamp(0.0, 1.0)) * contentShift;
     final needsMeasurement =
@@ -482,28 +479,37 @@ extension _M3EExpandableItemHeader on _M3EExpandableItemState {
     required bool isEntirelyTappable,
   }) {
     final expandableTheme = M3ETheme.of(context).listTheme.expandable;
+    final EdgeInsetsGeometry headerPadding =
+        d.headerPadding ?? expandableTheme.headerPadding;
+    final double iconGap = M3ETheme.of(context).listTheme.item.gap;
+
     final headerContent = Padding(
-      padding: d.headerPadding ?? expandableTheme.headerPadding,
-      child: Row(
-        crossAxisAlignment: d.headerAlignment == CrossAxisAlignment.stretch
-            ? CrossAxisAlignment.center
-            : d.headerAlignment,
-        textBaseline: d.headerAlignment == CrossAxisAlignment.baseline
-            ? TextBaseline.alphabetic
-            : null,
-        children: [
-          if (d.iconPlacement == M3EExpandableIconPlacement.left) ...[
-            _buildIcon(d, progress, widget.onToggle),
-            Expanded(
-              child: widget.headerBuilder(context, widget.index, progress),
-            ),
-          ] else ...[
-            Expanded(
-              child: widget.headerBuilder(context, widget.index, progress),
-            ),
-            _buildIcon(d, progress, widget.onToggle),
+      padding: headerPadding,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (d.iconPlacement == M3EExpandableIconPlacement.left) ...[
+              _buildIcon(d, progress, widget.onToggle),
+              SizedBox(width: iconGap),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: widget.headerBuilder(context, widget.index, progress),
+                ),
+              ),
+            ] else ...[
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: widget.headerBuilder(context, widget.index, progress),
+                ),
+              ),
+              SizedBox(width: iconGap),
+              _buildIcon(d, progress, widget.onToggle),
+            ],
           ],
-        ],
+        ),
       ),
     );
 
@@ -545,13 +551,30 @@ extension _M3EExpandableItemHeader on _M3EExpandableItemState {
         ? (isExpanded ? d.collapseTooltip : d.expandTooltip)
         : null;
 
-    Widget iconWidget = Padding(
-      padding: d.iconPadding,
-      child: Transform.rotate(angle: angle, child: icon),
-    );
+    final Widget rotated = Transform.rotate(angle: angle, child: icon);
+    final Widget iconWidget;
+    if (d.expandedIconBackgroundSize > 0) {
+      final double width = d.expandedIconBackgroundSize;
+      final Color? fill = isExpanded
+          ? (d.expandedIconBackground ??
+                M3ETheme.of(context).colorScheme.surfaceContainerLowest)
+          : null;
+      iconWidget = ConstrainedBox(
+        constraints: BoxConstraints.tightFor(width: width),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(width / 2),
+          ),
+          child: Center(child: rotated),
+        ),
+      );
+    } else {
+      iconWidget = Align(child: rotated);
+    }
 
     if (d.tapIconToToggle) {
-      iconWidget = _buildInteractionWrapper(
+      return _buildInteractionWrapper(
         d,
         onTap: onToggle,
         isHeader: true,
@@ -561,15 +584,11 @@ extension _M3EExpandableItemHeader on _M3EExpandableItemState {
         tooltip: tooltip,
         child: iconWidget,
       );
-    } else {
-      iconWidget = ExcludeSemantics(child: iconWidget);
     }
-
-    return iconWidget;
+    return ExcludeSemantics(child: iconWidget);
   }
 }
 
-/// Interaction wrapper helpers for [_M3EExpandableItemState].
 extension _M3EExpandableItemInteraction on _M3EExpandableItemState {
   Widget _buildInteractionWrapper(
     M3EExpandableStyle d, {

@@ -57,6 +57,18 @@ class M3EExpandableStyle {
   /// Expand icon padding.
   final EdgeInsetsGeometry iconPadding;
 
+  /// Width of the vertical pill behind the trailing expand icon.
+  ///
+  /// Height fills the header content area. Size is stable across expand /
+  /// collapse; only the fill toggles. Defaults to
+  /// [M3EListExpandableTheme.defaultExpandedIconBackgroundSize].
+  final double expandedIconBackgroundSize;
+
+  /// Fill for the expanded trailing-icon chrome.
+  ///
+  /// When null, resolves to [M3EColorScheme.surfaceContainerLowest].
+  final Color? expandedIconBackground;
+
   /// Icon rotation angle in clockwise radians.
   final double iconRotationAngle;
 
@@ -134,6 +146,9 @@ class M3EExpandableStyle {
     this.titleSubtitleGap = M3EListExpandableTheme.defaultTitleSubtitleGap,
     this.margin,
     this.iconPadding = M3EListExpandableTheme.defaultIconPadding,
+    this.expandedIconBackgroundSize =
+        M3EListExpandableTheme.defaultExpandedIconBackgroundSize,
+    this.expandedIconBackground,
     this.iconRotationAngle = M3EListExpandableTheme.defaultIconRotationAngle,
     this.expandIcon = const Icon(M3EIcons.expand_more_rounded),
     this.collapseIcon = const Icon(M3EIcons.expand_more_rounded),
@@ -164,6 +179,8 @@ class M3EExpandableStyle {
       gap: theme.gap,
       titleSubtitleGap: theme.titleSubtitleGap,
       iconPadding: theme.iconPadding,
+      expandedIconBackgroundSize: theme.expandedIconBackgroundSize,
+      expandedIconBackground: theme.expandedIconBackground,
       iconRotationAngle: theme.iconRotationAngle,
       expandTooltip: theme.expandTooltip,
       collapseTooltip: theme.collapseTooltip,
@@ -186,6 +203,8 @@ class M3EExpandableStyle {
     double? titleSubtitleGap,
     EdgeInsetsGeometry? margin,
     EdgeInsetsGeometry? iconPadding,
+    double? expandedIconBackgroundSize,
+    Color? expandedIconBackground,
     double? iconRotationAngle,
     Widget? expandIcon,
     Widget? collapseIcon,
@@ -220,6 +239,10 @@ class M3EExpandableStyle {
       titleSubtitleGap: titleSubtitleGap ?? this.titleSubtitleGap,
       margin: margin ?? this.margin,
       iconPadding: iconPadding ?? this.iconPadding,
+      expandedIconBackgroundSize:
+          expandedIconBackgroundSize ?? this.expandedIconBackgroundSize,
+      expandedIconBackground:
+          expandedIconBackground ?? this.expandedIconBackground,
       iconRotationAngle: iconRotationAngle ?? this.iconRotationAngle,
       expandIcon: expandIcon ?? this.expandIcon,
       collapseIcon: collapseIcon ?? this.collapseIcon,
@@ -259,6 +282,8 @@ class M3EExpandableStyle {
           titleSubtitleGap == other.titleSubtitleGap &&
           margin == other.margin &&
           iconPadding == other.iconPadding &&
+          expandedIconBackgroundSize == other.expandedIconBackgroundSize &&
+          expandedIconBackground == other.expandedIconBackground &&
           iconRotationAngle == other.iconRotationAngle &&
           expandIcon == other.expandIcon &&
           collapseIcon == other.collapseIcon &&
@@ -294,6 +319,8 @@ class M3EExpandableStyle {
     titleSubtitleGap,
     margin,
     iconPadding,
+    expandedIconBackgroundSize,
+    expandedIconBackground,
     iconRotationAngle,
     expandIcon,
     collapseIcon,

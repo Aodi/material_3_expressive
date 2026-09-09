@@ -200,13 +200,16 @@ class M3EListDismissibleTheme {
   static const double defaultGap = M3EListCardListTheme.defaultGap;
 
   /// defaultActionGap.
-  static const double defaultActionGap = 8;
+  ///
+  /// Matches [defaultActionSpacing] / [defaultActionEdgePadding] so the gap
+  /// between actions equals the gap between actions and the list item.
+  static const double defaultActionGap = 2;
 
   /// defaultActionSpacing.
-  static const double defaultActionSpacing = 8;
+  static const double defaultActionSpacing = 2;
 
   /// defaultActionEdgePadding.
-  static const double defaultActionEdgePadding = 8;
+  static const double defaultActionEdgePadding = 2;
 
   /// Fraction of actions width at which the preview snaps open on release.
   static const double defaultActionPreviewThreshold = 0.35;
@@ -440,12 +443,10 @@ class M3EListExpandableTheme {
 
   /// defaultHeaderPadding.
   ///
-  /// Balanced insets for title + subtitle in the header (subtitle used to live
-  /// in the body, which previously owned the bottom padding).
-  static const EdgeInsets defaultHeaderPadding = EdgeInsets.symmetric(
-    horizontal: 16,
-    vertical: 14,
-  );
+  /// Matches [M3EListCardListTheme.defaultItemPadding] so expandable headers
+  /// align with card / dismissible list rows.
+  static const EdgeInsets defaultHeaderPadding =
+      M3EListCardListTheme.defaultItemPadding;
 
   /// defaultBodyPadding.
   static const EdgeInsets defaultBodyPadding = EdgeInsets.fromLTRB(
@@ -457,6 +458,13 @@ class M3EListExpandableTheme {
 
   /// defaultIconPadding.
   static const EdgeInsets defaultIconPadding = EdgeInsets.all(8);
+
+  /// Width of the vertical pill behind the trailing expand icon.
+  ///
+  /// Height fills the header content area. The box size is the same when
+  /// collapsed or expanded; only the fill is shown while expanded. Set to `0`
+  /// to disable the chrome entirely.
+  static const double defaultExpandedIconBackgroundSize = 32;
 
   /// defaultIconRotationAngle.
   static const double defaultIconRotationAngle = math.pi;
@@ -479,6 +487,8 @@ class M3EListExpandableTheme {
     this.headerPadding = defaultHeaderPadding,
     this.bodyPadding = defaultBodyPadding,
     this.iconPadding = defaultIconPadding,
+    this.expandedIconBackgroundSize = defaultExpandedIconBackgroundSize,
+    this.expandedIconBackground,
     this.iconRotationAngle = defaultIconRotationAngle,
     this.expandTooltip = defaultExpandTooltip,
     this.collapseTooltip = defaultCollapseTooltip,
@@ -519,6 +529,17 @@ class M3EListExpandableTheme {
   /// iconPadding.
   final EdgeInsetsGeometry iconPadding;
 
+  /// Width of the vertical pill behind the trailing expand icon.
+  ///
+  /// Height fills the header content area. Size is stable across expand /
+  /// collapse; only the fill toggles. Set to `0` to disable.
+  final double expandedIconBackgroundSize;
+
+  /// Fill for the expanded trailing-icon chrome.
+  ///
+  /// When null, resolves to [M3EColorScheme.surfaceContainerLowest].
+  final Color? expandedIconBackground;
+
   /// iconRotationAngle.
   final double iconRotationAngle;
 
@@ -542,6 +563,10 @@ class M3EListExpandableTheme {
   Color backgroundColor(M3EColorScheme scheme) =>
       scheme.surfaceContainerHighest;
 
+  /// Expanded trailing-icon chrome color.
+  Color resolvedExpandedIconBackground(M3EColorScheme scheme) =>
+      expandedIconBackground ?? scheme.surfaceContainerLowest;
+
   /// copyWith.
 
   M3EListExpandableTheme copyWith({
@@ -554,6 +579,8 @@ class M3EListExpandableTheme {
     EdgeInsetsGeometry? headerPadding,
     EdgeInsetsGeometry? bodyPadding,
     EdgeInsetsGeometry? iconPadding,
+    double? expandedIconBackgroundSize,
+    Color? expandedIconBackground,
     double? iconRotationAngle,
     String? expandTooltip,
     String? collapseTooltip,
@@ -571,6 +598,10 @@ class M3EListExpandableTheme {
       headerPadding: headerPadding ?? this.headerPadding,
       bodyPadding: bodyPadding ?? this.bodyPadding,
       iconPadding: iconPadding ?? this.iconPadding,
+      expandedIconBackgroundSize:
+          expandedIconBackgroundSize ?? this.expandedIconBackgroundSize,
+      expandedIconBackground:
+          expandedIconBackground ?? this.expandedIconBackground,
       iconRotationAngle: iconRotationAngle ?? this.iconRotationAngle,
       expandTooltip: expandTooltip ?? this.expandTooltip,
       collapseTooltip: collapseTooltip ?? this.collapseTooltip,

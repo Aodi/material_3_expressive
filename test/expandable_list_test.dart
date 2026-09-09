@@ -72,6 +72,7 @@ void main() {
   registerExpandableListExpandsAndReportsTests();
   registerExpandableListSingleExpandTests();
   registerExpandableSublistTabTraversalTests();
+  registerExpandableSublistSelectionPersistenceTests();
 }
 
 void registerExpandableListRendersTitlesTests() {
@@ -178,5 +179,66 @@ void registerExpandableSublistTabTraversalTests() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(taps, <String>['nested-0', 'nested-1']);
+  });
+}
+
+void registerExpandableSublistSelectionPersistenceTests() {
+  testWidgets('nested selection survives collapse and re-expand', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(
+        M3EExpandableList(
+          initiallyExpanded: const <int>{0},
+          data: <M3EExpandableData>[
+            M3EExpandableData(
+              title: 'Parent',
+              expanded: M3EExpandableExpanded.list(
+                M3ECardList(
+                  embedded: true,
+                  selection: true,
+                  selectionState: const M3EListSelectionState(
+                    selectedIcon: Icon(M3EIcons.check_circle),
+                  ),
+                  itemCount: 2,
+                  itemBuilder: (BuildContext context, int index) {
+                    return M3EListItem(
+                      headline: 'Child $index',
+                      leading: const Icon(M3EIcons.star_outline),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(M3ESelectionFlip).first);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widgetList<M3ESelectionFlip>(find.byType(M3ESelectionFlip))
+          .first
+          .selected,
+      isTrue,
+    );
+
+    // Collapse then re-expand — owned FeatureHost must stay mounted.
+    await tester.tap(find.text('Parent'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Parent'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Child 0'), findsOneWidget);
+    expect(
+      tester
+          .widgetList<M3ESelectionFlip>(find.byType(M3ESelectionFlip))
+          .first
+          .selected,
+      isTrue,
+    );
   });
 }

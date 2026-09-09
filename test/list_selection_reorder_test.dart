@@ -199,11 +199,13 @@ Future<void> _expandableSublist(WidgetTester tester) async {
     ),
   );
 
-  expect(find.text('Child 1'), findsNothing);
+  // Nested list stays mounted while collapsed (selection/reorder persistence),
+  // but must not be hit-testable until expanded.
+  expect(find.text('Child 1').hitTestable(), findsNothing);
   await tester.tap(find.text('Parent'));
   await tester.pumpAndSettle();
-  expect(find.text('Child 1'), findsOneWidget);
-  expect(find.text('Child 2'), findsOneWidget);
+  expect(find.text('Child 1').hitTestable(), findsOneWidget);
+  expect(find.text('Child 2').hitTestable(), findsOneWidget);
 }
 
 Future<void> _expandableMainSelection(WidgetTester tester) async {
