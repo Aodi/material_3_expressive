@@ -8,7 +8,3 @@ extension M3EToolbarSpringMotion on M3ESpring {
   SpringMotion toMotion() => const MaterialSpringMotion.expressiveSpatialFast()
       .copyWith(stiffness: stiffness, damping: damping);
 }
-
-/// Expand / visibility spring used by floating toolbar morph and scroll exit.
-SpringMotion m3eToolbarExpandMotion() =>
-    M3EMotion.expressiveSpatialFast.toMotion();

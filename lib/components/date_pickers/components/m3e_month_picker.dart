@@ -252,12 +252,15 @@ class _MonthNavRow extends StatelessWidget {
                       builder:
                           (BuildContext context, M3EInteractionState state) {
                             return Row(
-                              mainAxisSize: MainAxisSize.min,
                               children: <Widget>[
-                                Text(
-                                  label,
-                                  style: theme.typeScale.titleSmall.copyWith(
-                                    color: theme.colorScheme.onSurface,
+                                Flexible(
+                                  child: Text(
+                                    label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.typeScale.titleSmall.copyWith(
+                                      color: theme.colorScheme.onSurface,
+                                    ),
                                   ),
                                 ),
                                 Icon(
@@ -270,6 +273,8 @@ class _MonthNavRow extends StatelessWidget {
                     )
                   : Text(
                       label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.typeScale.titleSmall.copyWith(
                         color: theme.colorScheme.onSurface,
                       ),

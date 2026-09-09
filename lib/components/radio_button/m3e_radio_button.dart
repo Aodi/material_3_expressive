@@ -19,6 +19,7 @@ class M3ERadio<T> extends StatelessWidget {
     required this.onChanged,
     this.label,
     this.error = false,
+    this.focusable = true,
     this.focusNode,
     this.autofocus = false,
     this.semanticLabel,
@@ -42,6 +43,11 @@ class M3ERadio<T> extends StatelessWidget {
 
   final bool error;
 
+  /// Whether this radio is a keyboard Tab stop.
+  ///
+  /// Set to false when embedded in a focusable parent (e.g. a list row).
+  final bool focusable;
+
   /// focusNode.
   final FocusNode? focusNode;
 
@@ -64,19 +70,25 @@ class M3ERadio<T> extends StatelessWidget {
       builder: (BuildContext context) => M3ETappable(
         onTap: _enabled ? () => onChanged!(value) : null,
         enabled: _enabled,
+        focusable: focusable,
         focusNode: focusNode,
         autofocus: autofocus,
         semanticLabel: semanticLabel,
         builder: (BuildContext context, M3EInteractionState state) {
-          final Widget control = SizedBox(
-            width: radioTheme.hitSize,
-            height: radioTheme.hitSize,
-            child: Stack(
-              alignment: Alignment.center,
-              children: <Widget>[
-                _buildStateLayer(radioTheme, scheme, state),
-                _buildRing(radioTheme, scheme),
-              ],
+          // Ring hugs the circular state layer, which is the outer shape.
+          final Widget control = M3EFocusRing(
+            focused: state.focused,
+            radius: BorderRadius.circular(radioTheme.hitSize / 2),
+            child: SizedBox(
+              width: radioTheme.hitSize,
+              height: radioTheme.hitSize,
+              child: Stack(
+                alignment: Alignment.center,
+                children: <Widget>[
+                  _buildStateLayer(radioTheme, scheme, state),
+                  _buildRing(radioTheme, scheme),
+                ],
+              ),
             ),
           );
 

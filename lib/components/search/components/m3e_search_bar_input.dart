@@ -93,6 +93,7 @@ class M3ESearchBarInput extends StatefulWidget {
     this.onTapOutside,
     this.onChanged,
     this.onSubmitted,
+    this.onEscape,
     this.textCapitalization = TextCapitalization.none,
     this.textInputAction,
     this.keyboardType,
@@ -146,6 +147,9 @@ class M3ESearchBarInput extends StatefulWidget {
 
   /// onSubmitted.
   final ValueChanged<String>? onSubmitted;
+
+  /// onEscape — when set, Escape invokes this instead of unfocusing.
+  final VoidCallback? onEscape;
 
   /// textCapitalization.
   final TextCapitalization textCapitalization;
@@ -210,44 +214,68 @@ class _M3ESearchBarInputState extends State<M3ESearchBarInput> {
           alignment: AlignmentDirectional.centerStart,
           children: <Widget>[
             if (widget.controller.text.isEmpty && widget.hintText != null)
-              IgnorePointer(
-                child: Text(
-                  widget.hintText!,
-                  style: widget.hintStyle,
-                  maxLines: 1,
-                ),
-              ),
+              _buildIdleHint(),
             Listener(
               behavior: HitTestBehavior.translucent,
               onPointerDown: (_) => widget.onTap?.call(),
-              child: EditableText(
-                controller: widget.controller,
-                focusNode: widget.focusNode,
-                readOnly: widget.readOnly || !widget.enabled,
-                autofocus: widget.autoFocus,
-                onTapOutside:
-                    widget.onTapOutside ??
-                    M3EFocus.tapOutsideHandler(widget.focusNode),
-                onChanged: widget.onChanged,
-                onSubmitted: widget.onSubmitted,
-                style: widget.textStyle,
-                cursorColor: widget.cursorColor,
-                backgroundCursorColor: widget.cursorColor.withValues(
-                  alpha: 0.4,
+              child: CallbackShortcuts(
+                bindings: _shortcutBindings(),
+                // Read-only anchors must not take the text-input client on tap
+                // (soft keyboard flash when SearchAnchor opens the view).
+                child: AbsorbPointer(
+                  absorbing: widget.readOnly || !widget.enabled,
+                  child: _buildEditableText(),
                 ),
-                selectionColor: widget.selectionColor,
-                textCapitalization: widget.textCapitalization,
-                textInputAction: widget.textInputAction,
-                keyboardType: widget.keyboardType,
-                scrollPadding: widget.scrollPadding,
-                contextMenuBuilder: widget.contextMenuBuilder,
-                smartDashesType: widget.smartDashesType,
-                smartQuotesType: widget.smartQuotesType,
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildIdleHint() {
+    return IgnorePointer(
+      child: Text(widget.hintText!, style: widget.hintStyle, maxLines: 1),
+    );
+  }
+
+  Map<ShortcutActivator, VoidCallback> _shortcutBindings() {
+    return <ShortcutActivator, VoidCallback>{
+      ...M3EFocus.editableTabShortcuts(widget.focusNode),
+      const SingleActivator(LogicalKeyboardKey.escape): _handleEscape,
+    };
+  }
+
+  void _handleEscape() {
+    if (widget.onEscape != null) {
+      widget.onEscape!();
+    } else if (widget.focusNode.hasPrimaryFocus) {
+      widget.focusNode.unfocus();
+    }
+  }
+
+  Widget _buildEditableText() {
+    return EditableText(
+      controller: widget.controller,
+      focusNode: widget.focusNode,
+      readOnly: widget.readOnly || !widget.enabled,
+      autofocus: widget.autoFocus,
+      onTapOutside:
+          widget.onTapOutside ?? M3EFocus.tapOutsideHandler(widget.focusNode),
+      onChanged: widget.onChanged,
+      onSubmitted: widget.onSubmitted,
+      style: widget.textStyle,
+      cursorColor: widget.cursorColor,
+      backgroundCursorColor: widget.cursorColor.withValues(alpha: 0.4),
+      selectionColor: widget.selectionColor,
+      textCapitalization: widget.textCapitalization,
+      textInputAction: widget.textInputAction,
+      keyboardType: widget.keyboardType,
+      scrollPadding: widget.scrollPadding,
+      contextMenuBuilder: widget.contextMenuBuilder,
+      smartDashesType: widget.smartDashesType,
+      smartQuotesType: widget.smartQuotesType,
     );
   }
 }

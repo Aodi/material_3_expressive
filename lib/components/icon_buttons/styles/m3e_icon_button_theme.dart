@@ -14,6 +14,7 @@ class M3EIconButtonTheme extends M3EThemeExtension<M3EIconButtonTheme> {
     this.morphCurve = Curves.easeOut,
     this.filledBackgroundGradient,
     this.tonalBackgroundGradient,
+    this.morphSpring = M3EMotion.expressiveSpatialPress,
   });
 
   /// defaults.
@@ -35,6 +36,9 @@ class M3EIconButtonTheme extends M3EThemeExtension<M3EIconButtonTheme> {
 
   /// Optional gradient for tonal icon buttons.
   final Gradient? tonalBackgroundGradient;
+
+  /// Shape / padding morph spring.
+  final M3ESpring morphSpring;
 
   static const Map<M3EIconButtonSize, double> _icon = {
     M3EIconButtonSize.xs: 20,
@@ -170,6 +174,7 @@ class M3EIconButtonTheme extends M3EThemeExtension<M3EIconButtonTheme> {
     Curve? morphCurve,
     Gradient? filledBackgroundGradient,
     Gradient? tonalBackgroundGradient,
+    M3ESpring? morphSpring,
   }) {
     return M3EIconButtonTheme(
       outlineWidth: outlineWidth ?? this.outlineWidth,
@@ -179,6 +184,7 @@ class M3EIconButtonTheme extends M3EThemeExtension<M3EIconButtonTheme> {
           filledBackgroundGradient ?? this.filledBackgroundGradient,
       tonalBackgroundGradient:
           tonalBackgroundGradient ?? this.tonalBackgroundGradient,
+      morphSpring: morphSpring ?? this.morphSpring,
     );
   }
 
@@ -203,6 +209,7 @@ class M3EIconButtonTheme extends M3EThemeExtension<M3EIconButtonTheme> {
       tonalBackgroundGradient: t < 0.5
           ? tonalBackgroundGradient
           : other.tonalBackgroundGradient,
+      morphSpring: t < 0.5 ? morphSpring : other.morphSpring,
     );
   }
 

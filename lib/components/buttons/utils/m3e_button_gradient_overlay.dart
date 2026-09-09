@@ -10,7 +10,8 @@ double m3eOverlayOpacityFor(Set<WidgetState> states) {
   if (states.contains(WidgetState.pressed)) {
     return M3EStateOpacity.pressed;
   }
-  if (states.contains(WidgetState.focused)) {
+  if (states.contains(WidgetState.focused) &&
+      !M3EFocusInteraction.instance.ringsAllowed) {
     return M3EStateOpacity.focus;
   }
   if (states.contains(WidgetState.hovered)) {

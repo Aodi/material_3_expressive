@@ -5,7 +5,6 @@ import 'package:motor/motor.dart';
 
 import '../../../foundations/foundations.dart';
 import '../buttons/components/m3e_radius_and_padding_motion.dart';
-import '../buttons/styles/m3e_button_motion.dart';
 import '../buttons/utils/m3e_button_gradient_layer.dart';
 import 'enums/m3e_icon_button_enums.dart';
 import 'styles/m3e_icon_button_decoration.dart';
@@ -18,10 +17,6 @@ export 'styles/m3e_icon_button_shapes.dart';
 export 'styles/m3e_icon_button_theme.dart';
 
 part 'components/m3e_icon_button_build.dart';
-
-final SpringMotion _kIconButtonMorphMotion = M3EButtonMotion
-    .expressiveSpatialPress
-    .toMotion();
 
 /// Material 3 Expressive Icon Button
 ///
@@ -116,6 +111,8 @@ class _M3EIconButtonState extends State<M3EIconButton> {
   late final ValueNotifier<bool> _isPointerDownNotifier;
   late final ValueNotifier<bool> _isHoveredNotifier;
   late final ValueNotifier<bool> _isPressedNotifier;
+  late final ValueNotifier<bool> _showFocusRingNotifier;
+  final FocusNode _focusNode = FocusNode(debugLabel: 'M3EIconButton');
 
   @override
   void initState() {
@@ -124,17 +121,28 @@ class _M3EIconButtonState extends State<M3EIconButton> {
     _isPointerDownNotifier = ValueNotifier(false);
     _isHoveredNotifier = ValueNotifier(false);
     _isPressedNotifier = ValueNotifier(false);
+    _showFocusRingNotifier = ValueNotifier(false);
+    FocusManager.instance.addHighlightModeListener(_onHighlightModeChanged);
+    M3EFocusInteraction.instance.addListener(_onFocusInteractionChanged);
   }
 
   @override
   void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_onHighlightModeChanged);
+    M3EFocusInteraction.instance.removeListener(_onFocusInteractionChanged);
     _statesController
       ..removeListener(_onStatesChanged)
       ..dispose();
     _isPointerDownNotifier.dispose();
     _isHoveredNotifier.dispose();
     _isPressedNotifier.dispose();
+    _showFocusRingNotifier.dispose();
+    _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onFocusInteractionChanged() {
+    _syncFocusRing();
   }
 
   void _onStatesChanged() {
@@ -144,6 +152,21 @@ class _M3EIconButtonState extends State<M3EIconButton> {
     final Set<WidgetState> states = _statesController.value;
     _isHoveredNotifier.value = states.contains(WidgetState.hovered);
     _isPressedNotifier.value = states.contains(WidgetState.pressed);
+    _syncFocusRing();
+  }
+
+  void _onHighlightModeChanged(FocusHighlightMode mode) {
+    _syncFocusRing();
+  }
+
+  void _syncFocusRing() {
+    if (!mounted) {
+      return;
+    }
+    final show = M3EFocusRing.shouldShow(_focusNode, context);
+    if (_showFocusRingNotifier.value != show) {
+      _showFocusRingNotifier.value = show;
+    }
   }
 
   void _setPointerDown(bool down) {

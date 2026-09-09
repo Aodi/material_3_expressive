@@ -26,6 +26,7 @@ class M3ECheckbox extends StatefulWidget {
     this.checkedChild,
     this.uncheckedChild,
     this.checkIconPadding,
+    this.focusable = true,
     this.focusNode,
     this.autofocus = false,
     this.semanticLabel,
@@ -70,6 +71,11 @@ class M3ECheckbox extends StatefulWidget {
   /// unchecked.
   final EdgeInsetsGeometry? checkIconPadding;
 
+  /// Whether this checkbox is a keyboard Tab stop.
+  ///
+  /// Set to false when embedded in a focusable parent (e.g. a list row).
+  final bool focusable;
+
   /// focusNode.
   final FocusNode? focusNode;
 
@@ -112,10 +118,11 @@ class _M3ECheckboxState extends State<M3ECheckbox>
   }
 
   void _pulse() {
+    final pulse = M3ETheme.of(context).checkboxTheme.pulseSpring;
     _scaleController.value = _pulseScale;
     _scaleController.animateWith(
       SpringSimulation(
-        M3EMotion.expressiveSpatialDefault.toDescription(),
+        pulse.toDescription(),
         _scaleController.value,
         1,
         _scaleController.velocity,
@@ -149,34 +156,46 @@ class _M3ECheckboxState extends State<M3ECheckbox>
       builder: (BuildContext context) => M3ETappable(
         onTap: _enabled ? _handleTap : null,
         enabled: _enabled,
+        focusable: widget.focusable,
         focusNode: widget.focusNode,
         autofocus: widget.autofocus,
         semanticLabel: widget.semanticLabel,
         builder: (BuildContext context, M3EInteractionState state) {
-          final Widget control = SizedBox(
-            width: hitSize,
-            height: hitSize,
-            child: Stack(
-              alignment: Alignment.center,
-              children: <Widget>[
-                _buildStateLayer(checkboxTheme, scheme, state, active, hitSize),
-                AnimatedBuilder(
-                  animation: _scaleController,
-                  builder: (BuildContext context, Widget? child) {
-                    return Transform.scale(
-                      scale: _scaleController.value,
-                      child: child,
-                    );
-                  },
-                  child: _buildBox(
+          // Ring hugs the circular state layer, which is the outer shape.
+          final Widget control = M3EFocusRing(
+            focused: state.focused,
+            radius: BorderRadius.circular(hitSize / 2),
+            child: SizedBox(
+              width: hitSize,
+              height: hitSize,
+              child: Stack(
+                alignment: Alignment.center,
+                children: <Widget>[
+                  _buildStateLayer(
                     checkboxTheme,
                     scheme,
-                    active: active,
-                    boxSize: boxSize,
-                    sizeScale: sizeScale,
+                    state,
+                    active,
+                    hitSize,
                   ),
-                ),
-              ],
+                  AnimatedBuilder(
+                    animation: _scaleController,
+                    builder: (BuildContext context, Widget? child) {
+                      return Transform.scale(
+                        scale: _scaleController.value,
+                        child: child,
+                      );
+                    },
+                    child: _buildBox(
+                      checkboxTheme,
+                      scheme,
+                      active: active,
+                      boxSize: boxSize,
+                      sizeScale: sizeScale,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
 

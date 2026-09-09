@@ -44,6 +44,7 @@ class M3ERefreshIndicatorTheme
     this.indicatorScaleDuration = const Duration(milliseconds: 200),
     this.releaseBubbleSpring = kDefaultReleaseBubbleSpring,
     this.releaseBubbleFromScale = kDefaultReleaseBubbleFromScale,
+    this.settleSpring = M3EMotion.expressiveSpatialDefault,
   });
 
   /// defaults.
@@ -76,6 +77,9 @@ class M3ERefreshIndicatorTheme
   /// Starting scale for the release bubble before it springs to 1.
   final double releaseBubbleFromScale;
 
+  /// Spring for position / scale / content-pad settle after drag.
+  final M3ESpring settleSpring;
+
   /// activeColor.
   Color activeColor(M3EColorScheme scheme) => scheme.primary;
 
@@ -101,6 +105,7 @@ class M3ERefreshIndicatorTheme
     Duration? indicatorScaleDuration,
     M3ESpring? releaseBubbleSpring,
     double? releaseBubbleFromScale,
+    M3ESpring? settleSpring,
   }) {
     return M3ERefreshIndicatorTheme(
       defaultDisplacement: defaultDisplacement ?? this.defaultDisplacement,
@@ -116,6 +121,7 @@ class M3ERefreshIndicatorTheme
       releaseBubbleSpring: releaseBubbleSpring ?? this.releaseBubbleSpring,
       releaseBubbleFromScale:
           releaseBubbleFromScale ?? this.releaseBubbleFromScale,
+      settleSpring: settleSpring ?? this.settleSpring,
     );
   }
 
@@ -164,6 +170,7 @@ class M3ERefreshIndicatorTheme
         other.releaseBubbleFromScale,
         t,
       )!,
+      settleSpring: t < 0.5 ? settleSpring : other.settleSpring,
     );
   }
 

@@ -453,6 +453,9 @@ class _M3ESliderState extends State<M3ESlider> with TickerProviderStateMixin {
   /// Shows a focus outline for keyboard/traditional focus, matching desktop
   /// convention of hiding it after a pointer-driven focus grab.
   bool get _showFocusOutline {
+    if (!M3ETheme.of(context).keyboardFocusIndicators) {
+      return false;
+    }
     if (!_focusNode.hasFocus) {
       return false;
     }
@@ -476,7 +479,10 @@ class _M3ESliderState extends State<M3ESlider> with TickerProviderStateMixin {
       duration: M3EMotion.extraLong2,
     );
     _dockController = SingleMotionController(
-      motion: const MaterialSpringMotion.expressiveSpatialFast(),
+      motion: const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
+        stiffness: M3ESliderTheme.defaults.dockSpring.stiffness,
+        damping: M3ESliderTheme.defaults.dockSpring.damping,
+      ),
       vsync: this,
     )..addListener(_handleDockTick);
     if (widget.wavy) {

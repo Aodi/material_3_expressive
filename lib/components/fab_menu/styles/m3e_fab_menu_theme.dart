@@ -22,6 +22,8 @@ class M3EFabMenuTheme extends M3EThemeExtension<M3EFabMenuTheme> {
     this.itemOutlineGradient,
     this.itemBackgroundGradient,
     this.itemForegroundGradient,
+    this.expandSpring = const M3ESpring(stiffness: 380, damping: 0.55),
+    this.fabShapeSpring = const M3ESpring(stiffness: 380, damping: 0.7),
   });
 
   /// defaults.
@@ -75,6 +77,12 @@ class M3EFabMenuTheme extends M3EThemeExtension<M3EFabMenuTheme> {
   /// Gradient tint for item icons and labels.
   final Gradient? itemForegroundGradient;
 
+  /// Menu item expand / collapse spring.
+  final M3ESpring expandSpring;
+
+  /// FAB container shape morph spring.
+  final M3ESpring fabShapeSpring;
+
   /// scrimColor.
 
   Color scrimColor(M3EColorScheme scheme) =>
@@ -110,6 +118,8 @@ class M3EFabMenuTheme extends M3EThemeExtension<M3EFabMenuTheme> {
     Gradient? itemOutlineGradient,
     Gradient? itemBackgroundGradient,
     Gradient? itemForegroundGradient,
+    M3ESpring? expandSpring,
+    M3ESpring? fabShapeSpring,
   }) {
     return M3EFabMenuTheme(
       menuOffset: menuOffset ?? this.menuOffset,
@@ -130,6 +140,8 @@ class M3EFabMenuTheme extends M3EThemeExtension<M3EFabMenuTheme> {
           itemBackgroundGradient ?? this.itemBackgroundGradient,
       itemForegroundGradient:
           itemForegroundGradient ?? this.itemForegroundGradient,
+      expandSpring: expandSpring ?? this.expandSpring,
+      fabShapeSpring: fabShapeSpring ?? this.fabShapeSpring,
     );
   }
 
@@ -172,6 +184,8 @@ class M3EFabMenuTheme extends M3EThemeExtension<M3EFabMenuTheme> {
       itemForegroundGradient: t < 0.5
           ? itemForegroundGradient
           : other.itemForegroundGradient,
+      expandSpring: t < 0.5 ? expandSpring : other.expandSpring,
+      fabShapeSpring: t < 0.5 ? fabShapeSpring : other.fabShapeSpring,
     );
   }
 

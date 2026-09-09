@@ -89,25 +89,38 @@ class _SectionHostPageState extends State<SectionHostPage>
     }
 
     final M3EThemeData theme = M3ETheme.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        SizedBox(width: 320, child: list),
-        VerticalDivider(
-          width: 1,
-          thickness: 1,
-          color: theme.colorScheme.outlineVariant,
-        ),
-        Expanded(
-          child: selected == null
-              ? const SizedBox.shrink()
-              : _WideDetail(
-                  key: ValueKey<String>(selected.id),
-                  title: selected.title,
-                  child: selected.playgroundBuilder(context),
-                ),
-        ),
-      ],
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          FocusTraversalOrder(
+            order: const NumericFocusOrder(0),
+            child: FocusTraversalGroup(
+              child: SizedBox(width: 320, child: list),
+            ),
+          ),
+          VerticalDivider(
+            width: 1,
+            thickness: 1,
+            color: theme.colorScheme.outlineVariant,
+          ),
+          Expanded(
+            child: FocusTraversalOrder(
+              order: const NumericFocusOrder(1),
+              child: FocusTraversalGroup(
+                child: selected == null
+                    ? const SizedBox.shrink()
+                    : _WideDetail(
+                        key: ValueKey<String>(selected.id),
+                        title: selected.title,
+                        child: selected.playgroundBuilder(context),
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

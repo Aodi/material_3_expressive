@@ -16,6 +16,7 @@ class M3ECheckboxTheme extends M3EThemeExtension<M3ECheckboxTheme> {
     this.disabledOpacity = 0.38,
     this.labelGap = 8,
     this.checkIconPadding = const EdgeInsets.only(right: 1),
+    this.pulseSpring = M3EMotion.expressiveSpatialDefault,
   });
 
   /// defaults.
@@ -51,6 +52,9 @@ class M3ECheckboxTheme extends M3EThemeExtension<M3ECheckboxTheme> {
   ///
   /// `left`/`top` nudge the glyph right/down; `right`/`bottom` nudge left/up.
   final EdgeInsetsGeometry checkIconPadding;
+
+  /// Scale pulse spring when the value changes.
+  final M3ESpring pulseSpring;
 
   /// The borderRadius.
 
@@ -123,6 +127,7 @@ class M3ECheckboxTheme extends M3EThemeExtension<M3ECheckboxTheme> {
     double? disabledOpacity,
     double? labelGap,
     EdgeInsetsGeometry? checkIconPadding,
+    M3ESpring? pulseSpring,
   }) {
     return M3ECheckboxTheme(
       boxSize: boxSize ?? this.boxSize,
@@ -134,6 +139,7 @@ class M3ECheckboxTheme extends M3EThemeExtension<M3ECheckboxTheme> {
       disabledOpacity: disabledOpacity ?? this.disabledOpacity,
       labelGap: labelGap ?? this.labelGap,
       checkIconPadding: checkIconPadding ?? this.checkIconPadding,
+      pulseSpring: pulseSpring ?? this.pulseSpring,
     );
   }
 
@@ -164,6 +170,7 @@ class M3ECheckboxTheme extends M3EThemeExtension<M3ECheckboxTheme> {
         other.checkIconPadding,
         t,
       )!,
+      pulseSpring: t < 0.5 ? pulseSpring : other.pulseSpring,
     );
   }
 

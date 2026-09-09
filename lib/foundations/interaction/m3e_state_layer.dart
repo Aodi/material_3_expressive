@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'm3e_focus_interaction.dart';
 import 'm3e_ink_splash_theme.dart' show M3EInkSplashTheme;
 
 /// Material 3 state layer opacity tokens.
@@ -54,6 +55,10 @@ class M3EInteractionState {
   /// Whether the component is being dragged.
   final bool dragged;
 
+  /// Focus fill when rings are not the keyboard chrome.
+  bool get showFocusFill =>
+      focused && !M3EFocusInteraction.instance.ringsAllowed;
+
   /// Resolves the effective state layer opacity for the active state.
   double get opacity {
     if (dragged) {
@@ -62,7 +67,7 @@ class M3EInteractionState {
     if (pressed) {
       return M3EStateOpacity.pressed;
     }
-    if (focused) {
+    if (showFocusFill) {
       return M3EStateOpacity.focus;
     }
     if (hovered) {
@@ -106,6 +111,9 @@ abstract final class M3EStateLayer {
   const M3EStateLayer._();
 
   /// Resolves an overlay color for the highest-priority active [states].
+  ///
+  /// When keyboard focus rings are active, [WidgetState.focused] does not
+  /// contribute a fill overlay (ring-only chrome).
   static Color? resolveOverlayColor(Color color, Set<WidgetState> states) {
     if (states.contains(WidgetState.pressed)) {
       return color.withValues(alpha: M3EStateOpacity.pressed);
@@ -113,7 +121,8 @@ abstract final class M3EStateLayer {
     if (states.contains(WidgetState.hovered)) {
       return color.withValues(alpha: M3EStateOpacity.hover);
     }
-    if (states.contains(WidgetState.focused)) {
+    if (states.contains(WidgetState.focused) &&
+        !M3EFocusInteraction.instance.ringsAllowed) {
       return color.withValues(alpha: M3EStateOpacity.focus);
     }
     return null;
