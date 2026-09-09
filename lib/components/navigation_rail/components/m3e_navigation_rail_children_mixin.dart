@@ -5,8 +5,8 @@ mixin _M3ENavigationRailChildrenMixin on State<M3ENavigationRail> {
   bool get _suppressInk;
   bool get _traveling;
   List<GlobalKey> get _destinationKeys;
-  Widget _buildMenuButton(BuildContext context, {required Alignment alignment});
-  Widget? _buildFab(BuildContext context);
+  Widget _buildMenuButton(BuildContext context);
+  Widget? _buildFab(BuildContext context, {required bool showLabel});
   Widget? _buildTrailing(BuildContext context) {
     final tr = widget.trailing;
     if (tr == null) {
@@ -22,20 +22,17 @@ mixin _M3ENavigationRailChildrenMixin on State<M3ENavigationRail> {
     );
   }
 
-  List<Widget> _buildChildren(
-    BuildContext context, {
-    required bool showLabels,
-  }) {
+  List<Widget> _buildChildren(BuildContext context) {
     final theme = M3ETheme.of(context).navigationRailTheme;
     final isExpanded = _isExpanded;
     final children = <Widget>[
       const SizedBox(height: M3ENavigationRailLayout.topGap),
-      _buildMenuButton(
-        context,
-        alignment: isExpanded ? Alignment.centerLeft : Alignment.center,
-      ),
+      _buildMenuButton(context),
     ];
-    final fabWidget = _buildFab(context);
+    // Reveal the FAB label at the same state change as destination labels.
+    // The rail's width animation provides the available-space constraint;
+    // delaying this flag makes the two motions visibly out of sync.
+    final fabWidget = _buildFab(context, showLabel: isExpanded);
     if (fabWidget != null) {
       children.add(fabWidget);
     }
@@ -70,8 +67,10 @@ mixin _M3ENavigationRailChildrenMixin on State<M3ENavigationRail> {
         children.add(
           _destinationPadding(
             theme: theme,
-            start: 16,
-            end: 16,
+            // The item owns its inset animation so the destination target
+            // remains full-width while the rail morphs.
+            start: 0,
+            end: 0,
             child: M3ERailItem(
               destination: dest,
               selected: index == widget.selectedIndex,
@@ -95,8 +94,10 @@ mixin _M3ENavigationRailChildrenMixin on State<M3ENavigationRail> {
       for (var i = 0; i < all.length; i++)
         _destinationPadding(
           theme: theme,
-          start: M3ENavigationRailLayout.horizontalInset,
-          end: M3ENavigationRailLayout.horizontalInset,
+          // Vertical destinations span the full compact rail width.  The
+          // active indicator itself is centered inside the item.
+          start: 0,
+          end: 0,
           child: M3ERailItem(
             destination: all[i],
             selected: i == widget.selectedIndex,

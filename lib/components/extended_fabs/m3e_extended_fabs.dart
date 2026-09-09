@@ -223,6 +223,7 @@ class M3EExtendedFab extends StatelessWidget {
           child: icon,
         ),
         AnimatedSize(
+          alignment: AlignmentDirectional.centerStart,
           duration: M3EMotion.medium2,
           curve: M3EMotion.emphasized,
           child: extended

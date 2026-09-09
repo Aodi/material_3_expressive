@@ -66,19 +66,14 @@ class M3ERailItem extends StatelessWidget {
       indicatorKey: indicatorKey,
     );
 
-    Widget core;
-    if (!expanded) {
-      // Collapsed: left-aligned icon-only button with 48x48 tap target.
-      core = SizedBox(
-        height: height,
-        child: Align(alignment: Alignment.centerLeft, child: button),
-      );
-    } else {
-      core = ConstrainedBox(
-        constraints: BoxConstraints(minHeight: height),
-        child: Row(children: [Expanded(child: button)]),
-      );
-    }
+    // Keep one stable full-width target in both states. Replacing this with a
+    // Row/Expanded tree during collapse causes a transient center layout
+    // before the rail width animation settles, which is visible as a jump.
+    final core = SizedBox(
+      width: double.infinity,
+      height: height,
+      child: button,
+    );
 
     return Semantics(selected: selected, button: true, child: core);
   }

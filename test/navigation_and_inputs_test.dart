@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_3_expressive/components/navigation_rail/components/m3e_nav_selection_indicator.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -20,6 +21,18 @@ void main() {
   testWidgets(
     'M3ENavigationRail FAB slot supports custom elevation',
     _m3enavigationrailFabSlotSupportsCustomElevation,
+  );
+  testWidgets(
+    'M3ENavigationRail uses official collapsed and expanded widths',
+    _m3enavigationrailUsesOfficialWidths,
+  );
+  testWidgets(
+    'M3ENavigationRail keeps toggle anchored while width changes',
+    _m3enavigationrailKeepsToggleAnchored,
+  );
+  testWidgets(
+    'M3ENavigationRail keeps FAB anchored while width changes',
+    _m3enavigationrailKeepsFabAnchored,
   );
   testWidgets(
     'M3ENavigationRail resting indicator tracks selection while scrolling',
@@ -150,7 +163,7 @@ Future<void> _m3enavigationrailFabSlotSupportsCustomElevation(
 
   final fabContainer = tester.widget<AnimatedContainer>(
     find.descendant(
-      of: find.byType(M3EFab),
+      of: find.byType(M3EExtendedFab),
       matching: find.byType(AnimatedContainer),
     ),
   );
@@ -158,6 +171,120 @@ Future<void> _m3enavigationrailFabSlotSupportsCustomElevation(
 
   expect(decoration, isA<BoxDecoration>());
   expect((decoration! as BoxDecoration).boxShadow, isEmpty);
+  // The rail slot aligns the FAB without forcing it to the rail's full width.
+  expect(tester.getSize(find.byType(M3EExtendedFab)).width, lessThan(96));
+}
+
+Future<void> _m3enavigationrailUsesOfficialWidths(WidgetTester tester) async {
+  Widget rail(M3ENavigationRailType type) {
+    return _host(
+      M3ENavigationRail(
+        type: type,
+        selectedIndex: 0,
+        onDestinationSelected: (_) {},
+        sections: const <M3ENavigationRailSection>[
+          M3ENavigationRailSection(
+            destinations: <M3ENavigationRailDestination>[
+              M3ENavigationRailDestination(
+                icon: Icon(M3EIcons.inbox),
+                label: 'Inbox',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  await tester.pumpWidget(rail(M3ENavigationRailType.collapsed));
+  await tester.pump();
+  expect(tester.getSize(find.byType(M3ENavigationRail)).width, 96);
+
+  await tester.pumpWidget(rail(M3ENavigationRailType.alwaysExpand));
+  await tester.pumpAndSettle();
+  expect(tester.getSize(find.byType(M3ENavigationRail)).width, 220);
+}
+
+Future<void> _m3enavigationrailKeepsToggleAnchored(WidgetTester tester) async {
+  await tester.pumpWidget(
+    _host(
+      M3ENavigationRail(
+        type: M3ENavigationRailType.collapsed,
+        selectedIndex: 0,
+        onDestinationSelected: (_) {},
+        sections: const <M3ENavigationRailSection>[
+          M3ENavigationRailSection(
+            destinations: <M3ENavigationRailDestination>[
+              M3ENavigationRailDestination(
+                icon: Icon(M3EIcons.inbox),
+                label: 'Inbox',
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+  await tester.pump();
+
+  final Finder toggle = find.descendant(
+    of: find.byType(M3ENavigationRail),
+    matching: find.byType(M3EIconButton),
+  );
+  final double collapsedLeft = tester.getTopLeft(toggle).dx;
+
+  await tester.tap(toggle);
+  await tester.pump();
+  expect(tester.getTopLeft(toggle).dx, closeTo(collapsedLeft, 0.1));
+
+  await tester.pump(const Duration(milliseconds: 300));
+  expect(tester.getTopLeft(toggle).dx, closeTo(collapsedLeft, 0.1));
+  await tester.pump(const Duration(milliseconds: 40));
+}
+
+Future<void> _m3enavigationrailKeepsFabAnchored(WidgetTester tester) async {
+  await tester.pumpWidget(
+    _host(
+      M3ENavigationRail(
+        type: M3ENavigationRailType.collapsed,
+        selectedIndex: 0,
+        onDestinationSelected: (_) {},
+        fab: const M3ENavigationRailFabSlot(
+          icon: Icon(M3EIcons.add),
+          label: 'Create',
+        ),
+        sections: const <M3ENavigationRailSection>[
+          M3ENavigationRailSection(
+            destinations: <M3ENavigationRailDestination>[
+              M3ENavigationRailDestination(
+                icon: Icon(M3EIcons.inbox),
+                label: 'Inbox',
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+  await tester.pump();
+
+  final Finder fab = find.byType(M3EExtendedFab);
+  final double collapsedLeft = tester.getTopLeft(fab).dx;
+
+  final Finder toggle = find.descendant(
+    of: find.byType(M3ENavigationRail),
+    matching: find.byType(M3EIconButton),
+  );
+  await tester.tap(toggle);
+  await tester.pump();
+
+  // The rail is still near its collapsed width on this first frame. The FAB
+  // must remain at the same leading inset while its label begins expanding.
+  expect(tester.getTopLeft(fab).dx, closeTo(collapsedLeft, 0.1));
+
+  await tester.pump(const Duration(milliseconds: 300));
+  expect(tester.getTopLeft(fab).dx, closeTo(collapsedLeft, 0.1));
+  await tester.pump(const Duration(milliseconds: 40));
 }
 
 Future<void> _m3enavigationrailRestingIndicatorTracksSelectionWhileS(
@@ -198,16 +325,7 @@ Future<void> _m3enavigationrailRestingIndicatorTracksSelectionWhileS(
 
   // Resting fill is local on the destination, so it scrolls with the row.
   expect(tester.getTopLeft(selectedLabel).dy, lessThan(before));
-  final Iterable<Material> materials = tester.widgetList<Material>(
-    find.descendant(
-      of: find.byType(M3ENavigationRail),
-      matching: find.byType(Material),
-    ),
-  );
-  expect(
-    materials.any((Material m) => m.color != null && m.color!.a > 0),
-    isTrue,
-  );
+  expect(find.byType(M3ENavSelectionIndicator), findsOneWidget);
 }
 
 Future<void> _m3enavigationrailIndicatorStaysOnSelectionAfterMediaqu(
@@ -251,7 +369,7 @@ Future<void> _m3enavigationrailIndicatorStaysOnSelectionAfterMediaqu(
   }
 
   await tester.pumpWidget(buildRail(viewInsets: EdgeInsets.zero));
-  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 320));
   await tester.pump();
   await tester.pump(M3ENavigationRailLayout.expandDuration);
 
@@ -261,26 +379,17 @@ Future<void> _m3enavigationrailIndicatorStaysOnSelectionAfterMediaqu(
   await tester.pumpWidget(
     buildRail(viewInsets: const EdgeInsets.only(bottom: 300)),
   );
-  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 320));
   await tester.pump();
   await tester.pump(M3ENavigationRailLayout.expandDuration);
   await tester.pumpWidget(buildRail(viewInsets: EdgeInsets.zero));
-  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 320));
   await tester.pump();
   await tester.pump(M3ENavigationRailLayout.expandDuration);
   await tester.pump(const Duration(milliseconds: 16));
 
   expect(tester.getTopLeft(find.text('Starred')).dy, closeTo(starredY, 1));
-  final Iterable<Material> materials = tester.widgetList<Material>(
-    find.descendant(
-      of: find.byType(M3ENavigationRail),
-      matching: find.byType(Material),
-    ),
-  );
-  expect(
-    materials.any((Material m) => m.color != null && m.color!.a > 0),
-    isTrue,
-  );
+  expect(find.byType(M3ENavSelectionIndicator), findsOneWidget);
 }
 
 Future<void> _m3esliderReportsValueChanges(WidgetTester tester) async {

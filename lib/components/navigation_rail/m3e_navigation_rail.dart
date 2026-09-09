@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../foundations/foundations.dart';
 import '../extended_fabs/m3e_extended_fabs.dart';
-import '../floating_action_buttons/m3e_floating_action_buttons.dart';
 import '../icon_buttons/m3e_icon_buttons.dart';
 import 'components/m3e_nav_selection_indicator.dart';
 import 'components/m3e_rail_item.dart';
@@ -355,10 +354,7 @@ class _M3ENavigationRailState extends State<M3ENavigationRail>
   }
 
   @override
-  Widget _buildMenuButton(
-    BuildContext context, {
-    required Alignment alignment,
-  }) {
+  Widget _buildMenuButton(BuildContext context) {
     if (!_canToggle) {
       return const SizedBox.shrink();
     }
@@ -373,37 +369,63 @@ class _M3ENavigationRailState extends State<M3ENavigationRail>
 
     return Padding(
       padding: M3ENavigationRailLayout.sectionPadding,
-      child: Align(alignment: alignment, child: button),
+      // M3E keeps the rail chrome anchored to the same leading inset while
+      // the rail width morphs. Using a state-dependent alignment causes the
+      // toggle to jump to the collapsed center during the first frame.
+      child: Align(alignment: AlignmentDirectional.centerStart, child: button),
     );
   }
 
   @override
-  Widget? _buildFab(BuildContext context) {
+  Widget? _buildFab(BuildContext context, {required bool showLabel}) {
     final fab = widget.fab;
     if (fab == null) {
       return null;
     }
-    final isExpanded = _isExpanded;
+    final Widget fabWidget = M3EExtendedFab(
+      icon: fab.icon,
+      label: fab.label,
+      onPressed: fab.onPressed,
+      extended: showLabel,
+      color: fab.color,
+      elevation: fab.elevation,
+      hoverElevation: fab.hoverElevation,
+    );
+
+    // Keep the slot's tooltip and semantic label available in both states.
+    // M3EExtendedFab supplies its own label semantics, while this wrapper
+    // preserves the explicit slot override and collapsed hover affordance.
+    final Widget labelledFab = Semantics(
+      container: true,
+      label: fab.semanticLabel ?? fab.label,
+      child: Tooltip(
+        message: fab.tooltip ?? fab.label,
+        preferBelow: false,
+        child: fabWidget,
+      ),
+    );
+
     return Padding(
       padding: M3ENavigationRailLayout.sectionPadding,
-      child: isExpanded
-          ? M3EExtendedFab(
-              label: fab.label,
-              icon: fab.icon,
-              onPressed: fab.onPressed,
-              color: fab.color,
-              elevation: fab.elevation,
-              hoverElevation: fab.hoverElevation,
-            )
-          : M3EFab(
-              icon: fab.icon,
-              onPressed: fab.onPressed,
-              tooltip: fab.tooltip,
-              color: fab.color,
-              size: fab.size,
-              elevation: fab.elevation,
-              hoverElevation: fab.hoverElevation,
-            ),
+      // Column children receive tight cross-axis constraints by default.
+      // Align lets the FAB keep its intrinsic content width instead of
+      // stretching to the full rail, while preserving the rail's 20dp inset.
+      child: Align(
+        // Keep the icon at the same leading anchor while the rail width
+        // morphs. Centering the collapsed FAB against the still-expanded
+        // width creates the visible first-frame jump (the same issue Android
+        // avoids by keeping the item view anchored and animating only its
+        // label).
+        alignment: AlignmentDirectional.centerStart,
+        // Scale only while the rail's intermediate constraint is narrower
+        // than the intrinsic extended FAB. This prevents a transient flex
+        // overflow without changing the final FAB geometry.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
+          child: labelledFab,
+        ),
+      ),
     );
   }
 
@@ -425,8 +447,7 @@ class _M3ENavigationRailState extends State<M3ENavigationRail>
       decoration: BoxDecoration(color: containerColor),
       child: LayoutBuilder(
         builder: (ctx, constraints) {
-          final showLabels = _isExpanded && constraints.maxWidth >= 180;
-          final children = _buildChildren(ctx, showLabels: showLabels);
+          final children = _buildChildren(ctx);
           final bottomTrailing =
               (widget.trailing != null && widget.trailingAtBottom)
               ? _buildTrailing(ctx)

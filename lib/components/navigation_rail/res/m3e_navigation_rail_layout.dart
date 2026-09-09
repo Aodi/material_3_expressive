@@ -8,13 +8,13 @@ abstract final class M3ENavigationRailLayout {
   /// Duration of the rail's width/expansion animation.
   static const Duration expandDuration = Duration(milliseconds: 280);
 
-  /// Horizontal + bottom insets around section headers.
+  /// Insets around rail chrome (menu, FAB and trailing content).
   static const EdgeInsetsDirectional sectionPadding =
-      EdgeInsetsDirectional.only(start: 16, end: 16, bottom: 12);
+      EdgeInsetsDirectional.only(start: 20, end: 20, bottom: 16);
 
   /// Horizontal inset for rail content.
-  static const double horizontalInset = 16;
+  static const double horizontalInset = 20;
 
   /// Vertical gap inserted above the first section.
-  static const double topGap = 36;
+  static const double topGap = 44;
 }
