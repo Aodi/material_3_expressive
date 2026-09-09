@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_3_expressive/components/navigation_rail/components/m3e_nav_selection_indicator.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -252,7 +253,7 @@ Future<void> _m3enavigationrailKeepsFabAnchored(WidgetTester tester) async {
           icon: Icon(M3EIcons.add),
           label: 'Create',
         ),
-        sections: <M3ENavigationRailSection>[
+        sections: const <M3ENavigationRailSection>[
           M3ENavigationRailSection(
             destinations: <M3ENavigationRailDestination>[
               M3ENavigationRailDestination(
