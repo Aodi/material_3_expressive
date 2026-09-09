@@ -73,6 +73,7 @@ void main() {
   registerExpandableListSingleExpandTests();
   registerExpandableSublistTabTraversalTests();
   registerExpandableSublistSelectionPersistenceTests();
+  registerExpandableSelectionTrailingExpandTests();
 }
 
 void registerExpandableListRendersTitlesTests() {
@@ -240,5 +241,37 @@ void registerExpandableSublistSelectionPersistenceTests() {
           .selected,
       isTrue,
     );
+  });
+}
+
+void registerExpandableSelectionTrailingExpandTests() {
+  testWidgets('selection on: trailing icon expands when not selecting', (
+    WidgetTester tester,
+  ) async {
+    Set<int>? last;
+    await tester.pumpWidget(
+      _host(
+        M3EExpandableList(
+          selection: true,
+          onSelectionChanged: (Set<int> s) => last = s,
+          selectionState: const M3EListSelectionState(
+            selectedIcon: Icon(M3EIcons.check_circle),
+          ),
+          data: const <M3EExpandableData>[
+            M3EExpandableData(
+              title: 'Section',
+              leading: Icon(M3EIcons.inbox),
+              expanded: M3EExpandableExpanded.content(Text('BODY')),
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(M3EIcons.expand_more_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('BODY'), findsOneWidget);
+    expect(last, isNull);
   });
 }

@@ -2,10 +2,11 @@ import 'package:flutter/widgets.dart';
 
 import '../../../foundations/foundations.dart';
 
-/// Provides the expandable header content tap (title / subtitle area).
+/// Provides an optional expandable header content tap.
 ///
-/// Used so the leading selection icon can stay outside the expand/collapse
-/// hit target.
+/// Prefer card / header-level expand press when possible. This scope remains
+/// for custom headers that wrap only title/subtitle in
+/// [M3EExpandableHeaderTapTarget].
 class M3EExpandableHeaderTapScope extends InheritedWidget {
   /// Creates a header tap scope.
   const M3EExpandableHeaderTapScope({

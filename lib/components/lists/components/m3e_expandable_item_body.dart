@@ -205,23 +205,23 @@ extension _M3EExpandableItemHeader on _M3EExpandableItemState {
   _HeaderInteraction _assembleHeaderInteraction({
     required bool separateLeadingSelect,
     required bool entireCardTappable,
+    required bool hasList,
     required VoidCallback? rawHeaderOrOuter,
     required M3EExpandableStyle d,
   }) {
+    // Leading selection owns its InkWell. Expand/collapse + filled splash stay
+    // on the card (list expansions) or the full header row (content bodies).
+    final bool cardOwnsExpand =
+        entireCardTappable || (separateLeadingSelect && hasList);
+    final bool headerOwnsExpand =
+        rawHeaderOrOuter != null && !cardOwnsExpand && !d.tapIconToToggle;
     return (
       separateLeadingSelect: separateLeadingSelect,
       entireCardTappable: entireCardTappable,
       rawHeaderOrOuter: rawHeaderOrOuter,
-      outerTap: entireCardTappable && !separateLeadingSelect
-          ? rawHeaderOrOuter
-          : null,
-      headerTap:
-          !entireCardTappable &&
-              !separateLeadingSelect &&
-              rawHeaderOrOuter != null
-          ? rawHeaderOrOuter
-          : null,
-      outerTooltip: entireCardTappable
+      outerTap: cardOwnsExpand ? rawHeaderOrOuter : null,
+      headerTap: headerOwnsExpand ? rawHeaderOrOuter : null,
+      outerTooltip: cardOwnsExpand
           ? (widget.isExpanded ? d.collapseTooltip : d.expandTooltip)
           : null,
       doubleTap: _selectionDoubleTap(),
@@ -256,6 +256,7 @@ extension _M3EExpandableItemHeader on _M3EExpandableItemState {
     return _assembleHeaderInteraction(
       separateLeadingSelect: separateLeadingSelect,
       entireCardTappable: entireCardTappable,
+      hasList: hasList,
       rawHeaderOrOuter: rawHeaderOrOuter,
       d: d,
     );
@@ -268,27 +269,17 @@ extension _M3EExpandableItemHeader on _M3EExpandableItemState {
     required _HeaderInteraction interaction,
   }) {
     return M3EListTapBinder(
-      onTap: interaction.separateLeadingSelect
-          ? interaction.rawHeaderOrOuter
-          : (interaction.outerTap ?? interaction.headerTap),
+      onTap: interaction.outerTap ?? interaction.headerTap,
       onDoubleTap: interaction.doubleTap,
       builder: (BuildContext context, VoidCallback? onPressed) {
-        final Widget card = _buildAnimatedContainer(
+        return _buildAnimatedContainer(
           scheme,
           d,
-          interaction.separateLeadingSelect
-              ? null
-              : (interaction.entireCardTappable ? onPressed : null),
-          interaction.separateLeadingSelect
-              ? null
-              : (!interaction.entireCardTappable ? onPressed : null),
+          interaction.outerTap != null ? onPressed : null,
+          interaction.headerTap != null ? onPressed : null,
           interaction.outerTooltip,
           bodyInsideCard: !hasList,
         );
-        if (!interaction.separateLeadingSelect) {
-          return card;
-        }
-        return M3EExpandableHeaderTapScope(onTap: onPressed, child: card);
       },
     );
   }

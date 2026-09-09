@@ -17,7 +17,6 @@ import '../utils/m3e_list_selection_fill.dart';
 import '../utils/m3e_measure_size.dart';
 import 'm3e_card_list_item.dart';
 import 'm3e_expandable_expanded.dart';
-import 'm3e_expandable_header_tap_scope.dart';
 import 'm3e_expandable_nest_scope.dart';
 import 'm3e_expandable_snap_collapse.dart';
 import 'm3e_expandable_sublist.dart';

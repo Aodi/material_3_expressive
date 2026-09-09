@@ -158,7 +158,6 @@ Future<void> _cardListReorder(WidgetTester tester) async {
     ),
   );
 
-  // Drag handle replaces trailing chevron.
   expect(find.byIcon(M3EIcons.drag_handle), findsNWidgets(3));
   expect(find.byIcon(M3EIcons.chevron_right), findsNothing);
 
@@ -245,7 +244,6 @@ Future<void> _expandableMainSelection(WidgetTester tester) async {
     ),
   );
 
-  // Main-row flips only (nested list blocked from parent selection scope).
   expect(find.byType(M3ESelectionFlip), findsNWidgets(2));
 
   await tester.tap(find.text('Section 0'));
@@ -263,7 +261,7 @@ Future<void> _expandableMainSelection(WidgetTester tester) async {
   ).colorScheme;
   expect(_rowColor(tester, 'Section 1'), scheme.secondaryContainer);
 
-  // In selection mode, header tap toggles selection (does not collapse).
+  // Selection mode: header tap toggles selection (does not collapse).
   await tester.tap(find.text('Section 0'));
   await tester.pumpAndSettle();
   expect(last, <int>{0});
@@ -382,7 +380,6 @@ Future<void> _expandableParentReorderIgnoresNested(WidgetTester tester) async {
   );
   await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
   await tester.pump();
-  // Parent must stay expanded — no snap-collapse from parent reorder.
   expect(find.text('Nest 1'), findsOneWidget);
   expect(find.text('Nest 2'), findsOneWidget);
 
@@ -511,7 +508,6 @@ Future<void> _tapNotDelayed(WidgetTester tester) async {
   );
 
   await tester.tap(find.text('Tap me'));
-  // Immediate — no need to wait past double-tap timeout.
   await tester.pump();
   expect(taps, <int>[0]);
 }
@@ -533,7 +529,6 @@ Future<void> _dismissibleSelection(WidgetTester tester) async {
   ).colorScheme;
   expect(_rowColor(tester, 'Row 0'), scheme.secondaryContainer);
 
-  // Equal outer corners when selected (same as card list).
   final Finder card = find.ancestor(
     of: find.text('Row 0'),
     matching: find.byType(M3ECard),
@@ -542,7 +537,6 @@ Future<void> _dismissibleSelection(WidgetTester tester) async {
   expect(radius?.topLeft, radius?.bottomLeft);
   expect(radius?.topLeft, radius?.topRight);
 
-  // Double-tap trigger on second row.
   await _pumpDoubleTapDismissible(
     tester,
     onSelectionChanged: (Set<int> s) => last = s,
