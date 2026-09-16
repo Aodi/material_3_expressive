@@ -214,6 +214,16 @@ void main() {
     expect(tester.takeException(), isA<AssertionError>());
   });
 
+  testWidgets('rejects an empty indicator color list in the base indicator', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(const M3EExpressiveLoadingIndicator(indicatorColors: <Color>[])),
+    );
+
+    expect(tester.takeException(), isA<AssertionError>());
+  });
+
   test('validates instance dimensions', () {
     for (final indicatorSize in <double>[0, -1]) {
       expect(
