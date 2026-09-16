@@ -154,6 +154,19 @@ class _M3EExpressiveLoadingIndicatorState
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      if (widget.indicatorColors != null && widget.indicatorColors!.isEmpty) {
+        throw AssertionError('indicatorColors cannot be empty');
+      }
+      return true;
+    }(), 'indicatorColors cannot be empty');
+    if (widget.indicatorColors != null && widget.indicatorColors!.isEmpty) {
+      throw ArgumentError.value(
+        widget.indicatorColors,
+        'indicatorColors',
+        'must not be empty',
+      );
+    }
     final m3eTheme = M3ETheme.of(context);
     _loadingTheme = m3eTheme.loadingIndicatorTheme;
     _indicatorColors =

@@ -150,10 +150,19 @@ class M3ELoadingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    assert(
-      indicatorColors == null || indicatorColors!.isNotEmpty,
-      'indicatorColors cannot be empty',
-    );
+    assert(() {
+      if (indicatorColors != null && indicatorColors!.isEmpty) {
+        throw AssertionError('indicatorColors cannot be empty');
+      }
+      return true;
+    }(), 'indicatorColors cannot be empty');
+    if (indicatorColors != null && indicatorColors!.isEmpty) {
+      throw ArgumentError.value(
+        indicatorColors,
+        'indicatorColors',
+        'must not be empty',
+      );
+    }
     final theme = M3ETheme.of(context);
     final scheme = theme.colorScheme;
     final loadingTheme = theme.loadingIndicatorTheme;
