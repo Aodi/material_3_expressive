@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:motor/motor.dart';
 
 import '../../../foundations/foundations.dart';
+import '../styles/m3e_navigation_rail_theme.dart';
 
 /// Liquid selection indicator: lead/trail springs elongate into a bridge
 /// between destinations, then settle to a stadium pill (spatial springs spec).
@@ -94,23 +95,34 @@ class _M3ENavSelectionIndicatorState extends State<M3ENavSelectionIndicator>
       <int, ({double main, double cross, double mainSize, double crossSize})>{};
 
   /// Lead moves with snappier shape spring; trail follows with position spring.
-  SpringMotion get _leadMotion =>
+  SpringMotion _springMotion(M3ESpring spring) =>
       const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
-        damping: 0.45,
+        stiffness: spring.stiffness,
+        damping: spring.damping,
       );
 
-  SpringMotion get _trailMotion =>
-      const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
-        damping: 0.55,
-      );
+  SpringMotion get _leadMotion => _springMotion(
+    M3ETheme.of(context).navigationRailTheme.indicatorLeadSpring,
+  );
+
+  SpringMotion get _trailMotion => _springMotion(
+    M3ETheme.of(context).navigationRailTheme.indicatorTrailSpring,
+  );
 
   bool get _animating => _lead.isAnimating || _trail.isAnimating;
 
   @override
   void initState() {
     super.initState();
-    _lead = SingleMotionController(motion: _leadMotion, vsync: this);
-    _trail = SingleMotionController(motion: _trailMotion, vsync: this);
+    const defaults = M3ENavigationRailTheme.defaults;
+    _lead = SingleMotionController(
+      motion: _springMotion(defaults.indicatorLeadSpring),
+      vsync: this,
+    );
+    _trail = SingleMotionController(
+      motion: _springMotion(defaults.indicatorTrailSpring),
+      vsync: this,
+    );
     _lead.addStatusListener(_onMotionStatus);
     _trail.addStatusListener(_onMotionStatus);
     _scheduleMeasure(forceJump: true);
@@ -529,32 +541,45 @@ class _M3ENavSelectionIndicatorState extends State<M3ENavSelectionIndicator>
     final double mainExtent = (maxMain - minMain) + _baseMain;
     final double mainStart = minMain - _baseMain / 2;
     final double radius = math.min(_crossSize, _baseMain) / 2;
-
-    if (widget.axis == Axis.vertical) {
-      return Positioned(
-        left: _crossCenter - _crossSize / 2,
-        top: mainStart,
-        width: _crossSize,
-        height: mainExtent,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: widget.color,
-            borderRadius: BorderRadius.circular(radius),
-          ),
-        ),
-      );
-    }
-    return Positioned(
-      top: _crossCenter - _crossSize / 2,
-      left: mainStart,
-      height: _crossSize,
-      width: mainExtent,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: widget.color,
-          borderRadius: BorderRadius.circular(radius),
-        ),
-      ),
+    return _m3eNavSelectionPill(
+      axis: widget.axis,
+      color: widget.color,
+      crossCenter: _crossCenter,
+      crossSize: _crossSize,
+      mainStart: mainStart,
+      mainExtent: mainExtent,
+      radius: radius,
     );
   }
+}
+
+Widget _m3eNavSelectionPill({
+  required Axis axis,
+  required Color color,
+  required double crossCenter,
+  required double crossSize,
+  required double mainStart,
+  required double mainExtent,
+  required double radius,
+}) {
+  final decoration = BoxDecoration(
+    color: color,
+    borderRadius: BorderRadius.circular(radius),
+  );
+  if (axis == Axis.vertical) {
+    return Positioned(
+      left: crossCenter - crossSize / 2,
+      top: mainStart,
+      width: crossSize,
+      height: mainExtent,
+      child: DecoratedBox(decoration: decoration),
+    );
+  }
+  return Positioned(
+    top: crossCenter - crossSize / 2,
+    left: mainStart,
+    height: crossSize,
+    width: mainExtent,
+    child: DecoratedBox(decoration: decoration),
+  );
 }

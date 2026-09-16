@@ -54,12 +54,15 @@ class M3EDatePickerModeToggle extends StatelessWidget {
             return Padding(
               padding: const EdgeInsetsDirectional.only(start: 16),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(
-                    label,
-                    style: theme.typeScale.titleSmall.copyWith(
-                      color: theme.colorScheme.onSurface,
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.typeScale.titleSmall.copyWith(
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
                   ),
                   Icon(

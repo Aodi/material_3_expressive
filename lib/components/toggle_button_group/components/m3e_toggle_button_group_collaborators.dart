@@ -330,15 +330,14 @@ class _FocusRingGapRenderer {
     required int beforeIndex,
     required double spacing,
     required double connectedGap,
+    required double focusRingOutset,
   }) {
     var gap = connected ? connectedGap : spacing;
     if (connected) {
       final isFocusedLeft = focusedIndex == beforeIndex;
       final isFocusedRight = focusedIndex == beforeIndex + 1;
       if (isFocusedLeft || isFocusedRight) {
-        gap +=
-            M3EButtonConstants.kFocusRingGap +
-            M3EButtonConstants.kFocusRingWidth;
+        gap += focusRingOutset;
       }
     }
     return gap;

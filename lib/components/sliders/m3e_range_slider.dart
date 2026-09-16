@@ -192,6 +192,9 @@ class _M3ERangeSliderState extends State<M3ERangeSlider>
   _M3ERangeThumb get _keyboardThumb => _activeThumb ?? _M3ERangeThumb.end;
 
   bool get _showFocusOutline {
+    if (!M3ETheme.of(context).keyboardFocusIndicators) {
+      return false;
+    }
     if (!_focusNode.hasFocus) {
       return false;
     }

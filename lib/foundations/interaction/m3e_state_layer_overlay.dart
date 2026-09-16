@@ -54,6 +54,7 @@ class M3EStateLayerOverlay extends StatelessWidget {
           onTapUp: ink.onTapUp,
           onTapCancel: ink.onTapCancel,
           onHover: ink.onHover,
+          canRequestFocus: false,
           customBorder: shape,
           splashFactory: InkSparkle.splashFactory,
           splashColor: M3EStateLayer.splashColor(color),

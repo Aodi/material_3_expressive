@@ -57,7 +57,7 @@ $kPlaySnippetImport
 M3EDropdownMenu<String>(
   singleSelect: $_singleSelect,
   searchEnabled: $_searchEnabled,
-  enabled: $_enabled,
+  enabled: $_enabled,${_singleSelect ? '' : '\n  limit: 2,'}
   items: const <M3EDropdownItem<String>>[
     M3EDropdownItem(label: 'Flutter', value: 'flutter'),
     M3EDropdownItem(label: 'Dart', value: 'dart'),
@@ -95,6 +95,7 @@ M3EDropdownMenu<String>(
                   singleSelect: _singleSelect,
                   searchEnabled: _searchEnabled,
                   enabled: _enabled,
+                  limit: _singleSelect ? null : 2,
                   items: _items,
                   fieldStyle: M3EDropdownFieldStyle(
                     hintText: _hint,

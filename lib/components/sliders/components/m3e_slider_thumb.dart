@@ -6,6 +6,7 @@ import 'package:material_3_expressive/components/sliders/m3e_sliders.dart'
 import 'package:material_3_expressive/material_3_expressive.dart'
     show M3ERangeSlider, M3ESlider;
 
+import '../../../foundations/foundations.dart';
 import '../res/m3e_slider_tokens.dart';
 
 /// Expressive bar handle for [M3ESlider] / [M3ERangeSlider].
@@ -47,9 +48,6 @@ class M3ESliderThumb extends StatelessWidget {
   /// Pressed thickness along the short axis. Defaults to token pressed width.
   final double? pressedThickness;
 
-  static const double _focusStroke = 2;
-  static const double _focusInflate = 6;
-
   @override
   Widget build(BuildContext context) {
     final vertical = axis == Axis.vertical;
@@ -85,18 +83,23 @@ class M3ESliderThumb extends StatelessWidget {
       return thumb;
     }
 
+    final M3EFocusRingTheme ring = M3EFocusRing.themeOf(context);
+    final Color ringColor = ring.resolveColor(M3ETheme.of(context).colorScheme);
+    // Stroke is centered on the inflated edge, so half of it eats into the gap.
+    final double inflate = 2 * ring.gap + ring.width;
+    final double ringW = w + inflate;
+    final double ringH = h + inflate;
+
     return Stack(
       alignment: Alignment.center,
       clipBehavior: Clip.none,
       children: <Widget>[
         Container(
-          width: w + _focusInflate,
-          height: h + _focusInflate,
+          width: ringW,
+          height: ringH,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(
-              math.max(w + _focusInflate, h + _focusInflate) / 2,
-            ),
-            border: Border.all(color: color, width: _focusStroke),
+            borderRadius: BorderRadius.circular(math.max(ringW, ringH) / 2),
+            border: Border.all(color: ringColor, width: ring.width),
           ),
         ),
         thumb,

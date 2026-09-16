@@ -84,7 +84,7 @@ flutter run
 
 ## Migrating to `material_ui`
 
-This package uses [`material_ui`](https://pub.dev/packages/material_ui) `^1.1.0`
+This package uses [`material_ui`](https://pub.dev/packages/material_ui) `^1.1.1`
 for Material widgets (`MaterialApp`, `ThemeData`, `ColorScheme`, and the rest of
 the Material library). **Do not import** `package:flutter/material.dart`.
 
@@ -101,13 +101,46 @@ is required (`material_ui` will not resolve on older SDKs).
 [`dynamic_color`](https://pub.dev/packages/dynamic_color) `^2.1.0` (re-exported
 through this package). Prefer those APIs rather than a local duplicate.
 
+## What's new in 1.1.2
+
+Summary of public API and behavior updates since 1.1.1 (details in
+[`CHANGELOG.md`](CHANGELOG.md)):
+
+- **Keyboard focus rings** — actionable controls show an outset ring for
+  keyboard focus. Configure via `M3EThemeData.focusRingTheme` /
+  `keyboardFocusIndicators` (see [Quick start](#quick-start)).
+- **List selection & reorder** — `M3ECardList`, dismissible lists, and
+  expandable header rows accept `selection` / `reorder` (and related
+  callbacks / state). Nested expandable sublists keep their own list APIs.
+  Theme tokens: `M3EListSelectionState`, `M3EListReorderState`,
+  `M3EListSelectionMode` / `M3EListSelectionTrigger`.
+- **Dismissible swipe actions** — optional `leadingActionsBuilder` /
+  `trailingActionsBuilder` reveal icon actions (`M3EListSwipeAction`) with
+  preview snap; full swipe still dismisses when a side has no actions.
+- **Expandable nested lists** — `M3EExpandableData.expanded` uses
+  `M3EExpandableExpanded.list(child)` or `.content(child)` (replaces a plain
+  `body` widget). Nested card lists can set `embedded: true` for inner radii.
+- **Configurable spatial springs** — component themes expose `M3ESpring`
+  fields (switch, FAB menu, nav rail, checkbox, slider, icon button, toolbar,
+  list card radius / dismissible, refresh settle, …). Defaults match prior
+  hard-coded motion.
+- **Dropdown** — optional `limit` caps multi-select count (`null` = unlimited).
+  `openMotion` / `closeMotion` are optional; when null they resolve from
+  `M3EDropdownMenuTheme.openSpring` / `closeSpring`.
+- **Toolbar FAB** — `fabExpandsToolbar: false` keeps a fixed baseline FAB
+  that only runs `onFabPressed` (pill stays open).
+- **Button group overflow** — `M3EOverflowStrategy`,
+  `M3ENoOverflowStrategy`, and `M3EScrollOverflowStrategy` are exported for
+  `M3EButtonGroup.overflowStrategy`.
+- **Deps** — `material_ui` `^1.1.1`; date picker overflow / wrap fixes.
+
 ## Installation
 
 Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  material_3_expressive: ^1.1.1
+  material_3_expressive: ^1.1.2
 ```
 
 Then fetch it:
@@ -173,6 +206,22 @@ class MyApp extends StatelessWidget {
 Surfaces draw behind the OS navigation bar; components such as `M3ENavigationBar`
 keep interactive content above the gesture area via `viewPadding`.
 
+Actionable controls draw an outset **keyboard focus ring** when focused via
+Tab (hidden after pointer interaction). Override globally with
+`focusRingTheme` / `keyboardFocusIndicators` on `M3EThemeData`, or try the
+example **Focus rings** playground (View tab):
+
+```dart
+M3EThemeData.light(seedColor: seed).copyWith(
+  keyboardFocusIndicators: true,
+  focusRingTheme: const M3EFocusRingTheme(
+    color: Color(0xFF6750A4),
+    width: 2,
+    gap: 2,
+  ),
+);
+```
+
 ### Alternative: `M3ETheme` subtree
 
 If you already have an app shell, wrap any subtree in `M3ETheme`:
@@ -222,6 +271,11 @@ Key properties on `M3EThemeData`:
 - `typography` — `M3ETypography` with baseline and emphasized scales (30 styles)
 - `typeScale` — baseline alias for `typography.baseline` (used by components)
 - `spacing`, `visualDensity`, per-component `*Theme` extensions
+- `focusRingTheme` / `keyboardFocusIndicators` — keyboard focus chrome
+- Per-component `M3ESpring` motion fields on themes such as `switchTheme`,
+  `fabMenuTheme`, `navigationRailTheme`, `listTheme`, `toolbarTheme`,
+  `sliderTheme`, `iconButtonTheme`, `checkboxTheme`, and
+  `refreshIndicatorTheme` (defaults preserve prior hard-coded springs)
 
 The M3 type system has 15 baseline and 15 emphasized roles. Use emphasized
 styles for selection, actions, and editorial hierarchy:
@@ -448,6 +502,8 @@ M3EFabMenu(
 #### M3EButtonGroup
 
 Grouped icon buttons with neighbour squish or connected corner morphing.
+Optional `overflowStrategy` (`M3ENoOverflowStrategy`, `M3EScrollOverflowStrategy`,
+or a custom `M3EOverflowStrategy`).
 
 ```dart
 // in State
@@ -463,6 +519,7 @@ M3EButtonGroup(
 
 M3EButtonGroup(
   type: M3EButtonGroupType.connected,
+  overflowStrategy: const M3EScrollOverflowStrategy(),
   actions: const [
     M3EButtonGroupAction(icon: Icon(M3EIcons.chevron_left)),
     M3EButtonGroupAction(icon: Icon(M3EIcons.menu)),
@@ -647,6 +704,9 @@ M3EChip(
 
 Static list, multi-select, search, and async loading. When search is enabled,
 the in-panel field defaults to `surface` fill and the panel container radius.
+Optional `limit` caps how many items can be selected in multi-select (`null` =
+unlimited). Optional `openMotion` / `closeMotion` override theme
+`M3EDropdownMenuTheme.openSpring` / `closeSpring` (null → theme).
 
 ```dart
 // Single select
@@ -660,9 +720,10 @@ M3EDropdownMenu<String>(
   onSelectionChanged: (items) {},
 );
 
-// Multi select with search
+// Multi select with search (and optional selection cap)
 M3EDropdownMenu<String>(
   searchEnabled: true,
+  limit: 2,
   items: const [
     M3EDropdownItem(label: 'Layout', value: 'layout'),
     M3EDropdownItem(label: 'Theming', value: 'theming'),
@@ -870,6 +931,8 @@ M3EListItem(
 
 Vertically stacked cards with dynamic corner rounding. Pass
 `variant: M3ECardVariant.outlined` (or `border`) for outlined cards.
+Enable list-owned `selection` / `reorder`, or nest with `embedded: true`
+(all rows use inner radii).
 
 ```dart
 M3ECardList(
@@ -880,6 +943,20 @@ M3ECardList(
     headline: 'Inbox',
     leading: const Icon(M3EIcons.schedule),
   ),
+);
+
+// Selection + reorder (theme: M3EListTheme.selection / .reorder)
+M3ECardList(
+  selection: true,
+  reorder: true,
+  onReorder: (oldIndex, newIndex) {},
+  selectionState: const M3EListSelectionState(
+    mode: M3EListSelectionMode.multiple,
+    trigger: M3EListSelectionTrigger.icon,
+    selectedIcon: Icon(M3EIcons.check),
+  ),
+  itemCount: items.length,
+  itemBuilder: (context, index) => M3EListItem(headline: items[index]),
 );
 
 // Scrollable / lazy
@@ -899,9 +976,11 @@ Multi-select host: optional [M3ESelectionController], [M3ESelectionAppBar]
 list [body] ([M3ECardList], [M3EDismissibleList], …). Selected rows pick up
 `selectedColor` (or `M3ESelectionTheme.highlightColor`, default
 `secondaryContainer`) automatically — no `colorBuilder` required for the
-highlight. Use `borderRadiusBuilder` for selected-item corner morph (spring),
-gestures (`onTap` / `onLongPress`), and [M3ESelectionLeading] on each item.
-Wrap with [PopScope] so system back clears selection first. Prefer
+highlight. Prefer list-owned `selection: true` on the body when you want
+built-in flip / double-tap triggers; otherwise use `borderRadiusBuilder` for
+selected-item corner morph, gestures (`onTap` / `onLongPress`), and
+[M3ESelectionLeading] on each item. Wrap with [PopScope] so system back clears
+selection first. Prefer
 `listPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8)`.
 
 ```dart
@@ -930,24 +1009,12 @@ PopScope(
     body: M3ECardList.builder(
       itemCount: items.length,
       listPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      borderRadiusBuilder: (i, pos) => selection.isSelected(i)
-          ? BorderRadius.circular(24)
-          : null,
-      onLongPress: (i) => selection.select(i),
-      onTap: (i) {
-        if (selection.isSelectionMode) {
-          selection.toggle(i);
-        }
-      },
-      itemBuilder: (context, i) => M3EListItem(
-        headline: items[i],
-        leading: M3ESelectionLeading(
-          selected: selection.isSelected(i),
-          onTap: () => selection.toggle(i),
-          selectedChild: CircleAvatar(child: Icon(M3EIcons.check)),
-          child: CircleAvatar(child: Text('$i')),
-        ),
+      selection: true,
+      selectionController: selection,
+      selectionState: const M3EListSelectionState(
+        selectedIcon: Icon(M3EIcons.check),
       ),
+      itemBuilder: (context, i) => M3EListItem(headline: items[i]),
     ),
   ),
 );
@@ -959,12 +1026,29 @@ An explicit `colorBuilder` still wins over the selection highlight.
 
 #### M3EDismissibleColumn
 
-Vertically swipeable card list with expressive physics.
+Vertically swipeable card list with expressive physics. Supports list-owned
+`selection` and `reorder` (same tokens as card list). Optional
+`leadingActionsBuilder` / `trailingActionsBuilder` reveal icon actions
+(`M3EListSwipeAction`) with preview snap; a side with no actions still
+full-dismisses.
 
 ```dart
 M3EDismissibleColumn(
   itemCount: 3,
+  selection: true,
+  reorder: true,
+  onReorder: (oldIndex, newIndex) {},
   onDismiss: (index, direction) async => true,
+  trailingActionsBuilder: (index) => [
+    M3EListSwipeAction(
+      icon: const Icon(M3EIcons.archive),
+      onPressed: () {},
+    ),
+    const M3EListSwipeAction(
+      icon: Icon(M3EIcons.delete),
+      isPrimary: true,
+    ),
+  ],
   onTap: (index) {},
   itemBuilder: (context, index) => M3EListItem(
     headline: 'Swipe to dismiss',
@@ -992,16 +1076,36 @@ SizedBox(
 
 #### M3EExpandableList
 
-Expandable cards with expressive open/close motion.
+Expandable cards with expressive open/close motion. Use
+`M3EExpandableExpanded.list` for a nested list (e.g. `M3ECardList` with
+`embedded: true`) or `.content` for freeform body content. Header rows support
+list-owned `selection` / `reorder` (nested lists keep their own APIs; expanded
+rows snap-collapse for reorder). Optional `expandMotion` / `collapseMotion`
+override theme springs.
 
 ```dart
 M3EExpandableList(
+  selection: true,
+  reorder: true,
+  onReorder: (oldIndex, newIndex) {},
   data: [
     M3EExpandableData(
       title: 'Battery level low',
       subtitle: 'Plug in your device.',
       leading: const Icon(M3EIcons.battery_alert),
-      body: const Text('Your battery is at 10%.'),
+      expanded: M3EExpandableExpanded.content(
+        const Text('Your battery is at 10%.'),
+      ),
+    ),
+    M3EExpandableData(
+      title: 'Nested list',
+      expanded: M3EExpandableExpanded.list(
+        M3ECardList(
+          embedded: true,
+          itemCount: 3,
+          itemBuilder: (context, i) => M3EListItem(headline: 'Child $i'),
+        ),
+      ),
     ),
   ],
 );

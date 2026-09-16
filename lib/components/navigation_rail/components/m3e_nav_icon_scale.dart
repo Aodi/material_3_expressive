@@ -1,6 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:motor/motor.dart';
 
+import '../../../foundations/foundations.dart';
+import '../styles/m3e_navigation_rail_theme.dart';
+
 /// Subtle scale pop on the newly selected icon (≈1.0 → 1.08 → 1.0).
 class M3ENavIconScale extends StatefulWidget {
   /// M3ENavIconScale.
@@ -25,16 +28,20 @@ class _M3ENavIconScaleState extends State<M3ENavIconScale>
     with SingleTickerProviderStateMixin {
   late SingleMotionController _scale;
 
-  SpringMotion get _motion =>
+  SpringMotion _springMotion(M3ESpring spring) =>
       const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
-        damping: 0.5,
+        stiffness: spring.stiffness,
+        damping: spring.damping,
       );
+
+  SpringMotion get _motion =>
+      _springMotion(M3ETheme.of(context).navigationRailTheme.iconScaleSpring);
 
   @override
   void initState() {
     super.initState();
     _scale = SingleMotionController(
-      motion: _motion,
+      motion: _springMotion(M3ENavigationRailTheme.defaults.iconScaleSpring),
       vsync: this,
       initialValue: 1,
     );

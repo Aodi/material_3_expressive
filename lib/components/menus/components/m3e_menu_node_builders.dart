@@ -178,16 +178,20 @@ abstract final class M3EMenuNodeBuilders {
               }
             : null,
         builder: (BuildContext context, M3EInteractionState state) {
-          return _customWidgetBody(
-            context,
-            item,
-            menuTheme: menuTheme,
-            scheme: scheme,
-            style: style,
-            palette: palette,
+          return M3EFocusRing(
+            focused: state.focused,
             radius: radius,
-            background: background,
-            state: state,
+            child: _customWidgetBody(
+              context,
+              item,
+              menuTheme: menuTheme,
+              scheme: scheme,
+              style: style,
+              palette: palette,
+              radius: radius,
+              background: background,
+              state: state,
+            ),
           );
         },
       ),

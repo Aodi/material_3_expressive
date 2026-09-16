@@ -105,7 +105,7 @@ class M3EDropdownMenuTheme extends M3EThemeExtension<M3EDropdownMenuTheme> {
   /// selectedTextStyle.
 
   TextStyle selectedTextStyle(M3ETypeScale type, M3EColorScheme scheme) =>
-      type.bodyLarge.copyWith(color: scheme.onSurface);
+      type.bodyMedium.copyWith(color: scheme.onSurface);
 
   /// chipLabelStyle.
 

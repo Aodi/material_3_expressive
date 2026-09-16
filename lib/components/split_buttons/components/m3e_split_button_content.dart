@@ -293,8 +293,7 @@ extension _M3ESplitButtonContent<T> on _M3ESplitButtonState<T> {
         (widget.style == M3EButtonStyle.elevated
             ? _splitTheme.elevatedInnerGap
             : _splitTheme.innerGap);
-    const double focusRingOutset =
-        M3EButtonConstants.kFocusRingGap + M3EButtonConstants.kFocusRingWidth;
+    final double focusRingOutset = M3EFocusRing.outsetOf(context);
     final eitherFocused = focused || _isTrailingFocused;
     final gap = baseGap + (eitherFocused ? focusRingOutset : 0.0);
 

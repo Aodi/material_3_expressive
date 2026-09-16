@@ -72,6 +72,7 @@ class M3ESliderTheme extends M3EThemeExtension<M3ESliderTheme> {
     this.disabledInactiveOpacity = M3ESliderTokens.disabledInactiveTrackOpacity,
     this.waveAmplitude = M3ESliderTokens.waveAmplitude,
     this.wavelength = M3ESliderTokens.wavelength,
+    this.dockSpring = M3EMotion.expressiveSpatialFast,
   });
 
   /// defaults.
@@ -131,6 +132,9 @@ class M3ESliderTheme extends M3EThemeExtension<M3ESliderTheme> {
 
   /// Length of one full sine cycle on a wavy active track.
   final double wavelength;
+
+  /// Dock / undock spring for the handle.
+  final M3ESpring dockSpring;
 
   /// Compose wavy determinate amplitude: full mid-progress, zero near ends.
   double amplitudeForProgress(double progress) {
@@ -196,6 +200,7 @@ class M3ESliderTheme extends M3EThemeExtension<M3ESliderTheme> {
     double? disabledInactiveOpacity,
     double? waveAmplitude,
     double? wavelength,
+    M3ESpring? dockSpring,
   }) {
     return M3ESliderTheme(
       height: height ?? this.height,
@@ -220,6 +225,7 @@ class M3ESliderTheme extends M3EThemeExtension<M3ESliderTheme> {
           disabledInactiveOpacity ?? this.disabledInactiveOpacity,
       waveAmplitude: waveAmplitude ?? this.waveAmplitude,
       wavelength: wavelength ?? this.wavelength,
+      dockSpring: dockSpring ?? this.dockSpring,
     );
   }
 
@@ -270,6 +276,7 @@ class M3ESliderTheme extends M3EThemeExtension<M3ESliderTheme> {
       ),
       waveAmplitude: _lerp(waveAmplitude, other.waveAmplitude, t),
       wavelength: _lerp(wavelength, other.wavelength, t),
+      dockSpring: t < 0.5 ? dockSpring : other.dockSpring,
     );
   }
 

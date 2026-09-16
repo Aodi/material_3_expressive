@@ -6,6 +6,7 @@ import 'package:motor/motor.dart';
 import '../../../foundations/foundations.dart';
 import '../../icon_buttons/m3e_icon_buttons.dart';
 import '../models/m3e_toolbar_item.dart';
+import '../styles/m3e_toolbar_theme.dart';
 
 /// Inline icon action for [M3EToolbar] — thin adapter over [M3EIconButton].
 ///
@@ -53,8 +54,11 @@ class _M3EToolbarIconButtonState extends State<M3EToolbarIconButton>
     with SingleTickerProviderStateMixin {
   late final SingleMotionController _labelCtrl;
 
-  static SpringMotion get _labelMotion =>
-      const MaterialSpringMotion.expressiveSpatialFast().copyWith(damping: 0.4);
+  SpringMotion _labelMotion(M3ESpring spring) =>
+      const MaterialSpringMotion.expressiveSpatialFast().copyWith(
+        stiffness: spring.stiffness,
+        damping: spring.damping,
+      );
 
   bool get _hasLabel {
     final String? label = widget.action.label;
@@ -67,7 +71,7 @@ class _M3EToolbarIconButtonState extends State<M3EToolbarIconButton>
   void initState() {
     super.initState();
     _labelCtrl = SingleMotionController(
-      motion: _labelMotion,
+      motion: _labelMotion(M3EToolbarTheme.defaults.labelSpring),
       vsync: this,
       initialValue: _showLabeled ? 1 : 0,
     );
@@ -81,8 +85,9 @@ class _M3EToolbarIconButtonState extends State<M3EToolbarIconButton>
         oldWidget.action.label != null &&
         oldWidget.action.label!.isNotEmpty;
     if (wasLabeled != _showLabeled) {
+      final spring = M3ETheme.of(context).toolbarTheme.labelSpring;
       _labelCtrl
-        ..motion = _labelMotion
+        ..motion = _labelMotion(spring)
         ..animateTo(_showLabeled ? 1 : 0);
     }
   }

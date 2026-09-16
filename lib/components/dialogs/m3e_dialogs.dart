@@ -404,6 +404,8 @@ class _M3ESelectionDialogState extends State<_M3ESelectionDialog> {
     final EdgeInsets padding = dialogTheme.padding;
     final ShapeBorder shape = const RoundedRectangleBorder();
 
+    // Row owns Tab / Enter; embedded radio/checkbox stay enabled visually but
+    // are not Tab stops ([focusable]: false + [ExcludeFocus]).
     return M3ETappable(
       onTap: () {
         if (widget.multiSelect) {
@@ -415,59 +417,51 @@ class _M3ESelectionDialogState extends State<_M3ESelectionDialog> {
       materialInk: true,
       semanticLabel: option,
       builder: (BuildContext context, M3EInteractionState state) {
-        return SizedBox(
-          height: dialogTheme.selectionItemHeight,
-          width: double.infinity,
-          child: M3EStateLayerOverlay(
-            state: state,
-            color: theme.colorScheme.onSurface,
-            shape: shape,
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: padding.left,
-                right: padding.right,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: ExcludeSemantics(
-                  child: widget.multiSelect
-                      ? _buildCheckboxVisual(theme, option)
-                      : IgnorePointer(
-                          child: M3ERadio<String>(
-                            value: option,
-                            groupValue: _selected.isEmpty
-                                ? null
-                                : _selected.first,
-                            label: Text(option),
-                            onChanged: (_) {},
-                          ),
-                        ),
+        return M3EFocusRing(
+          focused: state.focused,
+          radius: BorderRadius.zero,
+          child: SizedBox(
+            height: dialogTheme.selectionItemHeight,
+            width: double.infinity,
+            child: M3EStateLayerOverlay(
+              state: state,
+              color: theme.colorScheme.onSurface,
+              shape: shape,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: padding.left,
+                  right: padding.right,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ExcludeSemantics(
+                    child: ExcludeFocus(
+                      child: IgnorePointer(
+                        child: widget.multiSelect
+                            ? M3ECheckbox(
+                                value: _selected.contains(option),
+                                onChanged: (_) => _toggleMulti(option),
+                                label: Text(option),
+                                focusable: false,
+                              )
+                            : M3ERadio<String>(
+                                value: option,
+                                groupValue: _selected.isEmpty
+                                    ? null
+                                    : _selected.first,
+                                label: Text(option),
+                                onChanged: _selectSingle,
+                                focusable: false,
+                              ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildCheckboxVisual(M3EThemeData theme, String option) {
-    final bool checked = _selected.contains(option);
-    return Row(
-      children: <Widget>[
-        IgnorePointer(
-          child: M3ECheckbox(value: checked, onChanged: (_) {}),
-        ),
-        SizedBox(width: theme.radioTheme.labelGap),
-        Expanded(
-          child: Text(
-            option,
-            style: theme.typeScale.bodyLarge.copyWith(
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

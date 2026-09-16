@@ -87,6 +87,8 @@ class M3EToolbarTheme extends M3EThemeExtension<M3EToolbarTheme> {
     this.compactHeightReduction = 4,
     this.elevationSurface = 0,
     this.elevationProminent = 2,
+    this.expandSpring = M3EMotion.expressiveSpatialFast,
+    this.labelSpring = const M3ESpring(stiffness: 800, damping: 0.4),
   });
 
   /// defaults.
@@ -136,6 +138,12 @@ class M3EToolbarTheme extends M3EThemeExtension<M3EToolbarTheme> {
 
   /// elevationProminent.
   final double elevationProminent;
+
+  /// Floating toolbar morph / visibility expand spring.
+  final M3ESpring expandSpring;
+
+  /// Labeled action expand / collapse spring.
+  final M3ESpring labelSpring;
 
   /// metricsFor.
 
@@ -272,6 +280,8 @@ class M3EToolbarTheme extends M3EThemeExtension<M3EToolbarTheme> {
     double? compactHeightReduction,
     double? elevationSurface,
     double? elevationProminent,
+    M3ESpring? expandSpring,
+    M3ESpring? labelSpring,
   }) {
     return M3EToolbarTheme(
       containerSize: containerSize ?? this.containerSize,
@@ -290,6 +300,8 @@ class M3EToolbarTheme extends M3EThemeExtension<M3EToolbarTheme> {
           compactHeightReduction ?? this.compactHeightReduction,
       elevationSurface: elevationSurface ?? this.elevationSurface,
       elevationProminent: elevationProminent ?? this.elevationProminent,
+      expandSpring: expandSpring ?? this.expandSpring,
+      labelSpring: labelSpring ?? this.labelSpring,
     );
   }
 
@@ -325,6 +337,8 @@ class M3EToolbarTheme extends M3EThemeExtension<M3EToolbarTheme> {
         other.elevationProminent,
         t,
       ),
+      expandSpring: t < 0.5 ? expandSpring : other.expandSpring,
+      labelSpring: t < 0.5 ? labelSpring : other.labelSpring,
     );
   }
 

@@ -142,7 +142,8 @@ class M3EButtonTheme extends M3EThemeExtension<M3EButtonTheme> {
   Color outline(M3EColorScheme scheme) => scheme.outline;
 
   /// focusRingColor.
-
+  ///
+  /// Prefer [M3EThemeData.focusRingTheme] for a package-wide override.
   Color focusRingColor(M3EColorScheme scheme) => scheme.primary;
 
   /// elevation.

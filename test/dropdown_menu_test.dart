@@ -38,6 +38,10 @@ void main() {
     'M3EDropdownMenu single select replaces prior selection',
     _m3edropdownmenuSingleSelectReplacesPriorSelection,
   );
+  testWidgets(
+    'M3EDropdownMenu limit blocks extra multi selections',
+    _m3edropdownmenuLimitBlocksExtraMultiSelections,
+  );
 }
 
 Future<void> _m3edropdownmenuRendersFieldWithHintText(
@@ -125,6 +129,48 @@ Future<void> _m3edropdownmenuSingleSelectReplacesPriorSelection(
 
   expect(selected, hasLength(1));
   expect(selected.first.value, 'm3');
+}
+
+Future<void> _m3edropdownmenuLimitBlocksExtraMultiSelections(
+  WidgetTester tester,
+) async {
+  var selected = <M3EDropdownItem<String>>[];
+
+  await tester.pumpWidget(
+    _host(
+      M3EDropdownMenu<String>(
+        limit: 2,
+        items: _items,
+        fieldStyle: const M3EDropdownFieldStyle(hintText: 'Choose framework'),
+        onSelectionChanged: (List<M3EDropdownItem<String>> value) {
+          selected = value;
+        },
+      ),
+    ),
+  );
+
+  await tester.tap(find.text('Choose framework'));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+
+  await tester.tap(find.text('Flutter'));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 200));
+  expect(selected, hasLength(1));
+
+  await tester.tap(find.text('Dart'));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 200));
+  expect(selected, hasLength(2));
+
+  await tester.tap(find.text('Material 3'));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 200));
+  expect(selected, hasLength(2));
+  expect(
+    selected.map((M3EDropdownItem<String> i) => i.value),
+    containsAll(<String>['flutter', 'dart']),
+  );
 }
 
 Future<void> _m3edropdownmenuRebuildDoesNotFireOnSelectionChangedDuringBuild(

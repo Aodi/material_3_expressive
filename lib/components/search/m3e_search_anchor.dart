@@ -316,11 +316,9 @@ class _M3ESearchAnchorBar extends StatefulWidget {
 }
 
 class _M3ESearchAnchorBarState extends State<_M3ESearchAnchorBar> {
-  // Anchor bar is display-only; the search view owns focus and editing.
-  late final FocusNode _focusNode = FocusNode(
-    canRequestFocus: false,
-    skipTraversal: true,
-  );
+  // Closed anchor is a keyboard Tab stop (opens the search view). Editing
+  // happens in the view's search bar, so this field stays read-only.
+  late final FocusNode _focusNode = FocusNode(debugLabel: 'M3ESearchAnchorBar');
 
   @override
   void initState() {
@@ -372,36 +370,43 @@ class _M3ESearchAnchorBarState extends State<_M3ESearchAnchorBar> {
 
   @override
   Widget build(BuildContext context) {
-    return M3ESearchBar(
-      focusNode: _focusNode,
-      constraints: widget.constraints,
-      controller: widget.controller,
-      readOnly: true,
-      expandOnFocus: widget.expandOnFocus,
-      expandRestPadding: widget.expandRestPadding,
-      onTap: () {
-        _openView();
-        widget.onTap?.call();
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.enter): _openView,
+        const SingleActivator(LogicalKeyboardKey.numpadEnter): _openView,
+        const SingleActivator(LogicalKeyboardKey.space): _openView,
       },
-      hintText: widget.barHintText,
-      hintStyle: widget.barHintStyle,
-      textStyle: widget.barTextStyle,
-      elevation: widget.barElevation,
-      backgroundColor: widget.barBackgroundColor,
-      overlayColor: widget.barOverlayColor,
-      side: widget.barSide,
-      shape: widget.barShape,
-      padding: widget.barPadding,
-      alignment: widget.barAlignment,
-      leading: widget.barLeading ?? const Icon(M3EIcons.search),
-      trailing: _buildTrailing(),
-      textCapitalization: widget.textCapitalization,
-      textInputAction: widget.textInputAction,
-      keyboardType: widget.keyboardType,
-      scrollPadding: widget.scrollPadding,
-      contextMenuBuilder: widget.contextMenuBuilder,
-      smartDashesType: widget.smartDashesType,
-      smartQuotesType: widget.smartQuotesType,
+      child: M3ESearchBar(
+        focusNode: _focusNode,
+        constraints: widget.constraints,
+        controller: widget.controller,
+        readOnly: true,
+        expandOnFocus: widget.expandOnFocus,
+        expandRestPadding: widget.expandRestPadding,
+        onTap: () {
+          _openView();
+          widget.onTap?.call();
+        },
+        hintText: widget.barHintText,
+        hintStyle: widget.barHintStyle,
+        textStyle: widget.barTextStyle,
+        elevation: widget.barElevation,
+        backgroundColor: widget.barBackgroundColor,
+        overlayColor: widget.barOverlayColor,
+        side: widget.barSide,
+        shape: widget.barShape,
+        padding: widget.barPadding,
+        alignment: widget.barAlignment,
+        leading: widget.barLeading ?? const Icon(M3EIcons.search),
+        trailing: _buildTrailing(),
+        textCapitalization: widget.textCapitalization,
+        textInputAction: widget.textInputAction,
+        keyboardType: widget.keyboardType,
+        scrollPadding: widget.scrollPadding,
+        contextMenuBuilder: widget.contextMenuBuilder,
+        smartDashesType: widget.smartDashesType,
+        smartQuotesType: widget.smartQuotesType,
+      ),
     );
   }
 }
@@ -492,6 +497,9 @@ class _M3ESearchAnchorState extends State<M3ESearchAnchor>
     if (viewIsOpen) {
       return;
     }
+    // Drop any anchor field focus before the view mounts so the soft keyboard
+    // does not flash on the read-only bar then hide when the route takes over.
+    FocusManager.instance.primaryFocus?.unfocus();
     final NavigatorState navigator = Navigator.of(context);
     _route = M3ESearchViewRoute(
       anchorKey: _anchorKey,
@@ -569,12 +577,17 @@ class _M3ESearchAnchorState extends State<M3ESearchAnchor>
       key: _anchorKey,
       opacity: _opacity(),
       duration: M3ESearchConstants.anchorFadeDuration,
-      child: IgnorePointer(
-        ignoring: !widget.enabled,
-        child: GestureDetector(
-          onTap: openView,
-          behavior: HitTestBehavior.translucent,
-          child: widget.builder(context, _searchController),
+      // Hidden anchors must not keep an EditableText text-input client or Tab
+      // stop while the search view owns the same controller.
+      child: ExcludeFocus(
+        excluding: !_anchorIsVisible,
+        child: IgnorePointer(
+          ignoring: !widget.enabled || !_anchorIsVisible,
+          child: GestureDetector(
+            onTap: openView,
+            behavior: HitTestBehavior.translucent,
+            child: widget.builder(context, _searchController),
+          ),
         ),
       ),
     );

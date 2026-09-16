@@ -3,14 +3,10 @@ part of '../m3e_dropdown_menus.dart';
 /// Lifecycle, async load, and controller sync for [_M3EDropdownMenuState].
 extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
   void _initControllers() {
-    _expandCtrl = SingleMotionController(
-      motion: widget.openMotion.toMotion(),
-      vsync: this,
-    );
-    _arrowCtrl = SingleMotionController(
-      motion: widget.openMotion.toMotion(),
-      vsync: this,
-    );
+    // Theme may be unavailable; match [M3EDropdownMenuTheme] defaults.
+    final open = widget.openMotion ?? M3EMotion.expressiveSpatialDefault;
+    _expandCtrl = SingleMotionController(motion: open.toMotion(), vsync: this);
+    _arrowCtrl = SingleMotionController(motion: open.toMotion(), vsync: this);
     _expandCtrl.addListener(_onExpandAnimationTick);
 
     if (widget.controller != null) {
@@ -41,7 +37,34 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
   void _initFocusAndLoading() {
     _focusNode = widget.focusNode ?? FocusNode();
     _loadingNotifier = ValueNotifier<bool>(false);
-    _listenable = Listenable.merge([_controller, _loadingNotifier]);
+    _focusRingNotifier = ValueNotifier<bool>(false);
+    _focusNode.addListener(_syncFieldFocusRing);
+    FocusManager.instance.addHighlightModeListener(
+      _onFocusHighlightModeChanged,
+    );
+    M3EFocusInteraction.instance.addListener(_syncFieldFocusRing);
+    _listenable = Listenable.merge([
+      _controller,
+      _loadingNotifier,
+      _focusRingNotifier,
+    ]);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _syncFieldFocusRing();
+      }
+    });
+  }
+
+  void _onFocusHighlightModeChanged(FocusHighlightMode mode) {
+    _syncFieldFocusRing();
+  }
+
+  /// Keeps the field ring in sync with keyboard focus highlight state.
+  void _syncFieldFocusRing() {
+    if (!mounted) {
+      return;
+    }
+    _focusRingNotifier.value = M3EFocusRing.shouldShow(_focusNode, context);
   }
 
   void _listenBackButton() {
@@ -110,10 +133,13 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
     if (oldWidget.focusNode == widget.focusNode) {
       return;
     }
+    _focusNode.removeListener(_syncFieldFocusRing);
     if (oldWidget.focusNode == null) {
       _focusNode.dispose();
     }
     _focusNode = widget.focusNode ?? FocusNode();
+    _focusNode.addListener(_syncFieldFocusRing);
+    _syncFieldFocusRing();
   }
 
   void _syncMotionFromWidget(M3EDropdownMenu<T> oldWidget) {
@@ -121,8 +147,8 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
         widget.closeMotion == oldWidget.closeMotion) {
       return;
     }
-    _expandCtrl.motion = widget.openMotion.toMotion();
-    _arrowCtrl.motion = widget.openMotion.toMotion();
+    _expandCtrl.motion = _resolvedOpenMotion.toMotion();
+    _arrowCtrl.motion = _resolvedOpenMotion.toMotion();
   }
 
   Future<void> _loadAsync() async {
@@ -175,6 +201,8 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeInOut,
             alignment: Alignment.topCenter,
+            // Let the field's focus ring paint outside the animated bounds.
+            clipBehavior: Clip.none,
             child: CompositedTransformTarget(
               link: _layerLink,
               child: ListenableBuilder(
@@ -184,11 +212,7 @@ extension _M3EDropdownMenuLifecycle<T> on _M3EDropdownMenuState<T> {
                     label: widget.fieldStyle.hintText ?? 'Dropdown field',
                     button: true,
                     enabled: widget.enabled,
-                    child: Focus(
-                      focusNode: _focusNode,
-                      canRequestFocus: widget.enabled,
-                      child: _buildField(context, formState),
-                    ),
+                    child: _buildField(context, formState),
                   );
                 },
               ),

@@ -523,6 +523,7 @@ extension _M3EButtonGroupLayout on _M3EButtonGroupState {
           connectedGap: M3ETheme.of(
             context,
           ).toggleButtonGroupTheme.connectedGap,
+          focusRingOutset: M3EFocusRing.outsetOf(context),
         );
 
         final double width = widget.direction == Axis.horizontal ? gap : 0;
