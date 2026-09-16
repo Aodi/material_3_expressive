@@ -1,37 +1,28 @@
+import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
 import '../../../foundations/foundations.dart';
 import '../../cards/m3e_cards.dart';
 import '../components/m3e_card_radius_motion.dart';
+import '../components/m3e_list_drag_proxy_scope.dart';
+import '../components/m3e_list_feature_scope.dart';
 import '../components/m3e_list_item_scope.dart';
+import '../components/m3e_list_reorder_session_scope.dart';
+import '../components/m3e_list_swipe_action_button.dart';
 import '../enums/m3e_list_enums.dart';
+import '../enums/m3e_list_selection_enums.dart';
 import '../models/m3e_dismissible_slot.dart';
+import '../models/m3e_list_swipe_action.dart';
 import '../styles/m3e_dismissible_list_style.dart';
+import '../styles/m3e_list_theme.dart';
 import '../utils/m3e_list_selection_fill.dart';
 
 part 'm3e_dismissible_card_drag_mixin.dart';
 part 'm3e_dismissible_card_build_mixin.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Spring presets (Material 3 Expressive via motor)
-// ─────────────────────────────────────────────────────────────────────────────
-
-final _kSpatialSpringBack =
-    const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
-      stiffness: 200,
-      damping: 0.8,
-    );
-
-final _kReEngageSpring = const MaterialSpringMotion.standardSpatialFast();
-
-final _kDetachPush = const MaterialSpringMotion.expressiveSpatialDefault()
-    .copyWith(stiffness: 800, damping: 0.95);
-
-final _kRoundnessSnap = const MaterialSpringMotion.expressiveSpatialDefault()
-    .copyWith(stiffness: 1000, damping: 0.4);
 
 const int _kVibrationThresholdMs = 60;
 const double _kMaxPreDetachRoundness = 0.6;
@@ -55,6 +46,12 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
   /// The style.
   M3EDismissibleListStyle get style;
 
+  SpringMotion _spatialMotion(M3ESpring spring, {double? stiffness}) =>
+      const MaterialSpringMotion.expressiveSpatialDefault().copyWith(
+        stiffness: stiffness ?? spring.stiffness,
+        damping: spring.damping,
+      );
+
   /// Callback invoked when a dismissible item is dismissed.
   Future<bool> Function(int index, DismissDirection direction)?
   get onDismissCallback;
@@ -72,11 +69,27 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
   BorderRadius? Function(int index, M3ECardPosition position)?
   get borderRadiusBuilder => null;
 
+  /// Start-to-end swipe actions for a data index.
+  List<M3EListSwipeAction> Function(int index)? get leadingActionsBuilder =>
+      null;
+
+  /// End-to-start swipe actions for a data index.
+  List<M3EListSwipeAction> Function(int index)? get trailingActionsBuilder =>
+      null;
+
+  /// When true, all cards use [M3EDismissibleListStyle.innerRadius].
+  bool get embedded => false;
+
+  /// When true, long-press is owned by the list reorder host.
+  bool get listReorderEnabled => false;
+
   final List<M3EDismissibleSlot> _slots = [];
   M3EDismissibleSlot? _dragSlotRef;
   int _dragSlotIndex = -1;
   double _dragOffset = 0;
   bool _pastThreshold = false;
+  bool _pastActionThreshold = false;
+  bool _isDismissDragging = false;
   bool _reEngaging = false;
   double _neighbourFraction = 0;
   double _roundnessFraction = 0;
@@ -103,6 +116,70 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
 
   /// The isInteractionLocked.
   bool get isInteractionLocked => _dragSlotRef != null || _collapsingCount > 0;
+
+  /// Accumulated horizontal delta before dismiss locks (reorder-safe).
+  double _dismissDxAcc = 0;
+
+  /// True while a row is held open on its action preview.
+  bool get isActionPreviewOpen =>
+      _dragSlotRef != null && (_pastActionThreshold || _dragOffset.abs() > 0.5);
+
+  /// True while dismiss drag or settle springs are moving cards.
+  bool get _suppressCardHover {
+    if (_isDismissDragging) {
+      return true;
+    }
+    return _isMotionAnimating(_springCtrl) ||
+        _isMotionAnimating(_nbrCtrl) ||
+        _isMotionAnimating(_pushCtrl) ||
+        _isMotionAnimating(_roundnessCtrl);
+  }
+
+  bool _isMotionAnimating(SingleMotionController? controller) =>
+      controller != null && controller.isAnimating;
+
+  void _onMotionSettled(AnimationStatus status) {
+    if (status != AnimationStatus.completed &&
+        status != AnimationStatus.dismissed) {
+      return;
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  /// Actions for the given data index in the swipe direction (empty if none).
+  List<M3EListSwipeAction> actionsFor(
+    int dataIndex, {
+    required bool swipingRight,
+  }) {
+    final List<M3EListSwipeAction>? built = swipingRight
+        ? leadingActionsBuilder?.call(dataIndex)
+        : trailingActionsBuilder?.call(dataIndex);
+    return built ?? const <M3EListSwipeAction>[];
+  }
+
+  double _computeActionsWidth(List<M3EListSwipeAction> actionList) {
+    if (actionList.isEmpty) {
+      return 0;
+    }
+    var total = 0.0;
+    for (final action in actionList) {
+      total += action.width;
+    }
+    if (actionList.length > 1) {
+      total += (actionList.length - 1) * style.actionSpacing;
+    }
+    return total += 2 * style.actionEdgePadding;
+  }
+
+  int? _dataIndexForDragSlot() {
+    if (_dragSlotIndex < 0) {
+      return null;
+    }
+    final int dataIndex = computeVisibleIndices().indexOf(_dragSlotIndex);
+    return dataIndex < 0 ? null : dataIndex;
+  }
 
   /// initSlots.
 
@@ -210,15 +287,62 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
     final total = visible.length;
     final isFirst = slotPos == 0;
     final isLast = slotPos == total - 1;
-
     final or = s.outerRadius;
     final sr = s.selectedBorderRadius ?? or;
     final ir = s.innerRadius;
 
+    final BorderRadius? early = _computeRadiusEarlyExit(
+      slotIndex: slotIndex,
+      total: total,
+      or: or,
+      sr: sr,
+      ir: ir,
+      isFirst: isFirst,
+      isLast: isLast,
+      dragPos: dragPos,
+      slotPos: slotPos,
+    );
+    if (early != null) {
+      return early;
+    }
+
+    final facingR = lerpDouble(ir, or, _roundnessFraction)!;
+    final subtleR = _pastThreshold
+        ? ir
+        : lerpDouble(ir, or, _roundnessFraction * 0.3)!;
+    return _computeDragNeighborRadius(
+      slotIndex: slotIndex,
+      slotPos: slotPos,
+      dragPos: dragPos,
+      isFirst: isFirst,
+      isLast: isLast,
+      or: or,
+      sr: sr,
+      facingR: facingR,
+      subtleR: subtleR,
+    );
+  }
+
+  BorderRadius? _computeRadiusEarlyExit({
+    required int slotIndex,
+    required int total,
+    required double or,
+    required double sr,
+    required double ir,
+    required bool isFirst,
+    required bool isLast,
+    required int dragPos,
+    required int slotPos,
+  }) {
+    if (embedded) {
+      if (slotIndex == _dragSlotIndex && _pastThreshold) {
+        return BorderRadius.circular(sr);
+      }
+      return BorderRadius.circular(ir);
+    }
     if (total == 1) {
       return BorderRadius.circular(or);
     }
-
     if (dragPos < 0 || (slotPos - dragPos).abs() > 1) {
       return BorderRadius.only(
         topLeft: Radius.circular(isFirst ? or : ir),
@@ -227,15 +351,21 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
         bottomRight: Radius.circular(isLast ? or : ir),
       );
     }
+    return null;
+  }
 
-    final facingR = lerpDouble(ir, or, _roundnessFraction)!;
-    final subtleR = _pastThreshold
-        ? ir
-        : lerpDouble(ir, or, _roundnessFraction * 0.3)!;
-
+  BorderRadius _computeDragNeighborRadius({
+    required int slotIndex,
+    required int slotPos,
+    required int dragPos,
+    required bool isFirst,
+    required bool isLast,
+    required double or,
+    required double sr,
+    required double facingR,
+    required double subtleR,
+  }) {
     final isDragged = slotIndex == _dragSlotIndex;
-    final isAbove = slotPos < dragPos;
-
     if (isDragged) {
       if (_pastThreshold) {
         return BorderRadius.circular(sr);
@@ -247,8 +377,7 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
         bottomRight: Radius.circular(isLast ? or : facingR),
       );
     }
-
-    if (isAbove) {
+    if (slotPos < dragPos) {
       return BorderRadius.only(
         topLeft: Radius.circular(isFirst ? or : subtleR),
         topRight: Radius.circular(isFirst ? or : subtleR),
@@ -256,7 +385,6 @@ mixin M3EDismissibleCardMixin<T extends StatefulWidget>
         bottomRight: Radius.circular(isLast ? or : facingR),
       );
     }
-
     return BorderRadius.only(
       topLeft: Radius.circular(isFirst ? or : facingR),
       topRight: Radius.circular(isFirst ? or : facingR),

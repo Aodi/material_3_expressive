@@ -206,9 +206,15 @@ class _M3ETabsState extends State<M3ETabs> {
               ),
             ),
             Center(
-              child: KeyedSubtree(
-                key: _contentKeys[index],
-                child: _buildTabContent(theme, tabTheme, tab, selected),
+              // Ring hugs the tab content so it never spills past the bar or
+              // the indicator; the key stays on the raw content it measures.
+              child: M3EFocusRing(
+                focused: state.focused,
+                radius: M3EShapes.radiusSmall,
+                child: KeyedSubtree(
+                  key: _contentKeys[index],
+                  child: _buildTabContent(theme, tabTheme, tab, selected),
+                ),
               ),
             ),
           ],

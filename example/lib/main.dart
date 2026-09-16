@@ -97,48 +97,68 @@ class _GalleryShellState extends State<_GalleryShell> {
     return Scaffold(
       body: ColoredBox(
         color: theme.colorScheme.surface,
-        child: Column(
-          children: <Widget>[
-            M3EAppBar.top(
-              titleText: 'Material 3 Expressive',
-              actions: <Widget>[
-                M3EIconButton(
-                  icon: const Icon(M3EIcons.palette),
-                  tooltip: 'Theme settings',
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (BuildContext context) =>
-                            const ThemeConfigPage(),
+        child: FocusTraversalGroup(
+          policy: OrderedTraversalPolicy(),
+          child: Column(
+            children: <Widget>[
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(0),
+                child: FocusTraversalGroup(
+                  child: M3EAppBar.top(
+                    titleText: 'Material 3 Expressive',
+                    actions: <Widget>[
+                      M3EIconButton(
+                        icon: const Icon(M3EIcons.palette),
+                        tooltip: 'Theme settings',
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (BuildContext context) =>
+                                  const ThemeConfigPage(),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-                M3EIconButton(
-                  icon: Icon(
-                    theme.brightness == Brightness.dark
-                        ? M3EIcons.light_mode
-                        : M3EIcons.dark_mode,
+                      M3EIconButton(
+                        icon: Icon(
+                          theme.brightness == Brightness.dark
+                              ? M3EIcons.light_mode
+                              : M3EIcons.dark_mode,
+                        ),
+                        tooltip: 'Toggle theme',
+                        onPressed: () {
+                          M3ETheme.controllerOf(context)?.toggleBrightness(
+                            fallback: theme.brightness,
+                            autoTheming: ExampleThemeScope.of(
+                              context,
+                            ).autoTheming,
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                  tooltip: 'Toggle theme',
-                  onPressed: () {
-                    M3ETheme.controllerOf(context)?.toggleBrightness(
-                      fallback: theme.brightness,
-                      autoTheming: ExampleThemeScope.of(context).autoTheming,
-                    );
-                  },
                 ),
-              ],
-            ),
-            Expanded(child: TickerMode(enabled: true, child: _pages[_index])),
-            M3ENavigationBar(
-              destinations: _destinations,
-              selectedIndex: _index,
-              onDestinationSelected: (int value) {
-                setState(() => _index = value);
-              },
-            ),
-          ],
+              ),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(1),
+                child: Expanded(
+                  child: TickerMode(enabled: true, child: _pages[_index]),
+                ),
+              ),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(2),
+                child: FocusTraversalGroup(
+                  child: M3ENavigationBar(
+                    destinations: _destinations,
+                    selectedIndex: _index,
+                    onDestinationSelected: (int value) {
+                      setState(() => _index = value);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

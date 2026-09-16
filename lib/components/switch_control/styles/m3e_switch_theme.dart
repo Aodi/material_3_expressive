@@ -19,6 +19,8 @@ class M3ESwitchTheme extends M3EThemeExtension<M3ESwitchTheme> {
     this.disabledTrackOpacity = 0.12,
     this.disabledThumbOpacity = 0.38,
     this.disabledOutlineOpacity = 0.12,
+    this.positionSpring = const M3ESpring(stiffness: 380, damping: 0.55),
+    this.sizeSpring = const M3ESpring(stiffness: 380, damping: 0.7),
   });
 
   /// defaults.
@@ -61,6 +63,12 @@ class M3ESwitchTheme extends M3EThemeExtension<M3ESwitchTheme> {
 
   /// disabledOutlineOpacity.
   final double disabledOutlineOpacity;
+
+  /// Thumb position spring (overshoot toward resting side).
+  final M3ESpring positionSpring;
+
+  /// Thumb size spring (follows the slide, more damped).
+  final M3ESpring sizeSpring;
 
   /// thumbSize.
 
@@ -136,6 +144,8 @@ class M3ESwitchTheme extends M3EThemeExtension<M3ESwitchTheme> {
     double? disabledTrackOpacity,
     double? disabledThumbOpacity,
     double? disabledOutlineOpacity,
+    M3ESpring? positionSpring,
+    M3ESpring? sizeSpring,
   }) {
     return M3ESwitchTheme(
       trackWidth: trackWidth ?? this.trackWidth,
@@ -151,6 +161,8 @@ class M3ESwitchTheme extends M3EThemeExtension<M3ESwitchTheme> {
       disabledThumbOpacity: disabledThumbOpacity ?? this.disabledThumbOpacity,
       disabledOutlineOpacity:
           disabledOutlineOpacity ?? this.disabledOutlineOpacity,
+      positionSpring: positionSpring ?? this.positionSpring,
+      sizeSpring: sizeSpring ?? this.sizeSpring,
     );
   }
 
@@ -196,6 +208,8 @@ class M3ESwitchTheme extends M3EThemeExtension<M3ESwitchTheme> {
         other.disabledOutlineOpacity,
         t,
       )!,
+      positionSpring: t < 0.5 ? positionSpring : other.positionSpring,
+      sizeSpring: t < 0.5 ? sizeSpring : other.sizeSpring,
     );
   }
 

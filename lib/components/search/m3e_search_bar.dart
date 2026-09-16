@@ -57,6 +57,7 @@ class M3ESearchBar extends StatefulWidget {
     this.smartDashesType,
     this.smartQuotesType,
     this.alignment = AlignmentDirectional.centerStart,
+    this.onEscape,
     super.key,
   });
 
@@ -161,6 +162,12 @@ class M3ESearchBar extends StatefulWidget {
   /// unfocused. Switches to start layout when focused or when text is present.
   final AlignmentGeometry alignment;
 
+  /// Called when Escape is pressed while the search field has focus.
+  ///
+  /// Defaults to unfocusing the field. Search views pass a dismiss callback
+  /// so Escape closes the overlay instead of only clearing focus.
+  final VoidCallback? onEscape;
+
   @override
   State<M3ESearchBar> createState() => _M3ESearchBarState();
 }
@@ -174,6 +181,7 @@ class _M3ESearchBarState extends State<M3ESearchBar>
   late final AnimationController _expandPaddingController;
   FocusNode? _internalFocusNode;
   bool _expandPaddingSyncScheduled = false;
+  bool _showFocusRing = false;
 
   FocusNode get _focusNode =>
       widget.focusNode ?? (_internalFocusNode ??= FocusNode());
@@ -186,12 +194,25 @@ class _M3ESearchBarState extends State<M3ESearchBar>
     _controller.addListener(_handleTextChange);
     _focusNode.addListener(_handleFocusChange);
     _syncFocusedState();
+    FocusManager.instance.addHighlightModeListener(_handleHighlightModeChange);
+    M3EFocusInteraction.instance.addListener(_handleFocusInteractionChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
       _syncExpandPaddingController(M3ETheme.of(context).searchBarTheme);
     });
+  }
+
+  void _handleFocusInteractionChanged() {
+    if (!mounted) {
+      return;
+    }
+    final bool show = M3EFocusRing.shouldShow(_focusNode, context);
+    if (show == _showFocusRing) {
+      return;
+    }
+    setState(() => _showFocusRing = show);
   }
 
   void _scheduleExpandPaddingSync(
@@ -225,6 +246,10 @@ class _M3ESearchBarState extends State<M3ESearchBar>
 
   @override
   void dispose() {
+    FocusManager.instance.removeHighlightModeListener(
+      _handleHighlightModeChange,
+    );
+    M3EFocusInteraction.instance.removeListener(_handleFocusInteractionChanged);
     _focusNode.removeListener(_handleFocusChange);
     _controller.removeListener(_handleTextChange);
     _expandPaddingController.dispose();
@@ -237,7 +262,23 @@ class _M3ESearchBarState extends State<M3ESearchBar>
   }
 
   void _syncFocusedState() {
+    if (!mounted) {
+      return;
+    }
+    // The states controller listener rebuilds, so the ring flag rides along.
+    _showFocusRing = M3EFocusRing.shouldShow(_focusNode, context);
     _statesController.update(WidgetState.focused, _focusNode.hasFocus);
+  }
+
+  void _handleHighlightModeChange(FocusHighlightMode mode) {
+    if (!mounted) {
+      return;
+    }
+    final bool show = M3EFocusRing.shouldShow(_focusNode, context);
+    if (show == _showFocusRing) {
+      return;
+    }
+    setState(() => _showFocusRing = show);
   }
 
   void _handleTextChange() => setState(() {});
@@ -318,10 +359,12 @@ class _M3ESearchBarState extends State<M3ESearchBar>
       M3ETheme.of(context).searchBarTheme,
       animate: true,
     );
+    setState(() {});
   }
 
   void _handleTap() {
     widget.onTap?.call();
+    M3EFocusInteraction.instance.notePointerInteraction();
     // Read-only bars (e.g. SearchAnchor.bar) open a view and must not take
     // keyboard focus — the view's search field owns editing.
     if (widget.readOnly || !widget.enabled) {

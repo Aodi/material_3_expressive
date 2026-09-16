@@ -14,7 +14,10 @@ import 'm3e_rail_badge_view.dart';
 /// an IconButton (collapsed) or a text button (expanded) without
 /// switching widget types. This avoids animation hitches when the
 /// rail animates between collapsed and expanded.
-class M3ERailItemButton extends StatelessWidget {
+///
+/// Expanded destinations own their keyboard focus (shared [M3EFocusRing] plus
+/// Space/Enter activation); collapsed ones defer to the inner [M3EIconButton].
+class M3ERailItemButton extends StatefulWidget {
   /// Creates a [M3ERailItemButton].
   const M3ERailItemButton({
     super.key,
@@ -79,31 +82,82 @@ class M3ERailItemButton extends StatelessWidget {
   final M3EHapticFeedback haptic;
 
   @override
+  State<M3ERailItemButton> createState() => _M3ERailItemButtonState();
+}
+
+class _M3ERailItemButtonState extends State<M3ERailItemButton> {
+  final FocusNode _focusNode = FocusNode();
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    M3EFocusInteraction.instance.addListener(_onFocusInteractionChanged);
+  }
+
+  @override
+  void dispose() {
+    M3EFocusInteraction.instance.removeListener(_onFocusInteractionChanged);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onFocusInteractionChanged() {
+    _handleFocusHighlight(_focusNode.hasPrimaryFocus);
+  }
+
+  void _handleFocusHighlight(bool value) {
+    if (!mounted) {
+      return;
+    }
+    final bool show =
+        value &&
+        M3EFocusInteraction.instance.ringsAllowed &&
+        M3EFocusRing.shouldShow(_focusNode, context);
+    if (_focused == show) {
+      return;
+    }
+    setState(() => _focused = show);
+    if (show) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        M3EFocusInteraction.ensureVisibleIfKeyboard(context);
+      });
+    }
+  }
+
+  void _select({bool fromPointer = false}) {
+    if (fromPointer) {
+      M3EFocusInteraction.instance.notePointerInteraction();
+      _focusNode.requestFocus();
+    }
+    M3EHaptics.trigger(widget.haptic);
+    widget.onPressed();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = M3ETheme.of(context).navigationRailTheme;
     final m3e = M3ETheme.of(context);
     final scheme = m3e.colorScheme;
+    final bool expanded = widget.expanded;
     final double height =
-        heightOverride ??
+        widget.heightOverride ??
         (expanded ? theme.itemExpandedHeight : theme.itemCollapsedHeight);
-    final bool selected = isSelected;
+    final bool selected = widget.isSelected;
     final Color fg = selected
         ? theme.activeIconAndLabelColor(scheme)
         : theme.inactiveIconAndLabelColor(scheme);
-    final Color bg = useLocalIndicator && expanded && selected
+    final Color bg = widget.useLocalIndicator && expanded && selected
         ? theme.activeIndicatorColorResolved(scheme)
         : Colors.transparent;
     final ShapeBorder shape = expanded
         ? (theme.indicatorShapeFull ??
               RoundedRectangleBorder(borderRadius: M3EShapes.roundSet.xs))
         : const RoundedRectangleBorder();
-    final Widget scaledIcon = M3ENavIconScale(
-      selected: selected,
-      child: IconTheme.merge(
-        data: IconThemeData(color: fg, size: theme.iconSize),
-        child: selected && selectedIcon != null ? selectedIcon! : icon,
-      ),
-    );
+    final Widget scaledIcon = _buildScaledIcon(fg: fg, theme: theme);
     final Widget content = expanded
         ? _buildExpandedContent(
             m3e: m3e,
@@ -117,16 +171,76 @@ class M3ERailItemButton extends StatelessWidget {
             fg: fg,
             scaledIcon: scaledIcon,
           );
-    final material = Material(
-      key: expanded ? indicatorKey : null,
+    final Widget material = _buildItemMaterial(
+      theme: theme,
+      expanded: expanded,
+      bg: bg,
+      shape: shape,
+      fg: fg,
+      content: content,
+    );
+    Widget sized = ConstrainedBox(
+      constraints: BoxConstraints(minHeight: height),
+      child: material,
+    );
+    if (expanded) {
+      sized = M3EFocusRing(
+        focused: _focused,
+        radius: _ringRadius(shape),
+        child: sized,
+      );
+    }
+    final Widget withTooltip = expanded
+        ? sized
+        : Tooltip(
+            message: widget.semanticLabel ?? widget.label,
+            preferBelow: false,
+            child: sized,
+          );
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: expanded ? null : (widget.semanticLabel ?? widget.label),
+      child: expanded
+          ? _wrapExpandedFocus(withTooltip)
+          : MouseRegion(cursor: SystemMouseCursors.click, child: withTooltip),
+    );
+  }
+
+  Widget _buildScaledIcon({
+    required Color fg,
+    required M3ENavigationRailTheme theme,
+  }) {
+    return M3ENavIconScale(
+      selected: widget.isSelected,
+      child: IconTheme.merge(
+        data: IconThemeData(color: fg, size: theme.iconSize),
+        child: widget.isSelected && widget.selectedIcon != null
+            ? widget.selectedIcon!
+            : widget.icon,
+      ),
+    );
+  }
+
+  Widget _buildItemMaterial({
+    required M3ENavigationRailTheme theme,
+    required bool expanded,
+    required Color bg,
+    required ShapeBorder shape,
+    required Color fg,
+    required Widget content,
+  }) {
+    return Material(
+      key: expanded ? widget.indicatorKey : null,
       color: bg,
       shape: shape,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () {
-          M3EHaptics.trigger(haptic);
-          onPressed();
-        },
+        onTap: () => _select(fromPointer: true),
+        mouseCursor: SystemMouseCursors.click,
+        // Focus is owned by the expanded destination's detector below, and by
+        // the inner icon button when collapsed.
+        canRequestFocus: false,
         splashFactory: NoSplash.splashFactory,
         hoverColor: Colors.transparent,
         highlightColor: Colors.transparent,
@@ -148,23 +262,42 @@ class M3ERailItemButton extends StatelessWidget {
         ),
       ),
     );
-    final Widget sized = ConstrainedBox(
-      constraints: BoxConstraints(minHeight: height),
-      child: material,
+  }
+
+  Widget _wrapExpandedFocus(Widget child) {
+    return FocusableActionDetector(
+      focusNode: _focusNode,
+      mouseCursor: SystemMouseCursors.click,
+      onShowFocusHighlight: _handleFocusHighlight,
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (ActivateIntent intent) {
+            _select();
+            return null;
+          },
+        ),
+        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+          onInvoke: (ButtonActivateIntent intent) {
+            _select();
+            return null;
+          },
+        ),
+      },
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) {
+          M3EFocusInteraction.instance.notePointerInteraction();
+        },
+        child: child,
+      ),
     );
-    final Widget withTooltip = expanded
-        ? sized
-        : Tooltip(
-            message: semanticLabel ?? label,
-            preferBelow: false,
-            child: sized,
-          );
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: expanded ? null : (semanticLabel ?? label),
-      child: MouseRegion(cursor: SystemMouseCursors.click, child: withTooltip),
-    );
+  }
+
+  BorderRadius _ringRadius(ShapeBorder shape) {
+    if (shape is RoundedRectangleBorder) {
+      return shape.borderRadius.resolve(Directionality.of(context));
+    }
+    return M3EShapes.roundSet.xs;
   }
 
   Widget _buildExpandedContent({
@@ -183,10 +316,10 @@ class M3ERailItemButton extends StatelessWidget {
               SizedBox(width: theme.iconLabelGap),
               Flexible(
                 child: Text(
-                  label,
+                  widget.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  semanticsLabel: semanticLabel ?? label,
+                  semanticsLabel: widget.semanticLabel ?? widget.label,
                   style: m3e.typeScale.labelLarge.copyWith(color: fg),
                 ),
               ),
@@ -195,7 +328,7 @@ class M3ERailItemButton extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.only(left: theme.iconLabelGap),
-          child: M3ERailBadge(count: badgeCount),
+          child: M3ERailBadge(count: widget.badgeCount),
         ),
       ],
     );
@@ -207,22 +340,23 @@ class M3ERailItemButton extends StatelessWidget {
     required Color fg,
     required Widget scaledIcon,
   }) {
+    final M3ENavigationRailLabelBehavior labelBehavior = widget.labelBehavior;
     final bool showLabel =
         labelBehavior == M3ENavigationRailLabelBehavior.alwaysShow ||
-        (isSelected &&
+        (widget.isSelected &&
             labelBehavior != M3ENavigationRailLabelBehavior.alwaysHide);
     return Column(
       children: [
         KeyedSubtree(
-          key: indicatorKey,
+          key: widget.indicatorKey,
           child: M3EIconButton(
             icon: scaledIcon,
             width: M3EIconButtonWidth.wide,
-            badgeValue: badgeCount,
-            onPressed: onPressed,
+            badgeValue: widget.badgeCount,
+            onPressed: widget.onPressed,
             suppressInk: true,
-            haptic: haptic,
-            variant: useLocalIndicator && isSelected
+            haptic: widget.haptic,
+            variant: widget.useLocalIndicator && widget.isSelected
                 ? M3EIconButtonVariant.tonal
                 : M3EIconButtonVariant.standard,
           ),
@@ -230,10 +364,10 @@ class M3ERailItemButton extends StatelessWidget {
         if (showLabel)
           Flexible(
             child: Text(
-              label,
+              widget.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              semanticsLabel: semanticLabel ?? label,
+              semanticsLabel: widget.semanticLabel ?? widget.label,
               style: m3e.typeScale.labelMedium.copyWith(color: fg),
             ),
           ),

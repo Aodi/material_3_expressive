@@ -12,8 +12,9 @@ import '../styles/m3e_navigation_drawer_theme.dart';
 /// Single destination row in [M3ENavigationDrawer].
 ///
 /// Resting selection fill is local; the shared liquid overlay paints while
-/// traveling between destinations.
-class M3EDrawerDestinationButton extends StatelessWidget {
+/// traveling between destinations. Keyboard focus adds the shared
+/// [M3EFocusRing] around the destination row; Space/Enter selects.
+class M3EDrawerDestinationButton extends StatefulWidget {
   /// M3EDrawerDestinationButton.
   const M3EDrawerDestinationButton({
     required this.destination,
@@ -45,16 +46,76 @@ class M3EDrawerDestinationButton extends StatelessWidget {
   final bool showRestingFill;
 
   @override
+  State<M3EDrawerDestinationButton> createState() =>
+      _M3EDrawerDestinationButtonState();
+}
+
+class _M3EDrawerDestinationButtonState
+    extends State<M3EDrawerDestinationButton> {
+  final FocusNode _focusNode = FocusNode();
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    M3EFocusInteraction.instance.addListener(_onFocusInteractionChanged);
+  }
+
+  @override
+  void dispose() {
+    M3EFocusInteraction.instance.removeListener(_onFocusInteractionChanged);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onFocusInteractionChanged() {
+    _handleFocusHighlight(_focusNode.hasPrimaryFocus);
+  }
+
+  void _handleFocusHighlight(bool value) {
+    if (!mounted) {
+      return;
+    }
+    final bool show =
+        value &&
+        M3EFocusInteraction.instance.ringsAllowed &&
+        M3EFocusRing.shouldShow(_focusNode, context);
+    if (_focused == show) {
+      return;
+    }
+    setState(() => _focused = show);
+    if (show) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        M3EFocusInteraction.ensureVisibleIfKeyboard(context);
+      });
+    }
+  }
+
+  void _select({bool fromPointer = false}) {
+    if (fromPointer) {
+      M3EFocusInteraction.instance.notePointerInteraction();
+      _focusNode.requestFocus();
+    }
+    M3EHaptics.trigger(widget.haptic);
+    widget.onTap();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final M3EThemeData theme = M3ETheme.of(context);
     final M3ENavigationDrawerTheme drawerTheme = theme.navigationDrawerTheme;
     final M3EColorScheme scheme = theme.colorScheme;
+    final M3ENavigationDestination destination = widget.destination;
+    final bool selected = widget.selected;
     final Color foreground = drawerTheme.destinationForegroundColor(
       scheme,
       selected: selected,
     );
     final ShapeBorder border = drawerTheme.destinationShape();
-    final Color fill = selected && showRestingFill
+    final Color fill = selected && widget.showRestingFill
         ? drawerTheme.destinationBackgroundColor(scheme, selected: true)
         : const Color(0x00000000);
 
@@ -67,58 +128,83 @@ class M3EDrawerDestinationButton extends StatelessWidget {
         button: true,
         selected: selected,
         label: destination.label,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              M3EHaptics.trigger(haptic);
-              onTap();
+        child: FocusableActionDetector(
+          focusNode: _focusNode,
+          mouseCursor: SystemMouseCursors.click,
+          onShowFocusHighlight: _handleFocusHighlight,
+          actions: <Type, Action<Intent>>{
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (ActivateIntent intent) {
+                _select();
+                return null;
+              },
+            ),
+            ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(
+              onInvoke: (ButtonActivateIntent intent) {
+                _select();
+                return null;
+              },
+            ),
+          },
+          child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) {
+              M3EFocusInteraction.instance.notePointerInteraction();
             },
-            child: KeyedSubtree(
-              key: indicatorKey,
-              child: SizedBox(
-                height: drawerTheme.destinationHeight,
-                width: double.infinity,
-                child: DecoratedBox(
-                  decoration: ShapeDecoration(shape: border, color: fill),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: drawerTheme.destinationInnerHorizontalPadding,
-                    ),
-                    child: Row(
-                      children: <Widget>[
-                        M3ENavIconScale(
-                          selected: selected,
-                          child: IconTheme.merge(
-                            data: IconThemeData(
-                              color: foreground,
-                              size: drawerTheme.iconSize,
-                            ),
-                            child: selected
-                                ? (destination.selectedIcon ?? destination.icon)
-                                : destination.icon,
-                          ),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _select(fromPointer: true),
+              child: M3EFocusRing(
+                focused: _focused,
+                radius: _ringRadius(border, drawerTheme),
+                child: KeyedSubtree(
+                  key: widget.indicatorKey,
+                  child: SizedBox(
+                    height: drawerTheme.destinationHeight,
+                    width: double.infinity,
+                    child: DecoratedBox(
+                      decoration: ShapeDecoration(shape: border, color: fill),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal:
+                              drawerTheme.destinationInnerHorizontalPadding,
                         ),
-                        SizedBox(width: drawerTheme.iconLabelGap),
-                        Expanded(
-                          child: Text(
-                            destination.label,
-                            style: theme.typeScale.labelLarge.copyWith(
-                              color: foreground,
+                        child: Row(
+                          children: <Widget>[
+                            M3ENavIconScale(
+                              selected: selected,
+                              child: IconTheme.merge(
+                                data: IconThemeData(
+                                  color: foreground,
+                                  size: drawerTheme.iconSize,
+                                ),
+                                child: selected
+                                    ? (destination.selectedIcon ??
+                                          destination.icon)
+                                    : destination.icon,
+                              ),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            SizedBox(width: drawerTheme.iconLabelGap),
+                            Expanded(
+                              child: Text(
+                                destination.label,
+                                style: theme.typeScale.labelLarge.copyWith(
+                                  color: foreground,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (destination.badgeLabel != null)
+                              Text(
+                                destination.badgeLabel!,
+                                style: theme.typeScale.labelLarge.copyWith(
+                                  color: foreground,
+                                ),
+                              ),
+                          ],
                         ),
-                        if (destination.badgeLabel != null)
-                          Text(
-                            destination.badgeLabel!,
-                            style: theme.typeScale.labelLarge.copyWith(
-                              color: foreground,
-                            ),
-                          ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -128,5 +214,15 @@ class M3EDrawerDestinationButton extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  BorderRadius _ringRadius(
+    ShapeBorder border,
+    M3ENavigationDrawerTheme drawerTheme,
+  ) {
+    if (border is RoundedRectangleBorder) {
+      return border.borderRadius.resolve(Directionality.of(context));
+    }
+    return BorderRadius.circular(drawerTheme.destinationHeight / 2);
   }
 }

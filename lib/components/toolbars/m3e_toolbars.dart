@@ -444,7 +444,7 @@ class _M3EToolbarState extends State<M3EToolbar> with TickerProviderStateMixin {
     final bool startExpanded =
         _expanded || (!_usesTriggerExpand && !_usesFabExpand);
     _expandCtrl = SingleMotionController(
-      motion: m3eToolbarExpandMotion(),
+      motion: M3EToolbarTheme.defaults.expandSpring.toMotion(),
       vsync: this,
       initialValue: startExpanded ? 1 : 0,
     )..addListener(_handleExpandTick);
@@ -539,7 +539,7 @@ class _M3EToolbarState extends State<M3EToolbar> with TickerProviderStateMixin {
       widget.onExpandedChanged?.call(value);
     }
     _expandCtrl
-      ..motion = m3eToolbarExpandMotion()
+      ..motion = M3ETheme.of(context).toolbarTheme.expandSpring.toMotion()
       ..animateTo(value ? 1 : 0);
   }
 

@@ -432,12 +432,14 @@ extension _M3ERefreshIndicatorScroll on M3ERefreshIndicatorState {
   Future<void> _springTo(
     AnimationController controller, {
     required double target,
-    M3ESpring spring = M3EMotion.expressiveSpatialDefault,
+    M3ESpring? spring,
     double? velocity,
   }) {
+    final resolved =
+        spring ?? M3ETheme.of(context).refreshIndicatorTheme.settleSpring;
     return controller.animateWith(
       SpringSimulation(
-        spring.toDescription(),
+        resolved.toDescription(),
         controller.value,
         target,
         velocity ?? controller.velocity,

@@ -1,13 +1,11 @@
 import 'package:flutter/widgets.dart';
-import 'package:material_3_expressive/components/lists/m3e_lists.dart'
-    show M3ECardList;
-import 'package:material_3_expressive/material_3_expressive.dart'
-    show M3ECardList;
 
 import '../../../foundations/foundations.dart';
 import '../../cards/m3e_cards.dart';
 import '../enums/m3e_list_enums.dart';
 import 'm3e_card_radius_motion.dart';
+import 'm3e_expandable_nest_scope.dart';
+import 'm3e_list_drag_proxy_scope.dart';
 import 'm3e_list_item_scope.dart';
 
 /// Internal helper to calculate [M3ECardPosition] based on index and total.
@@ -20,11 +18,29 @@ M3ECardPosition calculateCardPosition(int index, int total) => total == 1
     : M3ECardPosition.middle;
 
 /// Internal helper to calculate [BorderRadius] based on [M3ECardPosition].
+///
+/// When [embedded] is true, items use [innerRadius] by default so the list can
+/// sit under another card row. Set [closeBottom] when the parent expandable is
+/// last/single so the nested last (or single) row uses [outerRadius] on the
+/// bottom corners.
 BorderRadius calculateCardRadius({
   required M3ECardPosition position,
   required double outerRadius,
   required double innerRadius,
+  bool embedded = false,
+  bool closeBottom = false,
 }) {
+  if (embedded) {
+    final bool isTail =
+        position == M3ECardPosition.last || position == M3ECardPosition.single;
+    if (closeBottom && isTail) {
+      return BorderRadius.vertical(
+        top: Radius.circular(innerRadius),
+        bottom: Radius.circular(outerRadius),
+      );
+    }
+    return BorderRadius.circular(innerRadius);
+  }
   switch (position) {
     case M3ECardPosition.single:
       return BorderRadius.circular(outerRadius);
@@ -43,7 +59,7 @@ BorderRadius calculateCardRadius({
   }
 }
 
-/// A single card item within an [M3ECardList].
+/// A single card item within a card-backed list.
 class M3ECardListItem extends StatelessWidget {
   /// M3ECardListItem.
   const M3ECardListItem({
@@ -53,6 +69,7 @@ class M3ECardListItem extends StatelessWidget {
     required this.outerRadius,
     required this.innerRadius,
     required this.gap,
+    this.embedded = false,
     this.color,
     this.padding,
     this.onTap,
@@ -85,6 +102,10 @@ class M3ECardListItem extends StatelessWidget {
 
   /// gap.
   final double gap;
+
+  /// When true, first/last/single use [innerRadius] like middle items, unless
+  /// an ancestor [M3EExpandableNestScope] requests closing the bottom.
+  final bool embedded;
 
   /// color.
   final Color? color;
@@ -124,14 +145,38 @@ class M3ECardListItem extends StatelessWidget {
     final theme = M3ETheme.of(context);
     final scheme = theme.colorScheme;
     final cardListTheme = theme.listTheme.cardList;
+    final M3EListDragProxyScope? dragProxy = M3EListDragProxyScope.maybeOf(
+      context,
+    );
 
-    final borderRadius =
-        resolvedBorderRadius ??
-        calculateCardRadius(
-          position: position,
-          outerRadius: outerRadius,
-          innerRadius: innerRadius,
-        );
+    final M3EExpandableNestScope? nest = M3EExpandableNestScope.maybeOf(
+      context,
+    );
+    final bool closeBottom = nest?.closeBottom ?? false;
+    final double effectiveOuter = nest?.outerRadius ?? outerRadius;
+
+    final BorderRadius borderRadius = dragProxy != null
+        ? BorderRadius.circular(dragProxy.radius)
+        : (resolvedBorderRadius ??
+              calculateCardRadius(
+                position: position,
+                outerRadius: effectiveOuter,
+                innerRadius: innerRadius,
+                embedded: embedded,
+                closeBottom: closeBottom,
+              ));
+
+    final M3ECardVariant effectiveVariant = dragProxy != null
+        ? M3ECardVariant.filled
+        : variant;
+    final BorderSide? effectiveBorder = dragProxy != null ? null : border;
+    final Color? effectiveColor = dragProxy != null
+        ? dragProxy.color
+        : (resolvedColor ??
+              color ??
+              (variant == M3ECardVariant.outlined
+                  ? null
+                  : cardListTheme.backgroundColor(scheme)));
 
     final bool isLast =
         position == M3ECardPosition.last || position == M3ECardPosition.single;
@@ -149,24 +194,18 @@ class M3ECardListItem extends StatelessWidget {
         radius: borderRadius,
         builder: (BuildContext context, BorderRadius animatedRadius) {
           return M3ECard(
-            variant: variant,
-            border: border,
+            variant: effectiveVariant,
+            border: effectiveBorder,
             borderRadius: animatedRadius,
-            // Outlined uses the card theme's transparent fill; other variants
-            // keep the card-list background unless an explicit color is set.
-            color:
-                resolvedColor ??
-                color ??
-                (variant == M3ECardVariant.outlined
-                    ? null
-                    : cardListTheme.backgroundColor(scheme)),
+            color: effectiveColor,
             padding: padding ?? cardListTheme.itemPadding,
-            onPressed: wrappedOnTap,
-            onLongPress: wrappedOnLongPress,
+            onPressed: dragProxy != null ? null : wrappedOnTap,
+            onLongPress: dragProxy != null ? null : wrappedOnLongPress,
             mouseCursor: mouseCursor,
             semanticLabel: semanticLabel,
             haptic: haptic,
             width: double.infinity,
+            elevation: dragProxy != null ? 0 : null,
             animationDuration: Duration.zero,
             child: M3EListItemScope(child: child),
           );

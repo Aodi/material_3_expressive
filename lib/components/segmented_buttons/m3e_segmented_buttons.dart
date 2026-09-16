@@ -65,6 +65,37 @@ class _M3ESegmentedButtonState<T> extends State<M3ESegmentedButton<T>> {
   /// Segment row. Dividers sample their gradient across this box.
   final GlobalKey _rowKey = GlobalKey();
 
+  /// Segment currently showing a keyboard focus ring, if any.
+  final ValueNotifier<int?> _focusedIndex = ValueNotifier<int?>(null);
+
+  @override
+  void dispose() {
+    M3EFocusInteraction.instance.removeListener(_onFocusInteractionChanged);
+    _focusedIndex.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    M3EFocusInteraction.instance.addListener(_onFocusInteractionChanged);
+  }
+
+  void _onFocusInteractionChanged() {
+    if (!M3EFocusInteraction.instance.ringsAllowed &&
+        _focusedIndex.value != null) {
+      _focusedIndex.value = null;
+    }
+  }
+
+  void _handleSegmentFocus(int index, {required bool focused}) {
+    if (focused && M3EFocusInteraction.instance.ringsAllowed) {
+      _focusedIndex.value = index;
+    } else if (_focusedIndex.value == index) {
+      _focusedIndex.value = null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return M3EComponentTheme(builder: _buildButton);
@@ -88,13 +119,21 @@ class _M3ESegmentedButtonState<T> extends State<M3ESegmentedButton<T>> {
               )
             : null,
       ),
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: Row(
-          key: _rowKey,
-          mainAxisSize: MainAxisSize.min,
-          children: _buildSegments(context, segmentedButtonTheme),
-        ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          ClipRRect(
+            borderRadius: borderRadius,
+            child: Row(
+              key: _rowKey,
+              mainAxisSize: MainAxisSize.min,
+              children: _buildSegments(context, segmentedButtonTheme),
+            ),
+          ),
+          // Rings live above the group clip so they stay visible on the
+          // outer edges and over neighbouring segment fills.
+          Positioned.fill(child: _buildFocusRingOverlay(segmentedButtonTheme)),
+        ],
       ),
     );
     final Gradient? outlineGradient = segmentedButtonTheme.outlineGradient;
@@ -132,11 +171,64 @@ class _M3ESegmentedButtonState<T> extends State<M3ESegmentedButton<T>> {
             segmentedButtonTheme: segmentedButtonTheme,
             index: i,
             parent: widget,
+            onFocusChanged: (bool focused) =>
+                _handleSegmentFocus(i, focused: focused),
           ),
         ),
       );
     }
     return children;
+  }
+
+  /// Mirrors the segment row's flex structure so the ring of the focused
+  /// segment lines up with it without measuring anything.
+  Widget _buildFocusRingOverlay(M3ESegmentedButtonTheme segmentedButtonTheme) {
+    return IgnorePointer(
+      child: ValueListenableBuilder<int?>(
+        valueListenable: _focusedIndex,
+        builder: (BuildContext context, int? focusedIndex, _) {
+          if (focusedIndex == null) {
+            return const SizedBox.shrink();
+          }
+          final TextDirection direction = Directionality.of(context);
+          final slots = <Widget>[];
+          for (var i = 0; i < widget.segments.length; i++) {
+            if (i > 0) {
+              slots.add(SizedBox(width: segmentedButtonTheme.borderWidth));
+            }
+            slots.add(
+              Flexible(
+                child: i == focusedIndex
+                    ? M3EFocusRing(
+                        focused: true,
+                        radius: _segmentRadius(
+                          segmentedButtonTheme,
+                          i,
+                          direction,
+                        ),
+                        child: const SizedBox.expand(),
+                      )
+                    : const SizedBox.expand(),
+              ),
+            );
+          }
+          return Row(children: slots);
+        },
+      ),
+    );
+  }
+
+  /// Outer corners are rounded only where the segment meets the group edge.
+  BorderRadius _segmentRadius(
+    M3ESegmentedButtonTheme segmentedButtonTheme,
+    int index,
+    TextDirection direction,
+  ) {
+    final Radius outer = segmentedButtonTheme.borderRadius.topLeft;
+    return BorderRadiusDirectional.horizontal(
+      start: index == 0 ? outer : Radius.zero,
+      end: index == widget.segments.length - 1 ? outer : Radius.zero,
+    ).resolve(direction);
   }
 }
 
@@ -145,11 +237,15 @@ class _M3ESegmentTile<T> extends StatelessWidget {
     required this.segmentedButtonTheme,
     required this.index,
     required this.parent,
+    required this.onFocusChanged,
   });
 
   final M3ESegmentedButtonTheme segmentedButtonTheme;
   final int index;
   final M3ESegmentedButton<T> parent;
+
+  /// Reports keyboard focus so the group can paint the ring above its clip.
+  final ValueChanged<bool> onFocusChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -160,6 +256,8 @@ class _M3ESegmentTile<T> extends StatelessWidget {
       onTap: () => parent._handleTap(segment.value),
       semanticLabel: segment.label,
       materialInk: true,
+      onStateChanged: (M3EInteractionState state) =>
+          onFocusChanged(state.focused),
       builder: (BuildContext context, M3EInteractionState state) {
         final resolvedScheme = M3ETheme.of(context).colorScheme;
         final Gradient? fgGradient = isSelected

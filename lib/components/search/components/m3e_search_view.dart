@@ -174,6 +174,8 @@ class _M3ESearchViewContentState extends State<M3ESearchViewContent> {
   Iterable<Widget> _suggestions = const <Widget>[];
   String? _searchValue;
   Timer? _timer;
+  final FocusNode _viewFocusNode = FocusNode(debugLabel: 'M3ESearchView');
+  bool _viewFocusRequested = false;
 
   @override
   void initState() {
@@ -182,8 +184,10 @@ class _M3ESearchViewContentState extends State<M3ESearchViewContent> {
     widget.searchController.addListener(_scheduleSuggestions);
     widget.searchController.addListener(_handleControllerChanged);
     _setupAnimations();
+    widget.animation.addStatusListener(_handleOpenAnimationStatus);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_updateSuggestions());
+      _tryFocusViewField();
     });
   }
 
@@ -194,8 +198,11 @@ class _M3ESearchViewContentState extends State<M3ESearchViewContent> {
       setState(() => _viewRect = widget.viewRect);
     }
     if (widget.animation != oldWidget.animation) {
+      oldWidget.animation.removeStatusListener(_handleOpenAnimationStatus);
       _disposeAnimations();
       _setupAnimations();
+      widget.animation.addStatusListener(_handleOpenAnimationStatus);
+      _tryFocusViewField();
     }
   }
 
@@ -210,11 +217,33 @@ class _M3ESearchViewContentState extends State<M3ESearchViewContent> {
 
   @override
   void dispose() {
+    widget.animation.removeStatusListener(_handleOpenAnimationStatus);
     widget.searchController.removeListener(_scheduleSuggestions);
     widget.searchController.removeListener(_handleControllerChanged);
     _disposeAnimations();
     _timer?.cancel();
+    _viewFocusNode.dispose();
     super.dispose();
+  }
+
+  void _handleOpenAnimationStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      _tryFocusViewField();
+    }
+  }
+
+  void _tryFocusViewField() {
+    if (_viewFocusRequested || !mounted) {
+      return;
+    }
+    // Wait until the open transition finishes so the soft keyboard attaches
+    // once to the view field instead of flashing during the expand.
+    if (widget.animation.status != AnimationStatus.completed &&
+        widget.animation.value < 1) {
+      return;
+    }
+    _viewFocusRequested = true;
+    _viewFocusNode.requestFocus();
   }
 
   void _setupAnimations() {

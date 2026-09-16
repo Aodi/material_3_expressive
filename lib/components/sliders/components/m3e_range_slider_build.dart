@@ -39,8 +39,12 @@ extension on _M3ERangeSliderState {
   _M3ERangeSliderResolved _resolve(BuildContext context) {
     final M3EThemeData theme = M3ETheme.of(context);
     final M3ESliderTheme baseSliderTheme = theme.sliderTheme;
+    // Widen the track gap by the ring outset so the outline never overlaps it.
     final M3ESliderTheme sliderTheme = _showFocusOutline
-        ? baseSliderTheme.copyWith(handleGap: baseSliderTheme.handleGap + 4)
+        ? baseSliderTheme.copyWith(
+            handleGap:
+                baseSliderTheme.handleGap + M3EFocusRing.outsetOf(context),
+          )
         : baseSliderTheme;
     final M3ESliderColors colors = sliderTheme.colors(
       theme.colorScheme,
@@ -130,6 +134,7 @@ extension on _M3ERangeSliderState {
 
   void _selectThumb(double dx, double startX, double endX) {
     _isFocusedFromPointer = true;
+    M3EFocusInteraction.instance.notePointerInteraction();
     _focusNode.requestFocus();
     _dragging = true;
     final double distStart = (dx - startX).abs();

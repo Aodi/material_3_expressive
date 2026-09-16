@@ -35,6 +35,7 @@ import '../pages/playground/view/cards_playground.dart';
 import '../pages/playground/view/carousel_playground.dart';
 import '../pages/playground/view/dialogs_playground.dart';
 import '../pages/playground/view/dividers_playground.dart';
+import '../pages/playground/view/focus_ring_playground.dart';
 import '../pages/playground/view/lists_playground.dart';
 import '../pages/playground/view/selection_playground.dart';
 import '../pages/playground/view/shapes_playground.dart';
@@ -246,6 +247,14 @@ abstract final class M3EDemoCatalog {
       icon: M3EIcons.text_fields,
       section: M3EDemoSection.viewSection,
       playgroundBuilder: (_) => const TypographyPlayground(),
+    ),
+    M3EDemoEntry(
+      id: 'focus_rings',
+      title: 'Focus rings',
+      subtitle: 'Keyboard focus outline and theme override',
+      icon: M3EIcons.keyboard_tab,
+      section: M3EDemoSection.viewSection,
+      playgroundBuilder: (_) => const FocusRingPlayground(),
     ),
     M3EDemoEntry(
       id: 'dialogs',

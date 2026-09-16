@@ -28,6 +28,9 @@ class M3ENavigationRailTheme extends M3EThemeExtension<M3ENavigationRailTheme> {
     this.badgeBackground,
     this.badgeLargeLabel,
     this.indicatorShapeFull,
+    this.indicatorLeadSpring = const M3ESpring(stiffness: 380, damping: 0.45),
+    this.indicatorTrailSpring = const M3ESpring(stiffness: 380, damping: 0.55),
+    this.iconScaleSpring = const M3ESpring(stiffness: 380, damping: 0.5),
   });
 
   /// defaults.
@@ -99,6 +102,15 @@ class M3ENavigationRailTheme extends M3EThemeExtension<M3ENavigationRailTheme> {
   /// indicatorShapeFull.
   final ShapeBorder? indicatorShapeFull;
 
+  /// Lead edge of the selection indicator travel morph.
+  final M3ESpring indicatorLeadSpring;
+
+  /// Trail edge of the selection indicator travel morph.
+  final M3ESpring indicatorTrailSpring;
+
+  /// Icon scale pop on newly selected items.
+  final M3ESpring iconScaleSpring;
+
   /// activeIconAndLabelColor.
 
   Color activeIconAndLabelColor(M3EColorScheme scheme) =>
@@ -144,6 +156,9 @@ class M3ENavigationRailTheme extends M3EThemeExtension<M3ENavigationRailTheme> {
     Color? badgeBackground,
     Color? badgeLargeLabel,
     ShapeBorder? indicatorShapeFull,
+    M3ESpring? indicatorLeadSpring,
+    M3ESpring? indicatorTrailSpring,
+    M3ESpring? iconScaleSpring,
   }) {
     return M3ENavigationRailTheme(
       collapsedWidth: collapsedWidth ?? this.collapsedWidth,
@@ -171,6 +186,9 @@ class M3ENavigationRailTheme extends M3EThemeExtension<M3ENavigationRailTheme> {
       badgeBackground: badgeBackground ?? this.badgeBackground,
       badgeLargeLabel: badgeLargeLabel ?? this.badgeLargeLabel,
       indicatorShapeFull: indicatorShapeFull ?? this.indicatorShapeFull,
+      indicatorLeadSpring: indicatorLeadSpring ?? this.indicatorLeadSpring,
+      indicatorTrailSpring: indicatorTrailSpring ?? this.indicatorTrailSpring,
+      iconScaleSpring: iconScaleSpring ?? this.iconScaleSpring,
     );
   }
 
@@ -229,6 +247,13 @@ class M3ENavigationRailTheme extends M3EThemeExtension<M3ENavigationRailTheme> {
         other.indicatorShapeFull,
         t,
       ),
+      indicatorLeadSpring: t < 0.5
+          ? indicatorLeadSpring
+          : other.indicatorLeadSpring,
+      indicatorTrailSpring: t < 0.5
+          ? indicatorTrailSpring
+          : other.indicatorTrailSpring,
+      iconScaleSpring: t < 0.5 ? iconScaleSpring : other.iconScaleSpring,
     );
   }
 

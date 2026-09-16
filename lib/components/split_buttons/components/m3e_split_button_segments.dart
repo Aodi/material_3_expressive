@@ -146,13 +146,20 @@ extension _M3ESplitButtonSegments<T> on _M3ESplitButtonState<T> {
     return InkWell(
       onTap: enabled
           ? () {
+              M3EFocusInteraction.instance.notePointerInteraction();
+              effectiveFocusNode.requestFocus();
               widget.onPressed?.call();
               _triggerHaptic();
             }
           : null,
       onLongPress: enabled ? widget.onLongPress : null,
       onHover: enabled ? widget.onHover : null,
-      onTapDown: enabled ? (_) => setState(() => _leadingPressed = true) : null,
+      onTapDown: enabled
+          ? (_) {
+              M3EFocusInteraction.instance.notePointerInteraction();
+              setState(() => _leadingPressed = true);
+            }
+          : null,
       onTapUp: enabled ? (_) => setState(() => _leadingPressed = false) : null,
       onTapCancel: enabled
           ? () => setState(() => _leadingPressed = false)
@@ -384,6 +391,8 @@ extension _M3ESplitButtonSegments<T> on _M3ESplitButtonState<T> {
     return InkWell(
       onTap: enabled
           ? () {
+              M3EFocusInteraction.instance.notePointerInteraction();
+              _trailingFocusNode.requestFocus();
               _openMenu(_trailingKey.currentContext ?? context);
               _triggerHaptic();
             }
@@ -394,7 +403,10 @@ extension _M3ESplitButtonSegments<T> on _M3ESplitButtonState<T> {
       ),
       onHover: enabled ? (value) => _onTrailingHover(value) : null,
       onTapDown: enabled
-          ? (_) => setState(() => _trailingPressed = true)
+          ? (_) {
+              M3EFocusInteraction.instance.notePointerInteraction();
+              setState(() => _trailingPressed = true);
+            }
           : null,
       onTapUp: enabled ? (_) => setState(() => _trailingPressed = false) : null,
       onTapCancel: enabled

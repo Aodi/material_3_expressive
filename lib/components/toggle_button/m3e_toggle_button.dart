@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
 import '../buttons/components/m3e_base_button_state.dart';
-import '../buttons/components/m3e_focus_ring.dart';
 import '../buttons/components/m3e_radius_and_padding_motion.dart';
 import '../buttons/enums/m3e_button_enums.dart';
 import '../buttons/models/m3e_button_measurements.dart';

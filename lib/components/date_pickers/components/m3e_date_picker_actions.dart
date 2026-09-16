@@ -42,15 +42,14 @@ class M3EDatePickerActions extends StatelessWidget {
       ),
       child: Align(
         alignment: AlignmentDirectional.centerEnd,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: OverflowBar(
+          spacing: dialogTheme.actionGap,
           children: <Widget>[
             M3EButton(
               style: M3EButtonStyle.text,
               onPressed: onCancel,
               child: Text(cancelText),
             ),
-            SizedBox(width: dialogTheme.actionGap),
             M3EButton(onPressed: onConfirm, child: Text(confirmText)),
           ],
         ),

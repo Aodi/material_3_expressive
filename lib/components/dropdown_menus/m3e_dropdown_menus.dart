@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
@@ -102,6 +103,12 @@ class M3EDropdownMenu<T> extends StatefulWidget {
   /// Maximum number of selectable items. `0` means unlimited.
   final int maxSelections;
 
+  /// Maximum number of selections when multi-select applies.
+  ///
+  /// `null` (default) means unlimited. When non-null, must be greater than
+  /// zero. Takes precedence over [maxSelections] when set.
+  final int? limit;
+
   /// Called whenever the selection changes.
   final ValueChanged<List<M3EDropdownItem<T>>>? onSelectionChanged;
 
@@ -182,13 +189,13 @@ class M3EDropdownMenu<T> extends StatefulWidget {
 
   /// The spring motion for the expand animation.
   ///
-  /// Defaults to [M3EMotion.expressiveSpatialDefault].
-  final M3ESpring openMotion;
+  /// When null, uses [M3EDropdownMenuTheme.openSpring].
+  final M3ESpring? openMotion;
 
   /// The spring motion for the collapse animation.
   ///
-  /// Defaults to [M3EMotion.expressiveSpatialDefault].
-  final M3ESpring closeMotion;
+  /// When null, uses [M3EDropdownMenuTheme.closeSpring].
+  final M3ESpring? closeMotion;
 
   // ── Splash ──
 
@@ -213,6 +220,7 @@ class M3EDropdownMenu<T> extends StatefulWidget {
     this.searchEnabled = false,
     this.showChipAnimation = true,
     this.maxSelections = 0,
+    this.limit,
     this.onSelectionChanged,
     this.onSearchChanged,
     this.controller,
@@ -231,11 +239,15 @@ class M3EDropdownMenu<T> extends StatefulWidget {
     this.autovalidateMode = AutovalidateMode.disabled,
     this.focusNode,
     this.closeOnBackButton = false,
-    this.openMotion = M3EMotion.expressiveSpatialDefault,
-    this.closeMotion = M3EMotion.expressiveSpatialDefault,
+    this.openMotion,
+    this.closeMotion,
     this.splashFactory = NoSplash.splashFactory,
     this.haptic = M3EHapticFeedback.none,
-  }) : future = null;
+  }) : future = null,
+       assert(
+         limit == null || limit > 0,
+         'limit must be null or greater than 0',
+       );
 
   /// Creates an [M3EDropdownMenu] that loads items asynchronously.
   const M3EDropdownMenu.future({
@@ -245,6 +257,7 @@ class M3EDropdownMenu<T> extends StatefulWidget {
     this.searchEnabled = false,
     this.showChipAnimation = false,
     this.maxSelections = 0,
+    this.limit,
     this.onSelectionChanged,
     this.onSearchChanged,
     this.controller,
@@ -263,11 +276,15 @@ class M3EDropdownMenu<T> extends StatefulWidget {
     this.autovalidateMode = AutovalidateMode.disabled,
     this.focusNode,
     this.closeOnBackButton = false,
-    this.openMotion = M3EMotion.expressiveSpatialDefault,
-    this.closeMotion = M3EMotion.expressiveSpatialDefault,
+    this.openMotion,
+    this.closeMotion,
     this.splashFactory = NoSplash.splashFactory,
     this.haptic = M3EHapticFeedback.none,
-  }) : items = const [];
+  }) : items = const [],
+       assert(
+         limit == null || limit > 0,
+         'limit must be null or greater than 0',
+       );
 
   @override
   State<M3EDropdownMenu<T>> createState() => _M3EDropdownMenuState<T>();
@@ -296,6 +313,9 @@ class _M3EDropdownMenuState<T> extends State<M3EDropdownMenu<T>>
   final GlobalKey<M3EMoreChipsIndicatorState> _moreKey = GlobalKey();
 
   late FocusNode _focusNode;
+  final FocusScopeNode _focusTrapScope = FocusScopeNode(
+    debugLabel: 'M3EDropdownMenu.trap',
+  );
   bool? _openingShowOnTop;
 
   final TextEditingController _searchTextController = TextEditingController();
@@ -307,7 +327,16 @@ class _M3EDropdownMenuState<T> extends State<M3EDropdownMenu<T>>
   late final SingleMotionController _expandCtrl;
   late final SingleMotionController _arrowCtrl;
   late final ValueNotifier<bool> _loadingNotifier;
+
+  /// Whether the field should paint the keyboard focus ring.
+  late final ValueNotifier<bool> _focusRingNotifier;
   late final Listenable _listenable;
+
+  M3ESpring get _resolvedOpenMotion =>
+      widget.openMotion ?? M3ETheme.of(context).dropdownMenuTheme.openSpring;
+
+  M3ESpring get _resolvedCloseMotion =>
+      widget.closeMotion ?? M3ETheme.of(context).dropdownMenuTheme.closeSpring;
 
   @override
   void initState() {
@@ -341,6 +370,13 @@ class _M3EDropdownMenuState<T> extends State<M3EDropdownMenu<T>>
     if (_ownController) {
       _controller.dispose();
     }
+    FocusManager.instance.removeHighlightModeListener(
+      _onFocusHighlightModeChanged,
+    );
+    M3EFocusInteraction.instance.removeListener(_syncFieldFocusRing);
+    _focusNode.removeListener(_syncFieldFocusRing);
+    _focusRingNotifier.dispose();
+    _focusTrapScope.dispose();
     if (widget.focusNode == null) {
       _focusNode.dispose();
     }
